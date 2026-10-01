@@ -10,7 +10,37 @@ import {
   Section,
   Text,
 } from "react-email";
-import type { EmailContext } from "./types";
+import type { EmailContext, EmailT } from "./types";
+
+/**
+ * A message whose values (URLs, emails, phones) are isolated LTR runs, so a Hebrew sentence never
+ * reorders or splits them (spec §6.4). `nowrap` values (phones) never break across lines.
+ */
+function isolated(
+  t: EmailT,
+  key: string,
+  values: Record<string, string>,
+  nowrap: readonly string[] = [],
+): ReactNode[] {
+  const names = Object.keys(values);
+  const text = t(key, Object.fromEntries(names.map((n, i) => [n, `⟦${i}⟧`])));
+  return text.split(/⟦(\d+)⟧/).map((part, i) => {
+    if (i % 2 === 0) return part;
+    const name = names[Number(part)] ?? "";
+    return (
+      <span
+        key={name}
+        dir="ltr"
+        style={{
+          unicodeBidi: "isolate",
+          ...(nowrap.includes(name) ? { whiteSpace: "nowrap" } : {}),
+        }}
+      >
+        {values[name]}
+      </span>
+    );
+  });
+}
 
 /**
  * Shared email layout (spec §4.5): `lang`/`dir` from the locale, and a footer with the seller
@@ -69,21 +99,28 @@ export function Layout({ ctx, preview, orderUrl, children }: LayoutProps) {
               })}
             </Text>
             <Text style={small}>
-              {t("emails-core.footer.contact", {
-                email: brand.email,
-                phone: brand.phone,
-              })}
+              {isolated(
+                t,
+                "emails-core.footer.contact",
+                { email: brand.email, phone: brand.phone },
+                ["phone"],
+              )}
             </Text>
             <Text style={small}>{t("emails-core.footer.merchantCountry")}</Text>
             <Text style={{ ...small, fontWeight: 700 }}>
               {t("emails-core.footer.cancelTitle")}
             </Text>
             <Text style={small}>
-              {t("emails-core.footer.cancelChannels", {
-                url: brand.cancelUrl,
-                email: brand.email,
-                phone: brand.phone,
-              })}
+              {isolated(
+                t,
+                "emails-core.footer.cancelChannels",
+                {
+                  url: brand.cancelUrl,
+                  email: brand.email,
+                  phone: brand.phone,
+                },
+                ["phone"],
+              )}
             </Text>
             <Text style={small}>{t("emails-core.footer.transactional")}</Text>
             {ctx.demo ? (

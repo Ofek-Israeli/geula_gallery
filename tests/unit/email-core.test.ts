@@ -174,6 +174,14 @@ describe("renderEmail", () => {
         const b = brand(expected);
         expect(out.html).toContain(b.email);
         expect(out.html).toContain(b.cancelUrl);
+        // phones are isolated LTR runs that never wrap (spec §6.4); the text part is unchanged
+        expect(out.html).toMatch(
+          new RegExp(
+            `<span dir="ltr" style="[^"]*white-space:nowrap[^"]*">${b.phone.replace("+", "\\+")}</span>`,
+          ),
+        );
+        expect(out.text).toContain(`(${b.phone})`);
+        expect(out.text).not.toContain("⟦");
         expect(out.text).toContain(
           expected === "he" ? "מדינת העוסק: ישראל" : "Merchant country: Israel",
         );
