@@ -21,6 +21,11 @@ import { buyerOrderUrls, loadDisclosure } from "@/server/documents/data";
 import { NotFoundError, notImplemented } from "@/server/domain/errors";
 import type { ShipmentStatus } from "@/server/domain/state-machines";
 import { env as defaultEnv, type Env } from "@/server/env";
+import {
+  painterNewRequestEmail,
+  requestAckEmail,
+  requestReplyEmail,
+} from "@/server/requests/service";
 import { getSetting } from "@/server/settings";
 
 /**
@@ -311,11 +316,12 @@ export const EMAIL_PROPS: Builders = {
       },
     };
   },
-  "request-ack": later("WS4"),
-  "request-reply": later("WS4"),
+  "request-ack": (refId, _locale, { db }) => requestAckEmail(refId, db),
+  "request-reply": (refId, _locale, { db }) => requestReplyEmail(refId, db),
   "cancellation-ack": later("WS6"),
   "return-instructions": later("WS6"),
-  "painter-new-request": later("WS4"),
+  "painter-new-request": (refId, _locale, { db, env }) =>
+    painterNewRequestEmail(refId, db, env),
   "painter-cancellation": later("WS6"),
   "admin-alert": later("WS6"),
 };
