@@ -469,3 +469,44 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
   `git diff --cached --name-status` for unexpected `D` lines. Consider moving the repo out of a
   synced folder.
 - zsh: `while read … path` overwrites `$PATH` (zsh ties `path` to `PATH`); use another name.
+
+### M1 steps 13–15 (spikes, test harness, M1 acceptance)
+
+**Spike results (step 13, 2026-10-01)**
+- **(a) react-pdf Hebrew + English: GO for the Tier B disclosure PDF.** A bilingual disclosure
+  sample (`@react-pdf/renderer` 4.9.0, static Assistant/Frank Ruhl Libre TTFs) was rendered to a
+  PDF, rasterised with ImageMagick/Ghostscript and inspected, and the glyph order was checked
+  with Ghostscript `txtwrite` (visual order per line). Correct: Hebrew shaping and order,
+  mirrored parentheses, `₪1,500` / `US$ 45.00` / `03-000-0000` / dates / `GG-…` / e-mail runs
+  inside Hebrew lines, Hebrew inside English lines, and the line order of a wrapped multi-line
+  Hebrew paragraph. Rules for WS6 (encoded in `src/server/documents/pdf/fonts.ts`):
+  - every Hebrew paragraph needs `direction: 'rtl'` (helper `rtlText(true)`); without it a
+    line that starts with a Latin token is laid out LTR. `direction` works but is missing from
+    react-pdf's `Style` type, hence the cast in the helper;
+  - for label/value rows use `flexDirection: 'row-reverse'` in Hebrew;
+  - hyphenation is disabled (`registerHyphenationCallback`), otherwise Hebrew words get split;
+  - react-pdf cannot use variable fonts: `assets/fonts/*.ttf` are static wght 400/700 instances
+    of the Google Fonts variable TTFs made with `fontTools.varLib.instancer --static
+    --update-name-table` (licence texts in `assets/fonts/OFL.txt`). The fallback (separate
+    `<Text>` runs or HTML only) was not needed.
+- **(b) react-email in a Route Handler and inside `after()` from a Server Action: works** with
+  the default `serverExternalPackages`; no config change needed. Verified on `next start`
+  through the project's own `renderEmail()` (subject, html with `dir`, plain text), and with a
+  form-bound Server Action whose `after()` callback rendered the template after the response
+  (driven by Playwright; POST 200, no page errors).
+- **(c) `next build` with `[locale]/layout.tsx` as the only root layout + `force-dynamic`:
+  passes** (Turbopack, ~8 s); every route is `ƒ` except the global not-found.
+- **(d) Fonts from the traced output: works.** `outputFileTracingIncludes: { '/*':
+  ['./assets/fonts/**/*'] }` puts the four TTFs into every route's `.nft.json` (checked for a
+  route handler, a page and `/api/cron/[job]`). A temporary `output: 'standalone'` build was
+  copied to the scratchpad (outside the repo) and its `server.js` rendered a PDF with the
+  Assistant font embedded, resolving `process.cwd()/assets/fonts`. `next start` from the repo
+  also renders it. Standalone output is **not** enabled in the committed config.
+- Spike code (temporary routes, a page and an action) was deleted after the run; only
+  `assets/fonts/**` and `src/server/documents/pdf/fonts.ts` (`registerPdfFonts`, `rtlText`) are
+  kept for WS6.
+- **Gotcha:** `next build` with `NEXT_DIST_DIR=<dir>` appends `<dir>/types/**/*.ts` and
+  `<dir>/dev/types/**/*.ts` to `tsconfig.json` `include` (exact-string check) and reformats the
+  file. `.next-e2e` entries are pre-added so `test:e2e` leaves the tree clean (the `.next-*`
+  exclude keeps them out of `tsc`). Worktrees using `.next-ws<N>` will see the same edit:
+  revert it (`git checkout tsconfig.json`) rather than committing it.
