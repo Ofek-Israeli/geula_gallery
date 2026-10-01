@@ -57,7 +57,16 @@ test("auto-decline below the threshold; accept an offer → link order", async (
     await price.getByLabel(c.fields.offersEnabled).check();
     await field(price, c.fields.offerAutoDeclineBelowIls).fill("2000");
     await price.getByRole("button", { name: HE.shell.common.save }).click();
-    await expect(price.getByTestId("form-success")).toBeVisible();
+    // The form already shows "saved" from the first price save: wait for the row instead.
+    await expect
+      .poll(async () => {
+        const [row] = await e2eQuery<{ offers_enabled: boolean }>(
+          "SELECT offers_enabled FROM artworks WHERE id = $1",
+          [a.id],
+        );
+        return row?.offers_enabled;
+      })
+      .toBe(true);
 
     // USD 100 is far below ₪2,000: auto-declined, the buyer gets a reply, the painter nothing.
     const low = uniqueBuyer("offer-low");
