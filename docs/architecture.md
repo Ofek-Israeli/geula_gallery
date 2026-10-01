@@ -921,3 +921,85 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
 - The checkout postal-code label has neither "(required)" nor "(optional)" (WS2).
 - The checkout details form needs JS (only the delivery GET form has a no-JS path); fine per §5.1,
   noted because the order page's forms now work without JS.
+
+### M3 WS5 Integrations notes
+
+**What exists**
+- `payments/providers/cardcom.ts` + `cardcom-map.ts`: LowProfile v11 on the generated swagger types.
+  `Create` (ReturnValue = attempt id, ISOCoinId 1/2, major-unit Amount, installments only for
+  IL + ILS + `maxInstallments > 1`, buyer prefill only in LIVE mode, `Document` only in LIVE gateway
+  mode; nullable fields are stripped before sending), `GetLpResult` (succeeded only on the four
+  spec conditions, everything else `pending`), HMAC `a`/`t` notification auth without the DB, event
+  key `cc:<LowProfileId>:<TranzactionId|none>:<ResponseCode>`, `RefundByTransactionId` (no
+  ApiPassword → `manual_required`; any non-zero code → `ProviderRejectedError` → FAILED),
+  `ListTransactions` (DDMMYYYY Israeli dates per the swagger, paged, charges only). The HTTP client
+  is built on first use and credentials are checked before it, so an unusable terminal fails with
+  `ProviderNotConfiguredError` before any network call.
+- `payments/providers/paypal.ts` + `paypal-map.ts` + `paypal-verify.ts`: Orders v2 / Payments v2 /
+  Webhooks v1. OAuth cached per (mode, client id) until `expires_in - 60` s; a 401 drops the token
+  and retries once. Full §4.2 status table; `custom_id` = attempt id, `invoice_id` =
+  `<order>-<seq>`, breakdown + items only when they add up to the amount exactly. Capture:
+  ORDER_ALREADY_CAPTURED re-reads the order; a 422 that leaves the order APPROVED (declined
+  instrument) maps to `failed` so finalize does not loop on `requires_capture`. Refund `custom_id`
+  = refund id. `getRefund` without a stored refund id follows the capture's `up` link to the order
+  and matches `custom_id`. Verify postback body is concatenated with the raw event verbatim; a
+  body that is not one JSON object, a missing transmission header or a missing
+  `PAYPAL_WEBHOOK_ID` is rejected without a network call.
+- `taxdocs/morning.ts`: token (auth host, `expiresAt` seconds) cached; receipts 400/320, credit
+  notes 330 linked to the receipt; marker in `description`; `findByMarker` = search ±7 days with an
+  exact description match (the search is fuzzy: `…/RECEIPT/1` vs `…/RECEIPT/10`); PDF via download
+  links. `taxdocs/gateway.ts#buildGatewayDocument` implemented.
+- `email/drivers/resend.ts`: Resend SDK with `idempotencyKey` = dedupe key; quota/rate/5xx →
+  `ProviderUnavailableError` (outbox retries with the same key), other 4xx → rejected.
+- `integrations/http.ts`: `recordingFetch` (redacted exchanges, no headers or hosts) and
+  `expectData` now reads provider error codes from Cardcom `ResponseCode` and Morning `errorCode`
+  too (PayPal `name` as before).
+- Scripts: `check:cardcom` (Create ₪1 → GetLpResult → hosted-page language check → negative paths;
+  `--record`, `--wait[=s]`, `--locale=en`, `--allow-live`), `check:paypal` (merchant id via
+  userinfo → create → approve URL; `--capture=<id>` → capture → refund), `check:morning` (sandbox
+  receipt → findByMarker → PDF), `check:dhl` (public api-mock with its demo credentials, then the
+  test environment only with credentials). All skip cleanly (exit 0) without credentials; shared
+  helpers in `scripts/check-support.ts`. Fixtures are written only with `--record` or
+  `RECORD_FIXTURES=1`.
+- Tests: `tests/contract/{payment-provider,taxdoc}.suite.ts` (shared), `cardcom`, `paypal`,
+  `morning` (+ the mock tax-document provider on the shared suite); unit `cardcom-map`,
+  `paypal-map`, `morning-map` (+ gateway builder), `resend-driver` (+ recorder). Replay helper:
+  `tests/contract/support/replay.ts`; env helper with the live-credential snapshot:
+  `tests/contract/support/env.ts`. Live blocks: `CARDCOM_CONTRACT=1` / `PAYPAL_CONTRACT=1` /
+  `MORNING_CONTRACT=1` in the **shell** (not `.env.local`) plus credentials.
+
+**Cardcom live check: BLOCKED by the test-terminal credentials**
+- `npm run check:cardcom` and `CARDCOM_CONTRACT=1 npm run test:contract` fail at `LowProfile/Create`:
+  HTTP 401 `{"ResponseCode":603,"Description":"שם משתמש או סיסמה שגויים"}` (wrong user name or
+  password). The terminal in `.env.local` is the documented public one and the ApiName matches the
+  hash in `check-secrets.ts`; two capitalisations were tried, and the legacy
+  `Interface/LowProfile.aspx` answers the same 603. So the public test terminal no longer accepts
+  these credentials: ask Cardcom for current test-terminal values. The refusal is recorded
+  (`tests/fixtures/cardcom/create-rejected.json`, redacted) and covered by the contract suite.
+- Consequently the unpaid GetLpResult, the hosted Hebrew page and a test-card payment could not be
+  observed live. The other Cardcom fixtures are **synthetic** (`recordedAt: "synthetic"`), built from
+  the v11 swagger shapes; re-record with `npm run check:cardcom -- --record` once credentials work
+  (it overwrites `create-ok` and `getlpresult-unpaid`; `--wait` adds `getlpresult-paid`).
+- Open questions only a live terminal can settle: the actual ResponseCode/shape of an unpaid
+  GetLpResult (mapped to `pending` either way), whether Cardcom accepts a localhost `WebHookUrl`, and
+  whether the webhook body is JSON (parsed as JSON, form-encoded as a fallback).
+
+**Decisions**
+- Cardcom `ProductName` is localized ("ציור מקורי – …" on Hebrew pages) instead of always English.
+- Cardcom has no idempotency key: a retried Create makes a second LowProfile, harmless because only
+  the stored `provider_ref` is verified.
+- Morning `currencyRate` is sent as 1 for ILS and omitted for USD so Morning applies its own rate
+  (the generated type marks it required; accountant/sandbox to confirm, spec §12.3). Row VAT:
+  murshe 1 (included), patur 0 (by business type), exports 2 (exempt) with document `vatType` 1.
+- The Morning credit-note contract carries no VAT mode, so the adapter reads the original document
+  first: a 400 (patur receipt) → `TaxDocumentNeedsManualError`.
+- PayPal `brand_name` comes from the display name of `EMAIL_FROM` (adapters stay DB-free).
+
+**For other streams (not done here, outside WS5 ownership)**
+- WS2: gateway mode end to end needs `checkout/start.ts` to pass `gatewayDocument`
+  (`buildGatewayDocument`) into `createCheckout` and `taxdocs/issue.ts` to copy
+  `VerifiedPayment.gatewayDocument` (not persisted by `apply.ts` today).
+- WS2: PayPal refund/reversal/dispute events carry `refundCustomId` but no attempt id; `webhook.ts`
+  currently marks them unmatched instead of calling `syncPostSuccessEvent`.
+- WS2: "Bit only for ILS totals ≤ ₪5,000" is a checkout-UI rule on top of `capabilities.wallets`.
+- WS3: `check:dhl` exercises only reachability; DHL label/tracking calls are the carrier adapter's.
