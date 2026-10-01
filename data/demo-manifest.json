@@ -1,0 +1,1138 @@
+{
+  "version": 1,
+  "source": "The Art Institute of Chicago API (https://api.artic.edu)",
+  "license": "Images and AIC metadata: CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/). Hebrew titles, alt texts and descriptions were written for this project.",
+  "fetchedOn": "2026-10-01",
+  "series": [
+    {
+      "slug": "landscapes",
+      "name": {
+        "he": "נופים",
+        "en": "Landscapes"
+      },
+      "sortOrder": 10
+    },
+    {
+      "slug": "abstractions",
+      "name": {
+        "he": "הפשטות",
+        "en": "Abstractions"
+      },
+      "sortOrder": 20
+    },
+    {
+      "slug": "interiors-still-life",
+      "name": {
+        "he": "פנים וטבע דומם",
+        "en": "Interiors & Still Life"
+      },
+      "sortOrder": 30
+    },
+    {
+      "slug": "shoreline",
+      "name": {
+        "he": "קו החוף",
+        "en": "Shoreline"
+      },
+      "sortOrder": 40
+    },
+    {
+      "slug": "works-on-paper",
+      "name": {
+        "he": "עבודות על נייר",
+        "en": "Works on Paper"
+      },
+      "sortOrder": 50
+    }
+  ],
+  "works": [
+    {
+      "aicId": 65912,
+      "imageId": "d9b07617-7953-5ef1-6a0f-1f593baf06a1",
+      "slug": "landscape-no-26",
+      "title": {
+        "en": "Landscape no. 26",
+        "he": "נוף מס׳ 26"
+      },
+      "artist": {
+        "en": "Marsden Hartley",
+        "he": "מרסדן הארטלי"
+      },
+      "date": {
+        "en": "1909–10",
+        "he": "1909–1910"
+      },
+      "yearCreated": 1909,
+      "medium": "OIL",
+      "surface": "CARDBOARD",
+      "mediumDetail": {
+        "en": "Oil on cardboard",
+        "he": "שמן על קרטון"
+      },
+      "heightMm": 305,
+      "widthMm": 305,
+      "series": "landscapes",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 3200,
+      "priceUsd": 870,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 10,
+      "sampleOrder": null,
+      "alt": {
+        "he": "נוף הררי בצבעי סתיו עזים: גבעות אדומות וכחולות, יער בכתום ובצהוב וסלעים לבנים בחזית, מתחת לשמיים כחולים עם עננים לבנים.",
+        "en": "A hilly landscape in strong autumn colours: red and blue hills, a forest in orange and yellow and white rocks in front, under a blue sky with white clouds."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Marsden Hartley (1909–10), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת מרסדן הארטלי (1909–1910), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Landscape no. 26",
+        "artistDisplay": "Marsden Hartley (American, 1877–1943)",
+        "dateDisplay": "1909–10",
+        "mediumDisplay": "Oil on cardboard",
+        "dimensions": "30.5 × 30.5 cm (12 × 12 in.)",
+        "creditLine": "Alfred Stieglitz Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/65912"
+      },
+      "caption": "Marsden Hartley. Landscape no. 26, 1909–10. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/65912.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/d9b07617-7953-5ef1-6a0f-1f593baf06a1/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1693,
+        "bytes": 539082,
+        "sha256": "38f2fc4df3678e35cafd9687faf9092bd32e04c8f7a1567550a54533c33f9327",
+        "blurDataUrl": "data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAAAwAgCdASoQABAAA4BaJbACdAD0j8WZynrz4AD+utO87LDhGgCmD47Tq3MJU0hSqQa45FeJFe6TZeDIBvyd920Iit9oY6MVj4KAmYMzIbFbw1jwW9/yHmlvG5n0YCHAAAA=",
+        "dominantColor": "#282828",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 90207,
+      "imageId": "768387ba-f972-b43b-39f7-98cb37dad883",
+      "slug": "movement-no-10",
+      "title": {
+        "en": "Movement No. 10",
+        "he": "תנועה מס׳ 10"
+      },
+      "artist": {
+        "en": "Marsden Hartley",
+        "he": "מרסדן הארטלי"
+      },
+      "date": {
+        "en": "1917",
+        "he": "1917"
+      },
+      "yearCreated": 1917,
+      "medium": "OIL",
+      "surface": "BOARD",
+      "mediumDetail": {
+        "en": "Oil on composition board",
+        "he": "שמן על לוח דחוס"
+      },
+      "heightMm": 387,
+      "widthMm": 495,
+      "series": "abstractions",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 5800,
+      "priceUsd": 1550,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 20,
+      "sampleOrder": null,
+      "alt": {
+        "he": "טבע דומם בצורות גיאומטריות: אגס, בננה ומפית לבנה מקופלת על צלחת עגולה כהה, על רקע אפור.",
+        "en": "A geometric still life: a pear, a banana and a folded white napkin on a dark round plate, against a grey background."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Marsden Hartley (1917), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת מרסדן הארטלי (1917), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Movement No. 10",
+        "artistDisplay": "Marsden Hartley (American, 1877–1943)",
+        "dateDisplay": "1917",
+        "mediumDisplay": "Oil on composition board",
+        "dimensions": "38.7 × 49.5 cm (15 1/4 × 19 1/2 in.)",
+        "creditLine": "Alfred Stieglitz Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/90207"
+      },
+      "caption": "Marsden Hartley. Movement No. 10, 1917. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/90207.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/768387ba-f972-b43b-39f7-98cb37dad883/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1345,
+        "bytes": 237807,
+        "sha256": "c102894f09ce3c32e432388d45a1b8c50a54402021b105e8db090bb18e349e4d",
+        "blurDataUrl": "data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAAAQAgCdASoQAA0AA4BaJQBOgCP3q9Aqh5twAP68loxHsrCA43ez4jbqH5Vm5bJ2aM1WRdhZifRw8lZ5/bxot6gM64ENsuZmM6s/DFYHwItTr3vZ5geS2bAA",
+        "dominantColor": "#887868",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 94241,
+      "imageId": "e4df4d4a-4cfb-5be8-3728-0d0bf1b44751",
+      "slug": "the-red-room-etretat",
+      "title": {
+        "en": "The Red Room, Etretat",
+        "he": "החדר האדום, אטרטה"
+      },
+      "artist": {
+        "en": "Félix Edouard Vallotton",
+        "he": "פליקס אדואר ואלוטון"
+      },
+      "date": {
+        "en": "1899",
+        "he": "1899"
+      },
+      "yearCreated": 1899,
+      "medium": "OIL",
+      "surface": "BOARD",
+      "mediumDetail": {
+        "en": "Oil on artist's board",
+        "he": "שמן על לוח ציור"
+      },
+      "heightMm": 492,
+      "widthMm": 513,
+      "series": "interiors-still-life",
+      "status": "SOLD",
+      "holdReason": null,
+      "priceIls": 7400,
+      "priceUsd": null,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 30,
+      "sampleOrder": 1,
+      "alt": {
+        "he": "חדר עם קירות אדומים: אישה בשמלה בורדו יושבת בכורסה ליד אח, ותינוקת בשמלה ורודה משחקת על השטיח.",
+        "en": "A room with red walls: a woman in a burgundy dress sits in an armchair by a fireplace while a toddler in a pink dress plays on the rug."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Félix Edouard Vallotton (1899), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת פליקס אדואר ואלוטון (1899), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "The Red Room, Etretat",
+        "artistDisplay": "Félix Edouard Vallotton (Swiss, 1865–1925)",
+        "dateDisplay": "1899",
+        "mediumDisplay": "Oil on artist's board",
+        "dimensions": "49.2 × 51.3 cm (19 3/8 × 20 3/8 in.); Framed: 62.9 × 65.4 × 6.4 cm (24 3/4 × 25 3/4 × 2 1/2 in.)",
+        "creditLine": "Bequest of Mrs. Clive Runnells",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/94241"
+      },
+      "caption": "Félix Edouard Vallotton. The Red Room, Etretat, 1899. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/94241.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/e4df4d4a-4cfb-5be8-3728-0d0bf1b44751/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1629,
+        "bytes": 213373,
+        "sha256": "3cad1d9abecf1d12e71275a3f706766f165c13737cb4db672d2844b44e18c991",
+        "blurDataUrl": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAAAQAgCdASoQAA8AA4BaJbACdAD0s77xdhjwAP7lv4i4p/E7+bpIcWN7gqE2/QkSfi3ORCvO1mUVb2pdPOD/zdaNiPjYOYmqPwAAAA==",
+        "dominantColor": "#282818",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 14310,
+      "imageId": "9678901a-7c1e-a9ed-aa9a-5b208fe9a80e",
+      "slug": "still-life-green-flower-vase",
+      "title": {
+        "en": "Still-Life with a Green Flower Vase",
+        "he": "טבע דומם עם אגרטל פרחים ירוק"
+      },
+      "artist": {
+        "en": "Paula Modersohn-Becker",
+        "he": "פאולה מודרזון-בקר"
+      },
+      "date": {
+        "en": "c. 1902",
+        "he": "בסביבות 1902"
+      },
+      "yearCreated": 1902,
+      "medium": "OIL",
+      "surface": "BOARD",
+      "mediumDetail": {
+        "en": "Oil on wood pulp board",
+        "he": "שמן על לוח עיסת עץ"
+      },
+      "heightMm": 377,
+      "widthMm": 291,
+      "series": "interiors-still-life",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 4600,
+      "priceUsd": 1250,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 40,
+      "sampleOrder": null,
+      "alt": {
+        "he": "אגרטל ירוק מלא פרחים בלבן, ורוד, כתום ובורדו, על מפה בעלת דוגמה מסולסלת, על רקע כחול־אפור.",
+        "en": "A green vase full of white, pink, orange and burgundy flowers on a cloth with a curling pattern, against a blue-grey background."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Paula Modersohn-Becker (c. 1902), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת פאולה מודרזון-בקר (בסביבות 1902), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Still-Life with a Green Flower Vase",
+        "artistDisplay": "Paula Modersohn-Becker\nGerman, 1876-1907",
+        "dateDisplay": "c. 1902",
+        "mediumDisplay": "Oil on brown wood pulp board, varnished",
+        "dimensions": "37.7 × 29.1 cm (14 7/8 × 11 1/2 in.)",
+        "creditLine": "Worcester Sketch Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/14310"
+      },
+      "caption": "Paula Modersohn-Becker. Still-Life with a Green Flower Vase, c. 1902. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/14310.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/9678901a-7c1e-a9ed-aa9a-5b208fe9a80e/full/1686,/0/default.jpg",
+        "width": 1575,
+        "height": 2000,
+        "bytes": 472448,
+        "sha256": "b3f971984c7065df96673a70c8319e6180e9ffd22f5a03a7866d57ce3aa682b7",
+        "blurDataUrl": "data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAAAQAgCdASoNABAAA4BaJQBOgBnk8PXe26QAAP2U7iFiwdLhmMiIRIG43BP49IX/4R9jVMw5pJV9vumlyHOTRrJphl9OOqDKBfiU5AAA",
+        "dominantColor": "#684838",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 256797,
+      "imageId": "6744270e-1f05-e07c-18a9-ea06f180a8fb",
+      "slug": "at-the-rivers-bend",
+      "title": {
+        "en": "At the River's Bend",
+        "he": "בעיקול הנהר"
+      },
+      "artist": {
+        "en": "Lilla Cabot Perry",
+        "he": "לילה קבוט פרי"
+      },
+      "date": {
+        "en": "1895",
+        "he": "1895"
+      },
+      "yearCreated": 1895,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 655,
+      "widthMm": 815,
+      "series": "landscapes",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 9800,
+      "priceUsd": 2650,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": true,
+      "sortOrder": 50,
+      "sampleOrder": null,
+      "alt": {
+        "he": "דיוקן נערה בעלת שיער חום ארוך בחולצה ורודה בהירה, יושבת על גדת נהר שמשתקפים בו עצים ירוקים כהים.",
+        "en": "A portrait of a girl with long brown hair in a pale pink blouse, sitting on a riverbank that reflects dark green trees."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Lilla Cabot Perry (1895), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת לילה קבוט פרי (1895), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "At the River's Bend (On the River II)",
+        "artistDisplay": "Lilla Cabot Perry (American, 1848–1933)",
+        "dateDisplay": "1895",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "65.5 × 81.5 cm (25 13/16 × 32 1/8 in.)",
+        "creditLine": "Partial gift of Abbot W. and Marcia L. Vose; through prior bequest of Arthur Rubloff; through prior gift of James D. Thornton, Mrs. Abram Poole, and Elizabeth Sprague Coolidge; through prior bequest of Celia Schmidt; Mr. and Mrs. Frank G. Logan Purchase Prize Fund; Mr. and Mrs. Frederick G. Wacker Jr. Endowment Fund",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/256797"
+      },
+      "caption": "Lilla Cabot Perry. At the River's Bend (On the River II), 1895. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/256797.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/6744270e-1f05-e07c-18a9-ea06f180a8fb/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1360,
+        "bytes": 260236,
+        "sha256": "1587be95d3e5f1667c3d289de34a480006dffcc3bda6b72047448abfab0df8ac",
+        "blurDataUrl": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAAAQAgCdASoQAA0AA4BaJZwC7ADdqyX4dqwAAP7r/xjXulchyvCF57LpWhyWNDd7koITftOdxI+JWfeIThd7NSjEDNuVnGAAAAA=",
+        "dominantColor": "#283828",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 100476,
+      "imageId": "16e53257-ade2-4f5d-3521-2bc9666bc4cf",
+      "slug": "beach-at-cabasson",
+      "title": {
+        "en": "Beach at Cabasson (Baigne-Cul)",
+        "he": "החוף בקבאסון"
+      },
+      "artist": {
+        "en": "Henri Edmond Cross",
+        "he": "אנרי אדמון קרוס"
+      },
+      "date": {
+        "en": "1891–92",
+        "he": "1891–1892"
+      },
+      "yearCreated": 1891,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 653,
+      "widthMm": 923,
+      "series": "shoreline",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 12500,
+      "priceUsd": 3400,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": true,
+      "sortOrder": 60,
+      "sampleOrder": null,
+      "alt": {
+        "he": "חוף ים מואר בנקודות צבע: שלושה ילדים משחקים בחול הלבן, סלעים כתומים יורדים אל ים כחול־סגול ומשמאל לפינה ענף עץ.",
+        "en": "A sunlit beach painted in dots of colour: three boys play on the white sand, orange rocks run into a blue-violet sea, and a tree branch reaches in from the corner."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Henri Edmond Cross (1891–92), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת אנרי אדמון קרוס (1891–1892), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Beach at Cabasson (Baigne-Cul)",
+        "artistDisplay": "Henri Edmond Cross (French, 1856–1910)",
+        "dateDisplay": "1891–92",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "65.3 × 92.3 cm (25 3/4 × 36 3/8 in.); Framed: 82.6 × 108.6 × 6.4 cm (32 1/2 × 42 3/4 × 2 1/2 in.)",
+        "creditLine": "L. L. and A. S. Coburn, and Bette and Neison Harris funds; Charles H. and Mary F. S. Worcester Collection; through prior acquisition of the Kate L. Brewster Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/100476"
+      },
+      "caption": "Henri Edmond Cross. Beach at Cabasson (Baigne-Cul), 1891–92. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/100476.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/16e53257-ade2-4f5d-3521-2bc9666bc4cf/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1181,
+        "bytes": 321382,
+        "sha256": "bd9d437206644dd766e9967ff505fb555952ba6ec7b49121b5621e127289f35c",
+        "blurDataUrl": "data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAAAwAgCdASoQAAsAA4BaJQBOiP/wPYY4szlkAAD+sgeMaFBH7rOs+QaHB4Vp6utghMjktFHTsljlNuwYdmA+k0l3FozAAA==",
+        "dominantColor": "#e8d8c8",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 212300,
+      "imageId": "ef637785-df55-adaf-b907-e3e8f59f08d6",
+      "slug": "beach-les-grands-sables",
+      "title": {
+        "en": "The Beach of Les Grands Sables at Le Pouldu",
+        "he": "חוף לה גראן סאבל"
+      },
+      "artist": {
+        "en": "Paul Sérusier",
+        "he": "פול סרוזייה"
+      },
+      "date": {
+        "en": "1890",
+        "he": "1890"
+      },
+      "yearCreated": 1890,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 600,
+      "widthMm": 700,
+      "series": "shoreline",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 8900,
+      "priceUsd": null,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 70,
+      "sampleOrder": null,
+      "alt": {
+        "he": "שדה חיטה צהוב משתפל, דמות בודדת הולכת בו, ערמות שחת אדומות בפינה, ושורת עצים ובתים מתחת לשמיים ירקרקים.",
+        "en": "A sloping yellow wheat field with a lone walking figure, red haystacks in the corner, and a row of trees and houses under a greenish sky."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Paul Sérusier (1890), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת פול סרוזייה (1890), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "The Beach of Les Grands Sables at Le Pouldu",
+        "artistDisplay": "Paul Sérusier (French, 1864–1927)",
+        "dateDisplay": "1890",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "60 × 70 cm (23 5/8 × 27 9/16 in.)",
+        "creditLine": "Through prior gift of Mrs. Clive Runnells",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/212300"
+      },
+      "caption": "Paul Sérusier. The Beach of Les Grands Sables at Le Pouldu, 1890. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/212300.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/ef637785-df55-adaf-b907-e3e8f59f08d6/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1443,
+        "bytes": 358252,
+        "sha256": "fa05416fdb0bc11b55cfc7c6ef75d5a35a394cfa331b3be4805e9a211849260b",
+        "blurDataUrl": "data:image/webp;base64,UklGRkgAAABXRUJQVlA4IDwAAADwAQCdASoQAA4AA4BaJbACdAD0MhMlOwAAyz6lnrXrW2MDsW6TAi9IuVQ+CfRZbkeIUJesew1uN5CsQAA=",
+        "dominantColor": "#b89858",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 121377,
+      "imageId": "56a4af78-1d23-3e2a-6119-8aa47e0cf285",
+      "slug": "boats-at-rest",
+      "title": {
+        "en": "Boats at Rest",
+        "he": "סירות במנוחה"
+      },
+      "artist": {
+        "en": "Arthur Wesley Dow",
+        "he": "ארתור ווסלי דאו"
+      },
+      "date": {
+        "en": "c. 1895",
+        "he": "בסביבות 1895"
+      },
+      "yearCreated": 1895,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 660,
+      "widthMm": 914,
+      "series": "shoreline",
+      "status": "ON_HOLD",
+      "holdReason": "RESERVED_OFFLINE",
+      "priceIls": 11800,
+      "priceUsd": null,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 80,
+      "sampleOrder": null,
+      "alt": {
+        "he": "סירת משוטים כחולה ולצידה סירה ירוקה קטנה עגונות על גדה עשבונית, ליד מפרץ שקט שבו משתקפים בתים.",
+        "en": "A blue rowing boat and a small green boat beached on a grassy bank beside a calm inlet that reflects houses."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Arthur Wesley Dow (c. 1895), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת ארתור ווסלי דאו (בסביבות 1895), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Boats at Rest",
+        "artistDisplay": "Arthur Wesley Dow (American, 1857–1922)",
+        "dateDisplay": "c. 1895",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "66 × 91.4 cm (26 × 36 in.)",
+        "creditLine": "Through prior acquisition of the Charles H. and Mary F. S. Worcester Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/121377"
+      },
+      "caption": "Arthur Wesley Dow. Boats at Rest, c. 1895. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/121377.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/56a4af78-1d23-3e2a-6119-8aa47e0cf285/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1221,
+        "bytes": 202681,
+        "sha256": "f88d3d746b6dcff8ffff3513e98fda49d7828c9ec9c772b647ea3c3cd176da28",
+        "blurDataUrl": "data:image/webp;base64,UklGRkgAAABXRUJQVlA4IDwAAACwAQCdASoQAAwAA4BaJYgCdACHy1AAAP6Bcm0VsrzaICkVhi1/YkkpkU81CA3XlNTv67+/yh1RcLj0gAA=",
+        "dominantColor": "#584838",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 72801,
+      "imageId": "3ae75415-0551-ae17-c478-3b8687a6f246",
+      "slug": "icebound",
+      "title": {
+        "en": "Icebound",
+        "he": "לכוד בקרח"
+      },
+      "artist": {
+        "en": "John Henry Twachtman",
+        "he": "ג׳ון הנרי טוואכטמן"
+      },
+      "date": {
+        "en": "c. 1889",
+        "he": "בסביבות 1889"
+      },
+      "yearCreated": 1889,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 642,
+      "widthMm": 766,
+      "series": "landscapes",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 9200,
+      "priceUsd": 2450,
+      "canBeRolled": true,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 90,
+      "sampleOrder": null,
+      "alt": {
+        "he": "נחל זורם בין גדות מכוסות שלג, עם מים בגוני טורקיז, סלעים אפורים ועצים דקים בעלים כתומים.",
+        "en": "A stream running between snow-covered banks, with turquoise water, grey rocks and slender trees with orange leaves."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by John Henry Twachtman (c. 1889), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת ג׳ון הנרי טוואכטמן (בסביבות 1889), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Icebound",
+        "artistDisplay": "John Henry Twachtman (American, 1853–1902)",
+        "dateDisplay": "c. 1889",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "64.2 × 76.6 cm (25 5/16 × 30 3/16 in.)",
+        "creditLine": "Friends of American Art Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/72801"
+      },
+      "caption": "John Henry Twachtman. Icebound, c. 1889. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/72801.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/3ae75415-0551-ae17-c478-3b8687a6f246/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1411,
+        "bytes": 371309,
+        "sha256": "1d9e637d6b84793e0b676c57c76e9c4158fc025824a9339a07e8fbea23690ff3",
+        "blurDataUrl": "data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAADQAQCdASoQAA0AA4BaJZQAAp2zzgE7qAD+7dkKcgBJ11tC2t+PPAb6sTnEXVkfqGw6ylz3Pc0os3iXjzDSd4jFeSIhKSTIIAA=",
+        "dominantColor": "#d8d8d8",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 64754,
+      "imageId": "4425984b-e241-6413-1404-cdac0fb06518",
+      "slug": "moonrise",
+      "title": {
+        "en": "Moonrise",
+        "he": "זריחת הירח"
+      },
+      "artist": {
+        "en": "George Inness",
+        "he": "ג׳ורג׳ איננס"
+      },
+      "date": {
+        "en": "1891",
+        "he": "1891"
+      },
+      "yearCreated": 1891,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 765,
+      "widthMm": 641,
+      "series": "landscapes",
+      "status": "SOLD",
+      "holdReason": null,
+      "priceIls": 10400,
+      "priceUsd": 2800,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 100,
+      "sampleOrder": 2,
+      "alt": {
+        "he": "שעת דמדומים: ירח כתום עולה בשמיים חומים־ערפיליים, עץ כהה משמאל ודמות קטנה עומדת בשדה.",
+        "en": "Dusk: an orange moon rises in a hazy brown sky, with a dark tree on the left and a small figure standing in a field."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by George Inness (1891), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת ג׳ורג׳ איננס (1891), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Moonrise",
+        "artistDisplay": "George Inness (American, 1825–1894)",
+        "dateDisplay": "1891",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "76.5 × 64.1 cm (30 1/8 × 25 1/4 in.)",
+        "creditLine": "Edward B. Butler Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/64754"
+      },
+      "caption": "George Inness. Moonrise, 1891. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/64754.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/4425984b-e241-6413-1404-cdac0fb06518/full/1686,/0/default.jpg",
+        "width": 1668,
+        "height": 2000,
+        "bytes": 362521,
+        "sha256": "8af8bc8078c21a9b2ac53c4a92a461e2c1747677564fbea63e6f7e34630dfade",
+        "blurDataUrl": "data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAAAQAgCdASoNABAAA4BaJZgCdADdla8zDCeAAP70nwyw6Rwxc21LTI2ZIQnqjmV1TG1qGTRWnmiZIluXbe5zXAAA",
+        "dominantColor": "#381808",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 109693,
+      "imageId": "c7686c63-3aca-64b6-6710-02f34ccd0767",
+      "slug": "banks-of-the-durance",
+      "title": {
+        "en": "The Banks of the River Durance at Saint Paul",
+        "he": "גדות הדוראנס"
+      },
+      "artist": {
+        "en": "Paul Camille Guigou",
+        "he": "פול קמי גיגו"
+      },
+      "date": {
+        "en": "1864",
+        "he": "1864"
+      },
+      "yearCreated": 1864,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 620,
+      "widthMm": 1480,
+      "series": "landscapes",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 18000,
+      "priceUsd": 4850,
+      "canBeRolled": false,
+      "crate": true,
+      "quoteOnly": true,
+      "featured": false,
+      "sortOrder": 110,
+      "sampleOrder": null,
+      "alt": {
+        "he": "נוף פנורמי רחב של נהר שקט, גדה חולית בהירה וצוק ירוק תחת שמיים תכולים עם ענן לבן.",
+        "en": "A wide panoramic view of a calm river, a pale sandy bank and a green cliff under a light blue sky with a white cloud."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Paul Camille Guigou (1864), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת פול קמי גיגו (1864), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "The Banks of the River Durance at Saint Paul",
+        "artistDisplay": "Paul Camille Guigou (French, 1834-1871)",
+        "dateDisplay": "1864",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "62 × 148 cm (24 1/2 × 58 1/4 in.); Framed: 88.3 × 172.8 × 10.2 cm (34 3/4 × 68 × 4 in.)",
+        "creditLine": "Jointly acquired by The Art Institute of Chicago, through the Searle Freedom Trust",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/109693"
+      },
+      "caption": "Paul Camille Guigou. The Banks of the River Durance at Saint Paul, 1864. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/109693.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/c7686c63-3aca-64b6-6710-02f34ccd0767/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 708,
+        "bytes": 114221,
+        "sha256": "af489270c1cdcd781eb5ed59eb35d9955a3f06973853c842aed55ebe3ab84c02",
+        "blurDataUrl": "data:image/webp;base64,UklGRkIAAABXRUJQVlA4IDYAAACwAQCdASoQAAcAA4BaJYgCdAD5fOh4AP6yOu1a9JCLwT80sNUPw9YPEdLelr3UYopFEzMAAAA=",
+        "dominantColor": "#c8d8b8",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 71573,
+      "imageId": "a67c4473-57a4-9807-a94e-1136d3daf876",
+      "slug": "a-holiday",
+      "title": {
+        "en": "A Holiday",
+        "he": "יום חופש"
+      },
+      "artist": {
+        "en": "Edward Henry Potthast",
+        "he": "אדוארד הנרי פוטהאסט"
+      },
+      "date": {
+        "en": "c. 1915",
+        "he": "בסביבות 1915"
+      },
+      "yearCreated": 1915,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 764,
+      "widthMm": 1018,
+      "series": "shoreline",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 14500,
+      "priceUsd": 3900,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 120,
+      "sampleOrder": null,
+      "alt": {
+        "he": "ילדים בבגדים לבנים משתכשכים במים הרדודים בחוף, ומאחוריהם גלים מתנפצים בים כחול.",
+        "en": "Children in white clothes paddle in the shallow water at the beach, with waves breaking in a blue sea behind them."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Edward Henry Potthast (c. 1915), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת אדוארד הנרי פוטהאסט (בסביבות 1915), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "A Holiday",
+        "artistDisplay": "Edward Henry Potthast (American, 1857–1927)",
+        "dateDisplay": "c. 1915",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "76.4 × 101.8 cm (30 1/8 × 40 1/8 in.)",
+        "creditLine": "Friends of American Art Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/71573"
+      },
+      "caption": "Edward Henry Potthast. A Holiday, c. 1915. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/71573.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/a67c4473-57a4-9807-a94e-1136d3daf876/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1261,
+        "bytes": 308242,
+        "sha256": "feeb144d3131a187ab47d090ac3e24bceaa2ddfcf04ba1616aaf2df1bf355ecf",
+        "blurDataUrl": "data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACwAQCdASoQAAwAA4BaJQBOgCHh9nEAAP5VsaA+Doq8oXi9vceWQ4Kl8nzElHdFMLquIyfKU7PnmICtMmVtE5BlpQjYAAAA",
+        "dominantColor": "#88b8b8",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 186427,
+      "imageId": "4457ef17-3808-b015-5deb-ad8a961eb970",
+      "slug": "antibes",
+      "title": {
+        "en": "Antibes",
+        "he": "אנטיב"
+      },
+      "artist": {
+        "en": "Attributed to Henri Edmond Cross",
+        "he": "מיוחס לאנרי אדמון קרוס"
+      },
+      "date": {
+        "en": "1907",
+        "he": "1907"
+      },
+      "yearCreated": 1907,
+      "medium": "WATERCOLOR",
+      "surface": "PAPER",
+      "mediumDetail": {
+        "en": "Watercolor with black chalk on paper",
+        "he": "צבעי מים וגיר שחור על נייר"
+      },
+      "heightMm": 420,
+      "widthMm": 317,
+      "series": "works-on-paper",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 1900,
+      "priceUsd": 520,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 130,
+      "sampleOrder": null,
+      "alt": {
+        "he": "צבעי מים: עצי ברוש ועצי זית בכחול ובירוק בנקודות צבע, ומעבר למים עיר עם בתים אדומים.",
+        "en": "Watercolour: cypress and olive trees in blue and green dabs of colour, with a town of red buildings across the water."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Attributed to Henri Edmond Cross (1907), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת מיוחס לאנרי אדמון קרוס (1907), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Antibes",
+        "artistDisplay": "Attributed to Henri Edmond Cross\nFrench, 1856-1910",
+        "dateDisplay": "1907",
+        "mediumDisplay": "Watercolor, with black chalk, on ivory laid paper, laid down on tan board",
+        "dimensions": "42 × 31.7 cm (16 9/16 × 12 1/2 in.)",
+        "creditLine": "Gift of Dorothy Braude Edinburg to the Harry B. and Bessie K. Braude Memorial Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/186427"
+      },
+      "caption": "Attributed to Henri Edmond Cross. Antibes, 1907. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/186427.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/4457ef17-3808-b015-5deb-ad8a961eb970/full/1686,/0/default.jpg",
+        "width": 1511,
+        "height": 2000,
+        "bytes": 510986,
+        "sha256": "e96fc8afa2e812e050b21f2cf5b5c8a296e68f564652b7f50be6f360510125fb",
+        "blurDataUrl": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAAAQAgCdASoMABAAA4BaJYgCdAEUqqw70SaQAP7rYREjwqCtVQH1WESvL8McCV/G+n5YAsYwSBONKaHJD7Q3er/vN4yPdFYhHCkoWaQAAAA=",
+        "dominantColor": "#e8e8c8",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 30928,
+      "imageId": "7182fe78-c4dd-c30d-2ae7-d1e018aacfd8",
+      "slug": "terrace-bridge-central-park",
+      "title": {
+        "en": "The Terrace Bridge, Central Park",
+        "he": "גשר הטרסה"
+      },
+      "artist": {
+        "en": "Maurice Prendergast",
+        "he": "מוריס פרנדרגאסט"
+      },
+      "date": {
+        "en": "1901",
+        "he": "1901"
+      },
+      "yearCreated": 1901,
+      "medium": "WATERCOLOR",
+      "surface": "PAPER",
+      "mediumDetail": {
+        "en": "Watercolor over graphite on paper",
+        "he": "צבעי מים על רישום עיפרון, על נייר"
+      },
+      "heightMm": 388,
+      "widthMm": 569,
+      "series": "works-on-paper",
+      "status": "SOLD",
+      "holdReason": null,
+      "priceIls": 2600,
+      "priceUsd": null,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 140,
+      "sampleOrder": 3,
+      "alt": {
+        "he": "צבעי מים: המון אנשים בבגדים צבעוניים ובשמשיות יורדים במדרגות אבן רחבות בפארק, מוקפים עצים.",
+        "en": "Watercolour: a crowd of people in colourful clothes with parasols walking down wide stone steps in a park, surrounded by trees."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Maurice Prendergast (1901), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת מוריס פרנדרגאסט (1901), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "The Terrace Bridge, Central Park",
+        "artistDisplay": "Maurice Prendergast\nAmerican, 1858-1924",
+        "dateDisplay": "1901",
+        "mediumDisplay": "Watercolor, over graphite, on ivory wove paper",
+        "dimensions": "38.8 × 56.9 cm (15 5/16 × 22 7/16 in.)",
+        "creditLine": "Olivia Shaler Swan Memorial Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/30928"
+      },
+      "caption": "Maurice Prendergast. The Terrace Bridge, Central Park, 1901. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/30928.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/7182fe78-c4dd-c30d-2ae7-d1e018aacfd8/full/1686,/0/default.jpg",
+        "width": 1686,
+        "height": 1157,
+        "bytes": 371862,
+        "sha256": "1c0849fab1a03e0ce8d678acb57853bcdb6915c52baa4128bc4cd1420c21c9a7",
+        "blurDataUrl": "data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAAAQAgCdASoQAAsAA4BaJQBOgCPtLdyQV4AAAPukZVhkNX64eTB1lTQzeWr0l5Gl1mCIRVFOZ/QK3GO4dpGz5mDRbOzyPJmDe/GqIAAA",
+        "dominantColor": "#b8a898",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 270002,
+      "imageId": "15a0f792-0c21-406e-3e4d-ac8c2393c873",
+      "slug": "interior-music-room",
+      "title": {
+        "en": "Interior. The Music Room, Strandgade 30",
+        "he": "פנים. חדר המוזיקה"
+      },
+      "artist": {
+        "en": "Vilhelm Hammershøi",
+        "he": "וילהלם המרסהוי"
+      },
+      "date": {
+        "en": "1907",
+        "he": "1907"
+      },
+      "yearCreated": 1907,
+      "medium": "OIL",
+      "surface": "CANVAS",
+      "mediumDetail": {
+        "en": "Oil on canvas",
+        "he": "שמן על בד"
+      },
+      "heightMm": 700,
+      "widthMm": 590,
+      "series": "interiors-still-life",
+      "status": "NOT_FOR_SALE",
+      "holdReason": null,
+      "priceIls": null,
+      "priceUsd": null,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 150,
+      "sampleOrder": null,
+      "alt": {
+        "he": "חדר שקט בגוני אפור: פסנתר עתיק, כיסא לבן וצ׳לו נשען על הקיר, מתחת לתמונה ממוסגרת.",
+        "en": "A quiet room in shades of grey: an old piano, a white chair and a cello leaning on the wall below a framed picture."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Vilhelm Hammershøi (1907), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת וילהלם המרסהוי (1907), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Interior. The Music Room, Strandgade 30",
+        "artistDisplay": "Vilhelm Hammershøi (Danish, 1864–1916)",
+        "dateDisplay": "1907",
+        "mediumDisplay": "Oil on canvas",
+        "dimensions": "70 × 59 cm (27 9/16 × 23 1/4 in.); Framed: 85.5 × 75.3 × 8.9 cm (33 5/8 × 29 5/8 × 3 1/2 in.)",
+        "creditLine": "Joseph Winterbotham Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/270002"
+      },
+      "caption": "Vilhelm Hammershøi. Interior. The Music Room, Strandgade 30, 1907. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/270002.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/15a0f792-0c21-406e-3e4d-ac8c2393c873/full/!2000,2000/0/default.jpg",
+        "width": 1687,
+        "height": 2000,
+        "bytes": 219126,
+        "sha256": "7acecfdd2ae08265bfd13628c2c6bb7b609edf1065f91d3b948b96a782a45172",
+        "blurDataUrl": "data:image/webp;base64,UklGRkgAAABXRUJQVlA4IDwAAADQAQCdASoNABAAA4BaJYwC7ADc6t6eQgD+vJRLwXPiax6BVpT2DFBT2PUDEooQWCawTNkwGx4l+FEAAAA=",
+        "dominantColor": "#484838",
+        "fallback": false
+      }
+    },
+    {
+      "aicId": 65930,
+      "imageId": "2a328b12-cb68-19e8-3843-b2160f007813",
+      "slug": "still-life-no-15",
+      "title": {
+        "en": "Still Life No. 15",
+        "he": "טבע דומם מס׳ 15"
+      },
+      "artist": {
+        "en": "Marsden Hartley",
+        "he": "מרסדן הארטלי"
+      },
+      "date": {
+        "en": "c. 1917",
+        "he": "בסביבות 1917"
+      },
+      "yearCreated": 1917,
+      "medium": "OIL",
+      "surface": "BOARD",
+      "mediumDetail": {
+        "en": "Oil on composition board",
+        "he": "שמן על לוח דחוס"
+      },
+      "heightMm": 594,
+      "widthMm": 495,
+      "series": "interiors-still-life",
+      "status": "AVAILABLE",
+      "holdReason": null,
+      "priceIls": 6900,
+      "priceUsd": 1850,
+      "canBeRolled": false,
+      "crate": false,
+      "quoteOnly": false,
+      "featured": false,
+      "sortOrder": 160,
+      "sampleOrder": null,
+      "alt": {
+        "he": "טבע דומם: גביע לבן עם עיטור כחול ובו פרח ורוד אחד, על רקע בדים בצהוב ובכחול ורקע שחור.",
+        "en": "A still life: a white goblet with blue decoration holding one pink flower, set against draped yellow and blue cloth on a black background."
+      },
+      "description": {
+        "en": "Demo listing using a public-domain painting by Marsden Hartley (c. 1917), The Art Institute of Chicago (CC0). This is a placeholder for the painter's own work; it is not for sale, and checkout accepts test payments only.",
+        "he": "רישום הדגמה המשתמש בציור ברשות הציבור מאת מרסדן הארטלי (בסביבות 1917), מכון האמנות של שיקגו (CC0). זהו ממלא מקום ליצירות של האמנית; הציור אינו מוצע למכירה, והקופה מקבלת תשלומי בדיקה בלבד."
+      },
+      "aic": {
+        "title": "Still Life No. 15",
+        "artistDisplay": "Marsden Hartley (American, 1877–1943)",
+        "dateDisplay": "c. 1917",
+        "mediumDisplay": "Oil on composition board",
+        "dimensions": "59.4 × 49.5 cm (23 3/8 × 19 1/2 in.)",
+        "creditLine": "Alfred Stieglitz Collection",
+        "isPublicDomain": true,
+        "url": "https://www.artic.edu/artworks/65930"
+      },
+      "caption": "Marsden Hartley. Still Life No. 15, c. 1917. The Art Institute of Chicago.",
+      "license": "CC0-1.0",
+      "image": {
+        "file": "data/demo-images/65930.jpg",
+        "sourceUrl": "https://www.artic.edu/iiif/2/2a328b12-cb68-19e8-3843-b2160f007813/full/1686,/0/default.jpg",
+        "width": 1663,
+        "height": 2000,
+        "bytes": 447795,
+        "sha256": "07273651e31bbafca4cf4821c4ca6adabba33fa29ed8e028fcb52961b9f033c4",
+        "blurDataUrl": "data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAADwAQCdASoNABAAA4BaJZQAAmjI2JsiJsAA/uv62O8rFuZpu/eybkvDgfA4oDMNvC+MZnIzNYXsstFc5O37fkJInfxe7txADmHMdhvXKyjr87lKfAA=",
+        "dominantColor": "#383838",
+        "fallback": false
+      }
+    }
+  ]
+}
