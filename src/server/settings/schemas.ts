@@ -89,15 +89,16 @@ export const surchargeSchema = z.object({
   id: z.string().min(1),
   label: localized,
   enabled: z.boolean(),
-  kind: z.enum(["PERCENT", "FIXED"]),
-  /** PERCENT: percentage of the base rate; FIXED: whole ILS per piece. */
+  /** PCT: percentage of the base class rate; FIXED: whole ILS per piece. */
+  kind: z.enum(["PCT", "FIXED"]),
   value: nonNegNum,
-  /** Zones it applies to; empty = all carrier zones. */
-  zones: z.array(zoneIdSchema).default([]),
-  /** Optional time box, inclusive dates (Asia/Jerusalem). */
-  from: isoDate.nullable().default(null),
-  to: isoDate.nullable().default(null),
+  /** `"ALL"` or the listed zones (spec §4.4). */
+  zones: z.union([z.literal("ALL"), z.array(zoneIdSchema).min(1)]),
+  /** Optional time box; active when `startsOn ≤ date ≤ endsOn` (inclusive, Asia/Jerusalem). */
+  startsOn: isoDate.nullable().default(null),
+  endsOn: isoDate.nullable().default(null),
 });
+export type Surcharge = z.infer<typeof surchargeSchema>;
 
 export const insuranceSettingsSchema = z.object({
   enabled: z.boolean(),
