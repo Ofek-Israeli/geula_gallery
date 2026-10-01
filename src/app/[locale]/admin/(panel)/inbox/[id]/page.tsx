@@ -286,6 +286,7 @@ export default async function RequestDetailPage({
           successText={t("sent")}
           errorNamespace={err}
           testId="reply-form"
+          resetOnSuccess
         >
           <ReplyTemplatePicker
             label={t("replyTemplate")}

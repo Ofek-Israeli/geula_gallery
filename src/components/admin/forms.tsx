@@ -9,13 +9,13 @@ import {
   useEffect,
   useId,
   useRef,
+  useTransition,
 } from "react";
 import { type ButtonVariant, buttonClasses } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Select, type SelectOption } from "@/components/ui/Select";
-import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
 import { LOCALE_FIELD } from "@/lib/forms";
 import type { Locale } from "@/lib/locale";
@@ -87,6 +87,7 @@ export function ActionForm({
   className,
   testId,
   inline = false,
+  resetOnSuccess = false,
 }: {
   action: AdminFormAction;
   locale: Locale;
@@ -103,16 +104,33 @@ export function ActionForm({
   className?: string;
   testId?: string;
   inline?: boolean;
+  /** Clear the fields after a successful submit (e.g. a sent reply). */
+  resetOnSuccess?: boolean;
 }) {
-  const [state, formAction] = useActionState(
+  const [state, formAction, pending] = useActionState(
     action as unknown as BoundAction,
     null,
   );
+  const [, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
   const idPrefix = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  useEffect(() => {
+    if (state?.ok && resetOnSuccess) formRef.current?.reset();
+  }, [state, resetOnSuccess]);
   return (
     <Ctx.Provider value={{ idPrefix, state }}>
       <form
+        ref={formRef}
+        // Without JS the form posts to the Server Action (progressive enhancement). Once hydrated,
+        // submit through a transition instead: React resets a form after an `action` submission,
+        // which would wipe what the admin typed when the server answers with an error.
         action={formAction}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const submitter = (event.nativeEvent as SubmitEvent).submitter;
+          const data = new FormData(event.currentTarget, submitter);
+          startTransition(() => formAction(data));
+        }}
         className={
           className ??
           (inline ? "flex flex-wrap items-end gap-3" : "flex flex-col gap-4")
@@ -131,16 +149,18 @@ export function ActionForm({
               label={submitLabel}
               variant={submitVariant}
               size={submitSize}
+              pending={pending}
               {...confirm}
             />
           ) : (
-            <SubmitButton
-              variant={submitVariant}
-              size={submitSize}
-              pendingLabel={pendingLabel}
+            <button
+              type="submit"
+              className={buttonClasses(submitVariant, submitSize)}
+              disabled={pending}
+              aria-disabled={pending || undefined}
             >
-              {submitLabel}
-            </SubmitButton>
+              {pending && pendingLabel ? pendingLabel : submitLabel}
+            </button>
           )}
           <FormStatus
             successText={successText}
@@ -159,10 +179,12 @@ function ConfirmSubmit({
   title,
   message,
   confirmLabel,
+  pending,
 }: ConfirmSpec & {
   label: ReactNode;
   variant: ButtonVariant;
   size: "md" | "sm";
+  pending: boolean;
 }) {
   const t = useTranslations("common.form");
   const ref = useRef<HTMLDialogElement>(null);
@@ -174,6 +196,7 @@ function ConfirmSubmit({
         type="button"
         className={buttonClasses(variant, size)}
         aria-haspopup="dialog"
+        disabled={pending}
         onClick={() => ref.current?.showModal()}
       >
         {label}
