@@ -91,7 +91,8 @@ const TLS_KILL_SWITCH = ["NODE", "TLS", "REJECT", "UNAUTHORIZED"].join("_");
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const PHONE =
   /(?<![\w.+-])(?:\+\d{1,3}[\s-]?\(?\d{1,4}\)?(?:[\s-]?\d{2,4}){2,3}|0\d{1,2}-?\d{3}-?\d{4}|\(\d{3}\)\s?\d{3}-\d{4})(?![\w-])/g;
-const NINE_DIGITS = /(?<![\d.,_-])\d{9}(?![\d.,_])/g;
+// Not inside a longer alphanumeric token (hex hashes, base64), which are never ID numbers.
+const NINE_DIGITS = /(?<![\w.,-])\d{9}(?![\w.,])/g;
 
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|json|ya?ml|sh|toml)$|(?:^|\/)\.env[^/]*$/;
 const PII_SCOPE =

@@ -195,6 +195,14 @@ describe("PII in fixtures and seeds (allowlist)", () => {
     }
     expect(rules("src/lib/phone.ts", text)).toEqual([]);
   });
+
+  it("ignores nine-digit runs inside hashes and base64", () => {
+    const text = [
+      '"sha256": "bd9d437206644dd766e9967ff505fb555952ba6ec7b49121b5621e127289f35c",',
+      '"blur": "data:image/webp;base64,UklGRk123456789xYz",',
+    ].join("\n");
+    expect(rules("data/demo-manifest.json", text)).toEqual([]);
+  });
 });
 
 describe("paths and history", () => {
