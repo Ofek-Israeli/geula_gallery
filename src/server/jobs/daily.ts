@@ -21,6 +21,7 @@ import { transition } from "@/server/domain/transition";
 import { env } from "@/server/env";
 import { goLiveBlockers } from "@/server/golive";
 import { checkInvariants } from "@/server/invariants";
+import { runCardcomDailyChecks } from "@/server/payments/sweep";
 import { getSettingOrNull } from "@/server/settings";
 import { notifyCriticalAlerts } from "./alert-emails";
 import type { CronJob, CronJobContext } from "./index";
@@ -38,12 +39,13 @@ import type { CronJob, CronJobContext } from "./index";
  * 2. COMPLETED transitions (spec §3.6): PAID, delivered or collected, the window has passed (4
  *    months after the window start when a conversation took place, else 14 days), no open
  *    cancellation, no fulfillment block, no pending export declaration.
- * 3. `checkInvariants()` (Tier B) → one CRITICAL alert per violation.
- * 4. Go-live digest (outside demo mode): CRITICAL alert listing the blockers.
- * 5. `admin-alert` emails for open CRITICAL alerts (once per alert).
- *
- * Not here: the Cardcom tail poll and the live ListTransactions sweep (spec §5.11) belong to WS2
- * (`payments/sweep.ts`); the integrator wires them into this job in M4.
+ * 3. Cardcom checks (WS2's `payments/sweep.ts#runCardcomDailyChecks`): the 30-day tail poll of
+ *    expired attempts and, in live mode with an ApiPassword, the ListTransactions sweep (unmatched
+ *    money → CRITICAL alert). Stats: `cardcomTail`, `cardcomSweep`.
+ * 4. `checkInvariants()` (Tier B) → one CRITICAL alert per violation.
+ * 5. Go-live digest (outside demo mode): CRITICAL alert listing the blockers.
+ * 6. `admin-alert` emails for open CRITICAL alerts (once per alert), last so that the alerts of
+ *    the earlier steps are mailed the same day.
  */
 const DAY = 86_400_000;
 
@@ -54,6 +56,15 @@ export const dailyJob: CronJob = async (ctx) => {
   const steps: [string, () => Promise<unknown>][] = [
     ["deadlines", () => deadlineAlerts(db, now)],
     ["completed", () => completeOrders(ctx, db, now)],
+    [
+      "cardcom",
+      async () => {
+        const r = await runCardcomDailyChecks(ctx, { db });
+        stats.cardcomTail = r.cardcomTail;
+        stats.cardcomSweep = r.cardcomSweep;
+        return r.cardcomSweep.skipped ?? "ok";
+      },
+    ],
     ["invariants", () => invariantAlerts(db)],
     ["golive", () => goLiveDigest(db, now)],
     ["alertEmails", () => notifyCriticalAlerts(db, { now })],
@@ -65,7 +76,6 @@ export const dailyJob: CronJob = async (ctx) => {
     }
     stats[name] = await fn();
   }
-  stats.cardcomTail = "not wired (WS2 payments/sweep.ts)";
   return stats;
 };
 

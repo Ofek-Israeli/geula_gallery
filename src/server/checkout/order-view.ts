@@ -150,7 +150,7 @@ export async function getBuyerOrder(
             destinationCountry: order.shipCountry,
             isDemo: order.isDemo,
             paypalForIsraeliDestinations: checkout.paypalForIsraeliDestinations,
-            liveBlocked: await liveProvidersBlocked(db),
+            liveBlocked: await liveProvidersBlocked(db, deps.env ?? defaultEnv),
           },
           { env: deps.env ?? defaultEnv },
         ).map((p) => p.id)

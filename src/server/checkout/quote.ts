@@ -4,6 +4,7 @@ import type { Currency } from "@/lib/money";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import { artworks } from "@/server/db/schema";
 import { env as defaultEnv, type Env } from "@/server/env";
+import { liveBlocked } from "@/server/golive";
 import {
   buildProvider,
   checkoutProviders,
@@ -33,10 +34,20 @@ export interface QuoteDeps {
   now?: Date;
 }
 
-/** Go-live blockers (WS6 `golive.ts`); until then: the business profile is not completed. */
-export async function liveProvidersBlocked(db: DbOrTx): Promise<boolean> {
-  const profile = await getSetting("business_profile", db);
-  return !profile.completed;
+/**
+ * `liveBlocked` for `checkoutProviders` (spec §5.1 step 3.4): WS6's go-live blockers
+ * (`golive.ts#liveBlocked`). They only matter when a configured provider is LIVE, so the blocker
+ * queries run only then.
+ */
+export async function liveProvidersBlocked(
+  db: DbOrTx,
+  e: Env = defaultEnv,
+): Promise<boolean> {
+  const anyLive = e.PAYMENT_PROVIDERS.some(
+    (id) => buildProvider(id, { env: e })?.mode === "LIVE",
+  );
+  if (!anyLive) return false;
+  return liveBlocked({ db, env: e });
 }
 
 export async function getCheckoutQuote(
@@ -82,7 +93,6 @@ export async function getCheckoutQuote(
   const checkout = await getSetting("checkout", db);
   const shipping = await getSetting("shipping", db);
   const profile = await getSetting("business_profile", db);
-  const liveBlocked = !profile.completed;
 
   // A demo item is never offered while a live provider is configured (spec §5.1 step 1).
   if (a.isDemo) {
@@ -100,7 +110,7 @@ export async function getCheckoutQuote(
       destinationCountry: country,
       isDemo: a.isDemo,
       paypalForIsraeliDestinations: checkout.paypalForIsraeliDestinations,
-      liveBlocked,
+      liveBlocked: await liveProvidersBlocked(db, e),
     },
     { env: e },
   );

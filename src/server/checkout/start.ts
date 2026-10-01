@@ -36,7 +36,7 @@ import { detectConversation } from "./conversation";
 import { orderItemValues } from "./items";
 import { orderDetailsComplete } from "./link-details";
 import { itemPriceMinor } from "./pricing";
-import { getCheckoutQuote } from "./quote";
+import { getCheckoutQuote, liveProvidersBlocked } from "./quote";
 import {
   allReservable,
   checkHoldCaps,
@@ -631,6 +631,10 @@ export async function startPaymentForOrder(
   const e = deps.env ?? defaultEnv;
   const provider = buildProvider(input.providerId, { env: e });
   if (!provider) {
+    return withEffects({ kind: "refused", code: "provider_unavailable" });
+  }
+  // Live providers are refused while go-live blockers exist (spec §5.1 step 3.4), as on the page.
+  if (provider.mode === "LIVE" && (await liveProvidersBlocked(db, e))) {
     return withEffects({ kind: "refused", code: "provider_unavailable" });
   }
   const checkout = await getSetting("checkout", db);
