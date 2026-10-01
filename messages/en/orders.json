@@ -1,1 +1,91 @@
-{}
+{
+  "title": "Order {number}",
+  "status": {
+    "AWAITING_PAYMENT": "Awaiting payment",
+    "PAYMENT_REVIEW": "Payment being confirmed",
+    "PAID": "Paid",
+    "EXPIRED": "Reservation ended",
+    "CANCELLED": "Cancelled",
+    "COMPLETED": "Completed"
+  },
+  "holdUntil": "Reserved for you until {time}",
+  "holdLapsed": "Your reservation time is up. If the work is still free you can try again.",
+  "payNow": "Pay now",
+  "provider": "Payment method",
+  "release": "Release my reservation",
+  "releaseConfirm": "Release the reservation? The work becomes available to other buyers.",
+  "released": "The reservation was released.",
+  "inFlight": "Your payment is being confirmed. Please wait – this page refreshes by itself.",
+  "checking": "Checking your payment… this page refreshes every few seconds.",
+  "payment": {
+    "paid": "Thank you! Your payment was received.",
+    "already_final": "This payment has already been processed.",
+    "pending": "We have not received a confirmation yet. If you paid, it will appear here shortly.",
+    "capturing": "Your payment is being confirmed.",
+    "review": "Your payment is under review by the provider. We will email you when it is confirmed.",
+    "needs_refund": "Your payment could not be applied to this order. It is being refunded in full; we have emailed you.",
+    "failed": "The payment did not go through. You were not charged.",
+    "canceled": "The payment was cancelled. You were not charged.",
+    "expired": "The payment page expired. You were not charged.",
+    "refunded": "This payment was refunded.",
+    "deferred": "Your payment is being confirmed.",
+    "lost_before_capture": "Sorry – the work was sold to another buyer before your payment was taken. You were not charged.",
+    "config_drift": "We could not verify the payment yet. We are looking into it.",
+    "unknown": "We could not reach the payment provider. We will keep checking."
+  },
+  "summary": {
+    "title": "Summary",
+    "items": "Work",
+    "shipping": "Shipping",
+    "insurance": "Insurance",
+    "total": "Total",
+    "method": "Delivery",
+    "destination": "Destination"
+  },
+  "paid": {
+    "title": "Your order is confirmed",
+    "body": "A confirmation with the disclosure document is on its way to your email. We will let you know when the work ships.",
+    "cancel": "Want to cancel? Use the cancellation form"
+  },
+  "review": {
+    "body": "The payment provider is reviewing the payment. The work stays reserved for you meanwhile."
+  },
+  "expired": {
+    "body": "This reservation ended without a completed payment. You were not charged.",
+    "again": "See the work"
+  },
+  "cancelled": {
+    "body": "This order was cancelled. Any payment taken is refunded in full."
+  },
+  "attempts": {
+    "title": "Payment attempts",
+    "status": {
+      "CREATED": "Started",
+      "PENDING": "Waiting for payment",
+      "AWAITING_CAPTURE": "Approved",
+      "CAPTURING": "Being confirmed",
+      "PAYMENT_REVIEW": "Under review",
+      "SUCCEEDED": "Paid",
+      "FAILED": "Failed",
+      "CANCELED": "Cancelled",
+      "EXPIRED": "Expired",
+      "NEEDS_REFUND": "Being refunded",
+      "REFUNDED": "Refunded"
+    }
+  },
+  "errors": {
+    "not_payable": "This order can no longer be paid.",
+    "in_flight": "A payment is being confirmed. Please wait.",
+    "too_many_attempts": "Too many payment attempts for this order. Please contact us.",
+    "just_reserved": "Sorry – the work has been reserved by another buyer.",
+    "hold_count_exceeded": "This reservation cannot be renewed again. Please start a new checkout.",
+    "hold_span_exceeded": "This reservation cannot be renewed again. Please start a new checkout.",
+    "too_many_holds": "You already have works reserved.",
+    "artwork_hold_budget": "This work has been reserved for you too many times today.",
+    "hold_cooldown": "Please try again in a few minutes.",
+    "provider_unavailable": "This payment method is not available.",
+    "provider_error": "We could not open the payment page. Please try again.",
+    "generic": "Something went wrong. Please try again.",
+    "rate_limited": "Too many attempts. Please try again in a few minutes."
+  }
+}
