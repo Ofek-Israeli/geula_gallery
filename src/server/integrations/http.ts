@@ -10,6 +10,9 @@ import { log } from "@/server/log";
  * adapter relies on with zod; an unparseable response counts as "outcome unknown".
  *
  * WS5 owns this file after `contracts-v1`; the error classes are a frozen contract.
+ *
+ * `recordingFetch()` captures redacted request/response pairs for fixtures (`RECORD_FIXTURES`,
+ * the live `check:*` scripts); `parseBodyText()` is the shared tolerant body reader.
  */
 
 export type ProviderName =
@@ -200,13 +203,15 @@ export function expectData<S extends z.ZodType>(
     throw new ProviderUnavailableError(provider, `HTTP ${status}`, status);
   }
   if (status >= 400) {
-    const code =
+    // PayPal `name`, generic `code`, Cardcom `ResponseCode`, Morning `errorCode`.
+    const body =
       typeof result.error === "object" && result.error !== null
-        ? String(
-            (result.error as Record<string, unknown>).name ??
-              (result.error as Record<string, unknown>).code ??
-              "",
-          ) || undefined
+        ? (result.error as Record<string, unknown>)
+        : {};
+    const raw = body.name ?? body.code ?? body.ResponseCode ?? body.errorCode;
+    const code =
+      typeof raw === "string" || typeof raw === "number"
+        ? String(raw) || undefined
         : undefined;
     throw new ProviderRejectedError(provider, `HTTP ${status}`, status, code);
   }
@@ -222,4 +227,59 @@ export function expectData<S extends z.ZodType>(
     );
   }
   return parsed.data;
+}
+
+// ---------------------------------------------------------------- fixtures (RECORD_FIXTURES)
+
+/** One redacted HTTP exchange, as stored under `tests/fixtures/<provider>/*.json`. */
+export interface RecordedExchange {
+  request: { method: string; path: string; body: unknown };
+  response: { status: number; body: unknown };
+}
+
+/** Parses a JSON body; anything else (empty, HTML, binary) is returned as `{ text }` metadata. */
+export function parseBodyText(text: string): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { nonJsonBodyLength: text.length };
+  }
+}
+
+/**
+ * Wraps a fetch so every exchange is appended to `sink` with both bodies passed through `redact`
+ * first. Only the path and query are kept (no host), and headers are never recorded, so
+ * credentials and tokens cannot leak into fixtures. Bodies are read from clones; the caller's
+ * request and response are untouched.
+ */
+export function recordingFetch(
+  base: FetchLike,
+  sink: RecordedExchange[],
+  redactBody: (body: unknown) => unknown,
+): FetchLike {
+  return async (request: Request) => {
+    const url = new URL(request.url);
+    const reqText = await request
+      .clone()
+      .text()
+      .catch(() => "");
+    const response = await base(request);
+    const resText = await response
+      .clone()
+      .text()
+      .catch(() => "");
+    sink.push({
+      request: {
+        method: request.method.toUpperCase(),
+        path: `${url.pathname}${url.search}`,
+        body: redactBody(parseBodyText(reqText)),
+      },
+      response: {
+        status: response.status,
+        body: redactBody(parseBodyText(resText)),
+      },
+    });
+    return response;
+  };
 }
