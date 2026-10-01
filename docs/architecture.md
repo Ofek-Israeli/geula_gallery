@@ -1278,3 +1278,86 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   counter's contrast is measured mid-animation.
 - yet-another-react-lightbox interpolates `{index}`/`{total}` itself: pass the next-intl message
   with literal placeholders (`t("position", { index: "{index}", total: "{total}" })`).
+
+### M3 WS4 notes (admin and requests)
+
+**What exists**
+- Catalog: `server/catalog/mutations.ts` (create, section edits, image role/order/delete, offline hold,
+  offline sale, not for sale / for sale, relist, damaged) and `server/catalog/publish.ts` (pure
+  `publishChecklist`, publish/unpublish). Pages `/admin/artworks`, `/new`, `/[id]` (Photos via the
+  frozen upload route, Details, Size, Price & sale, Shipping with "use suggestion" and the live class
+  and zone estimates, Customs, Publish checklist, sale-state actions).
+- Requests: `server/requests/service.ts` (submit question / quote / offer, inbox reads, reply,
+  decline, close, `sendQuote`, `answerOffer`, and the props builders for `request-ack`,
+  `request-reply`, `painter-new-request`, wired into `email/props.ts`). Public form
+  `/works/[slug]/request?kind=question|quote|offer`; inbox `/admin/inbox`, `/[id]`.
+- Orders: `/admin/orders/[id]` with translated labels, the refund dialog, refund confirmations,
+  tax-document retry / manual record, record payment and cancel-unpaid; `/admin/orders/new`
+  (manual order). Services added to `server/orders/admin.ts`.
+- Dashboard, alerts (acknowledge, retry DEAD), settings index / business / checkout (read-only
+  providers panel), account (password, TOTP enrol/disable, backup codes), `/admin/more`, nav badges.
+- New WS4 read models live in `src/server/admin/{catalog,dashboard,alerts,settings}.ts` (the spec
+  tree names no module for admin reads).
+- Tests: integration `admin-catalog`, `requests`, `admin-money`; e2e `admin-artwork`,
+  `admin-offline`, `quote`, `offer`, `manual-order`, `admin-auth` (project `auth-limits`),
+  `admin-a11y`; helpers `tests/helpers/factories/admin.ts`, `tests/e2e/support/admin.ts`.
+
+**Decisions and deviations**
+- Live-checkout override (spec §5.9): the admin action locks the artwork *and the holder's other
+  artworks* (id order) before the order, expires an AWAITING_PAYMENT holder with reason `ADMIN`
+  and clears its holds; refused with `PAYMENT_IN_FLIGHT` while the holder has a CAPTURING /
+  PAYMENT_REVIEW attempt, `LIVE_HOLD` without `confirmOverride`. A lapsed hold is cleared silently.
+  The editor knows the hold, so the confirm dialog is shown up front (one step).
+- Price changes: changing an existing ILS or USD price needs `confirmPriceChange`
+  (`PRICE_CONFIRM_REQUIRED`, the checkbox then appears); setting a first price does not. Audited as
+  `artwork.price_changed` with before/after.
+- Publish checklist: titles, slug, MAIN image, he+en alt on every image, ILS price (unless price on
+  request / quote only), USD price when listed and shipped abroad ("ILS only" = domestic, as in
+  M2), packed dimensions and weight unless pickup-only / quote-only, English customs description
+  when shipped abroad. Making an image MAIN demotes the old MAIN; a DETAIL promoted to MAIN has no
+  OG image (only uploads create one) — the storefront should fall back (WS1).
+- Relist of an ONLINE sale requires order CANCELLED, every refund settled (or confirmed FAILED)
+  with at least one settled, and returns NOT_APPLICABLE / INSPECTED_OK (`INSPECTED_DAMAGED` allowed
+  for "mark damaged"); an OFFLINE sale needs `confirm`. WS6's cancellation close can call
+  `relistArtwork` / `markDamaged`.
+- Offline sales are `is_mock=false`; turnover excludes `is_mock` sales and demo works, converts
+  USD with the order FX (settings FX for offline sales), and uses the Asia/Jerusalem year.
+- Requests: replies use refId `<requestId>:<n>` (n = replies so far, counted from outbox dedupe
+  keys), so each reply is its own idempotent email; the builder reads the stored `admin_reply`
+  (the latest one). A question NEW → REPLIED on the first reply; quotes/offers keep their status on
+  a reply. Offers below `offer_auto_decline_below_ils_minor` (USD converted with settings FX) are
+  AUTO_DECLINED at once with a `request-reply` in the buyer's language (`requests.autoDecline`
+  via `server/i18n.ts`); no ack and no painter email for those.
+- `answerOffer`: "accept" must keep the offered amount and currency, "counter" must differ. Both
+  call `createLinkOrder({ kind: 'OFFER', requestId })`; **WS2's body must set ACCEPTED when the
+  link price equals the offer and COUNTERED otherwise** (the frozen input has no flag).
+  `sendQuote` / manual orders pass `priceChangeReason` (manual orders require it when the price
+  differs from the list price; `PRICE_REQUIRED` when the work has no price in that currency).
+- UNKNOWN refunds: besides "check with the provider" (`reconcileRefund`), the admin can record the
+  dashboard result: UNKNOWN → SUCCEEDED (reference stored in `manual_reference`, `refund-settled`
+  enqueued) or UNKNOWN → FAILED with `failure_confirmed_at` (stops counting; retry allowed).
+- Tax document retry: FAILED → ISSUING with `attempts=0` (the runner's "admin retry" branch) and
+  the job re-enqueued under `taxdoc:receipt:<attemptId>:retry:<docId>:<ts>` (or the credit-note
+  key), because the original job is DONE. NEEDS_MANUAL → ISSUED records a hand-issued number.
+- Order detail keeps the raw attempt / shipment status as a small `<code>` next to the translated
+  badge (`data-testid="attempt-status"` / `"shipment-status"`; `purchase-il` asserts them).
+- Admin forms (`components/admin/forms.tsx`): once hydrated they submit through a transition,
+  because React resets a form after an `action` submission and would wipe the typed values on a
+  server error. Without JS they still post to the Server Action. Errors translate
+  `<errorNamespace>.<CODE>`, falling back to `admin-shell.errors.*`.
+- Go-live readiness on the dashboard is computed from env and settings; M4 should switch it to
+  WS6's `server/golive.ts`.
+- `admin-auth` 429 check: E2E runs with `RATE_LIMIT_SCALE=100`, so the spec sends 5 × 100 failed
+  sign-ins from its own `x-forwarded-for` and expects the next one to be 429.
+
+**Depends on other streams (stubs today)**
+- `createLinkOrder` and `recordOfflinePayment` are WS2 bodies (still `NotImplementedError` here):
+  "send quote", "accept/counter offer", the manual order and "record payment" show
+  "still being built" (`NOT_IMPLEMENTED`). The e2e specs `quote`, `offer` and `manual-order` skip
+  at runtime at exactly that call and run fully after M4; integration cases skip the same way.
+  The link-order page steps (requote by method change, pay) are `test.fixme` (WS2 UI).
+- `checkout-link` email (WS2) is what the buyer receives after a quote / offer link.
+- WS1: link "Make an offer" from the artwork page when `offersEnabled` (`paths.artworkRequest(slug,
+  'offer')`), and the contact page can call `submitRequest({ kind: 'QUESTION', topic })`.
+
+**Not done**: `/api/admin/blob-upload` (P1), admin live preview, `/admin/series` (P1).
