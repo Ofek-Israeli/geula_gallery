@@ -170,7 +170,9 @@ export default async function OrderPage({
           <h2 className="text-2xl">{t("paid.title")}</h2>
           <p>{t("paid.body")}</p>
           <p>
-            <Link href={paths.cancel(view.number)}>{t("paid.cancel")}</Link>
+            <Link href={paths.cancel(view.number)} className="underline">
+              {t("paid.cancel")}
+            </Link>
           </p>
         </section>
       ) : null}
@@ -179,7 +181,9 @@ export default async function OrderPage({
           <p>{t("expired.body")}</p>
           {firstSlug ? (
             <p>
-              <Link href={paths.artwork(firstSlug)}>{t("expired.again")}</Link>
+              <Link href={paths.artwork(firstSlug)} className="underline">
+                {t("expired.again")}
+              </Link>
             </p>
           ) : null}
         </section>
