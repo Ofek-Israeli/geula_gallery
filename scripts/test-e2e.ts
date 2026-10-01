@@ -1,4 +1,13 @@
-import { notImplemented } from "./lib/not-implemented";
+/**
+ * `npm run test:e2e [-- <playwright args>]` — runs `playwright test` (spec §10.4).
+ * playwright.config.ts starts its own production server on E2E_PORT with a pinned environment
+ * (db:reset of the E2E database, `next build` into `.next-e2e`, `next start`).
+ */
+import { spawnSync } from "node:child_process";
 
-// Stub: replaced by `playwright test` once playwright.config.ts and the smoke spec exist.
-notImplemented("test:e2e", "M1 step 14");
+const result = spawnSync(
+  "npx",
+  ["playwright", "test", ...process.argv.slice(2)],
+  { stdio: "inherit" },
+);
+process.exit(result.status ?? 1);
