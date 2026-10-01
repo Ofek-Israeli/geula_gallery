@@ -101,14 +101,18 @@ describe("payments registry", () => {
     expect(ids(env, { destinationCountry: "US" })).toEqual(["mock"]);
   });
 
-  it("stub adapters expose identity but throw ProviderNotConfiguredError on calls", async () => {
+  it("adapters expose identity and throw ProviderNotConfiguredError without usable credentials", async () => {
     const env = makeEnv();
     const cardcom = buildProvider("cardcom", { env });
     expect(cardcom?.merchantRef()).toBe("1000");
     expect(cardcom?.capabilities.wallets).toEqual(["bit"]);
     expect(cardcom?.capabilities.refunds).toBe("manual");
+    // WS5: the adapter is real now; an unusable terminal number fails before any network call.
+    const unusable = buildProvider("cardcom", {
+      env: makeEnv({ CARDCOM_TERMINAL_NUMBER: "not-a-number" }),
+    });
     await expect(
-      cardcom?.fetchPayment({ providerRef: "x", attemptId: "y" }),
+      unusable?.fetchPayment({ providerRef: "x", attemptId: "y" }),
     ).rejects.toBeInstanceOf(ProviderNotConfiguredError);
     expect(buildProvider("paypal", { env })?.merchantRef()).toBe("MERCHANT");
   });

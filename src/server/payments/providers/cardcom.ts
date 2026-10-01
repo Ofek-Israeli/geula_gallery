@@ -79,12 +79,15 @@ export function createCardcomProvider({
   fetch,
 }: ProviderFactoryInput): PaymentProvider {
   const mode = env.CARDCOM_MODE === "live" ? "LIVE" : "TEST";
-  const client = createTypedClient<paths>({
-    provider: "cardcom",
-    baseUrl: env.CARDCOM_BASE_URL.replace(/\/+$/, ""),
-    ...(fetch ? { fetch } : {}),
-    headers: { Accept: "application/json" },
-  });
+  // Built on first use, so constructing the adapter never touches the network config.
+  let typed: ReturnType<typeof createTypedClient<paths>> | undefined;
+  const api = () =>
+    (typed ??= createTypedClient<paths>({
+      provider: "cardcom",
+      baseUrl: env.CARDCOM_BASE_URL.replace(/\/+$/, ""),
+      ...(fetch ? { fetch } : {}),
+      headers: { Accept: "application/json" },
+    }));
 
   const terminal = (): { terminalNumber: number; apiName: string } => {
     const terminalNumber = Number(env.CARDCOM_TERMINAL_NUMBER);
@@ -163,7 +166,7 @@ export function createCardcomProvider({
         mode,
         threeDSecure: env.CARDCOM_3DS,
       });
-      const result = await client.POST("/api/v11/LowProfile/Create", {
+      const result = await api().POST("/api/v11/LowProfile/Create", {
         body: stripNulls(body),
       });
       const data = expectData("cardcom", result, createResponseSchema);
@@ -189,15 +192,13 @@ export function createCardcomProvider({
     },
 
     async fetchPayment(r) {
-      const result = await client.POST("/api/v11/LowProfile/GetLpResult", {
-        body: (() => {
-          const t = terminal();
-          return {
-            TerminalNumber: t.terminalNumber,
-            ApiName: t.apiName,
-            LowProfileId: r.providerRef,
-          };
-        })(),
+      const t = terminal();
+      const result = await api().POST("/api/v11/LowProfile/GetLpResult", {
+        body: {
+          TerminalNumber: t.terminalNumber,
+          ApiName: t.apiName,
+          LowProfileId: r.providerRef,
+        },
       });
       const data = expectData("cardcom", result, lpResultSchema);
       return mapGetLpResult(data);
@@ -220,7 +221,7 @@ export function createCardcomProvider({
         },
         creds,
       );
-      const result = await client.POST(
+      const result = await api().POST(
         "/api/v11/Transactions/RefundByTransactionId",
         { body },
       );
@@ -254,7 +255,7 @@ export function createCardcomProvider({
       }
       const out: ListedTransaction[] = [];
       for (let page = 1; page <= LIST_MAX_PAGES; page++) {
-        const result = await client.POST(
+        const result = await api().POST(
           "/api/v11/Transactions/ListTransactions",
           {
             body: buildListTransactionsRequest(
