@@ -9,10 +9,14 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 export const AUTH_ISSUER = "Geula Gallery";
 export const MIN_PASSWORD_LENGTH = 12;
 
-/** Better Auth database rate limits (spec §7: 5 per 15 min on sign-in and TOTP verification). */
+/**
+ * Better Auth database rate limits (spec §7: 5 per 15 min on sign-in and TOTP verification).
+ * Backup-code verification gets the same limit (M1 step 9 addition): it is a second factor too.
+ */
 export const AUTH_RATE_LIMIT_RULES = {
   "/sign-in/email": { window: 900, max: 5 },
   "/two-factor/verify-totp": { window: 900, max: 5 },
+  "/two-factor/verify-backup-code": { window: 900, max: 5 },
 } as const;
 
 export interface CreateAuthOptionsInput {
@@ -27,6 +31,16 @@ export interface CreateAuthOptionsInput {
   allowSignUp?: boolean;
   /** Request hooks (e.g. the failed-sign-in recorder added in M1 step 9). */
   hooks?: BetterAuthOptions["hooks"];
+  /**
+   * Atomic rate-limit storage. The app passes one backed by our `rate_limits` table with
+   * HMAC-hashed keys (spec §7: IPs are stored only as hashes). Without it, Better Auth's own
+   * `rate_limit` table is used (scripts never serve HTTP, so they never hit it).
+   */
+  rateLimitStorage?: NonNullable<
+    BetterAuthOptions["rateLimit"]
+  >["customStorage"];
+  /** Database hooks (the app hashes `session.ip_address`). */
+  databaseHooks?: BetterAuthOptions["databaseHooks"];
 }
 
 export function createAuthOptions(input: CreateAuthOptionsInput) {
@@ -48,9 +62,13 @@ export function createAuthOptions(input: CreateAuthOptionsInput) {
       enabled: true,
       storage: "database",
       customRules: { ...AUTH_RATE_LIMIT_RULES },
+      ...(input.rateLimitStorage
+        ? { customStorage: input.rateLimitStorage }
+        : {}),
     },
     // The Next layer spreads these options and appends `nextCookies()` last (spec §6.10).
     plugins: [twoFactor({ issuer: AUTH_ISSUER })],
     ...(input.hooks ? { hooks: input.hooks } : {}),
+    ...(input.databaseHooks ? { databaseHooks: input.databaseHooks } : {}),
   } satisfies BetterAuthOptions;
 }
