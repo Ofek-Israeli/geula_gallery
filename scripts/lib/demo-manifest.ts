@@ -32,6 +32,7 @@ export const demoManifestWorkSchema = z.object({
   canBeRolled: z.boolean(),
   crate: z.boolean(),
   quoteOnly: z.boolean(),
+  shipsInternationally: z.boolean(),
   featured: z.boolean(),
   sortOrder: z.number().int(),
   sampleOrder: z.union([z.literal(1), z.literal(2), z.literal(3)]).nullable(),

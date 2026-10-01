@@ -298,6 +298,7 @@ async function main(): Promise<void> {
       canBeRolled: w.canBeRolled ?? false,
       crate: w.crate ?? false,
       quoteOnly: w.quoteOnly ?? false,
+      shipsInternationally: !w.domesticOnly,
       featured: w.featured ?? false,
       sortOrder: (index + 1) * 10,
       sampleOrder: w.sampleOrder ?? null,

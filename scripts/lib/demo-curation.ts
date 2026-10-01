@@ -52,6 +52,8 @@ export interface DemoWork {
   canBeRolled?: boolean;
   crate?: boolean;
   quoteOnly?: boolean;
+  /** "ILS only" in the §8.3 table: a domestic-only listing (no USD price, no shipping abroad). */
+  domesticOnly?: boolean;
   featured?: boolean;
   alt: { he: string; en: string };
   /** Where the sold works come from (spec §8.4 sample orders 1–3). */
@@ -223,6 +225,7 @@ export const DEMO_WORKS: readonly DemoWork[] = [
     status: "AVAILABLE",
     priceIls: 8900,
     priceUsd: null,
+    domesticOnly: true,
     alt: {
       he: "שדה חיטה צהוב משתפל, דמות בודדת הולכת בו, ערמות שחת אדומות בפינה, ושורת עצים ובתים מתחת לשמיים ירקרקים.",
       en: "A sloping yellow wheat field with a lone walking figure, red haystacks in the corner, and a row of trees and houses under a greenish sky.",
