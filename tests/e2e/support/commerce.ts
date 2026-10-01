@@ -140,3 +140,143 @@ export async function orderStatusByRef(
   );
   return rows[0]?.status;
 }
+
+// ---------------------------------------------------------------- M3 (WS2) helpers
+
+/**
+ * Fixture inventory for the M3 commerce specs. The demo catalog has only a handful of works that
+ * the checkout can sell, and every purchase spends one for the whole run, so each WS2 scenario
+ * buys its own published copy of a demo work (`e2e-<name>`, same images, prices and packaging;
+ * last in the sort order, never featured). This is the only state these specs arrange directly;
+ * everything else goes through the app. Storefront specs that count works should ignore `e2e-`
+ * slugs.
+ */
+export async function cloneWork(source: string, slug: string): Promise<void> {
+  const skip = new Set([
+    "id",
+    "slug",
+    "inventory_number",
+    "featured",
+    "sort_order",
+    "sale_status",
+    "hold_reason",
+    "hold_note",
+    "reserved_by_order_id",
+    "reserved_until",
+    "sold_at",
+    "created_at",
+    "updated_at",
+  ]);
+  const client = new pg.Client({
+    connectionString: e2eDatabaseUrl(),
+    application_name: "geula-e2e-fixtures",
+  });
+  await client.connect();
+  try {
+    const cols = (
+      await client.query<{ name: string }>(
+        `SELECT column_name AS name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'artworks' ORDER BY ordinal_position`,
+      )
+    ).rows
+      .map((r) => r.name)
+      .filter((c) => !skip.has(c));
+    const list = cols.map((c) => `"${c}"`).join(", ");
+    const inserted = await client.query<{ id: string }>(
+      `INSERT INTO artworks (slug, featured, sort_order, sale_status, ${list})
+       SELECT $2, false, 9999, 'AVAILABLE', ${list} FROM artworks WHERE slug = $1
+       ON CONFLICT (slug) DO NOTHING RETURNING id`,
+      [source, slug],
+    );
+    const id = inserted.rows[0]?.id;
+    if (!id) return; // already cloned in this run
+    const imageCols = (
+      await client.query<{ name: string }>(
+        `SELECT column_name AS name FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'artwork_images' ORDER BY ordinal_position`,
+      )
+    ).rows
+      .map((r) => r.name)
+      .filter(
+        (c) => !["id", "artwork_id", "created_at", "updated_at"].includes(c),
+      );
+    const ilist = imageCols.map((c) => `"${c}"`).join(", ");
+    await client.query(
+      `INSERT INTO artwork_images (artwork_id, ${ilist})
+       SELECT $2, ${ilist} FROM artwork_images
+        WHERE artwork_id = (SELECT id FROM artworks WHERE slug = $1)`,
+      [source, id],
+    );
+  } finally {
+    await client.end();
+  }
+}
+
+/** The mock payment's cancel URL: opens the order page without changing the payment. */
+export async function orderPageUrlForRef(ref: string): Promise<string> {
+  const rows = await e2eQuery<{ cancel_url: string }>(
+    "SELECT cancel_url FROM mock_payments WHERE ref = $1",
+    [ref],
+  );
+  const url = rows[0]?.cancel_url;
+  if (!url) throw new Error(`no mock payment ${ref}`);
+  return url;
+}
+
+/**
+ * The buyer releases the hold from the order page while the provider page stays open in another
+ * tab (the "hold lost" setup of late-payment and capture-mode).
+ */
+export async function releaseFromSecondTab(
+  page: Page,
+  ref: string,
+  locale: "he" | "en" = "en",
+): Promise<void> {
+  const tab = await page.context().newPage();
+  await tab.goto(await orderPageUrlForRef(ref));
+  const orders = messages(locale, "orders");
+  const common = messages(locale, "common");
+  await clickAndConfirm(tab, orders.release, common.form.confirm);
+  await expect(tab.getByText(orders.released)).toBeVisible();
+  await tab.close();
+}
+
+/** Another buyer (own context and IP) buys `slug` with studio pickup and pays. */
+export async function anotherBuyerBuys(
+  page: Page,
+  slug: string,
+  ip: number,
+): Promise<void> {
+  const browser = page.context().browser();
+  if (!browser) throw new Error("no browser");
+  const ctx = await browser.newContext({
+    extraHTTPHeaders: buyerIp(ip),
+    baseURL: new URL(page.url()).origin,
+  });
+  try {
+    const other = await ctx.newPage();
+    await other.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+    const { uniqueBuyer } = await import("../../helpers/factories/core");
+    await fillCheckout(other, { locale: "en", ...uniqueBuyer("other") });
+    await continueToMockPay(other);
+    await other.getByTestId("mock-pay").click();
+    await expect(other).toHaveURL(/payment=paid/);
+  } finally {
+    await ctx.close();
+  }
+}
+
+export async function artworkStatus(slug: string) {
+  const rows = await e2eQuery<{
+    sale_status: string;
+    reserved_by_order_id: string | null;
+  }>("SELECT sale_status, reserved_by_order_id FROM artworks WHERE slug = $1", [
+    slug,
+  ]);
+  return rows[0];
+}
+
+/** Runs the outbox until it is idle (jobs enqueued by handlers run in the next batch). */
+export async function drainOutbox(request: APIRequestContext): Promise<void> {
+  for (let i = 0; i < 4; i++) await runCron(request, "outbox");
+}
