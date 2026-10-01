@@ -1,0 +1,31 @@
+{
+  "provider": "cardcom",
+  "scenario": "getlpresult-unpaid",
+  "recordedAt": "synthetic",
+  "note": "Synthetic: nobody has paid yet (no TranzactionInfo, TranzactionId 0). The live unpaid response could not be recorded: the public test terminal refused Create (603).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/LowProfile/GetLpResult",
+        "body": {
+          "TerminalNumber": 1000,
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ResponseCode": 0,
+          "Description": "",
+          "TerminalNumber": 1000,
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa",
+          "TranzactionId": 0,
+          "ReturnValue": "11111111-1111-4111-8111-111111111111",
+          "Operation": "ChargeOnly",
+          "TranzactionInfo": null
+        }
+      }
+    }
+  ]
+}

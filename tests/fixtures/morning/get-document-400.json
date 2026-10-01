@@ -1,0 +1,33 @@
+{
+  "provider": "morning",
+  "scenario": "get-document-400",
+  "recordedAt": "synthetic",
+  "note": "Synthetic GET /documents/{id}: an osek patur receipt.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/documents/6f0c8a2e-1111-4a5b-9c0d-000000000001",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "id": "6f0c8a2e-1111-4a5b-9c0d-000000000001",
+          "type": 400,
+          "number": 30001,
+          "documentDate": "2026-10-01",
+          "status": 1,
+          "lang": "he",
+          "amount": 1250.5,
+          "currency": "ILS",
+          "vatType": 0,
+          "client": {
+            "name": "Test Buyer",
+            "country": "IL"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "provider": "morning",
+  "scenario": "search-found",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /documents/search: a fuzzy hit and the exact marker.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/documents/search",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "total": 2,
+          "page": 1,
+          "pageSize": 50,
+          "from": 1,
+          "to": 2,
+          "pages": 1,
+          "items": [
+            {
+              "id": "6f0c8a2e-1111-4a5b-9c0d-000000000009",
+              "type": 400,
+              "number": "30000",
+              "status": 1,
+              "documentDate": "2026-10-01",
+              "lang": "he",
+              "description": "GG-7K3M9Q/RECEIPT/10",
+              "amount": 1,
+              "currency": "ILS"
+            },
+            {
+              "id": "6f0c8a2e-1111-4a5b-9c0d-000000000001",
+              "type": 400,
+              "number": "30001",
+              "status": 1,
+              "documentDate": "2026-10-01",
+              "creationDate": 1790000000,
+              "lang": "he",
+              "description": "GG-7K3M9Q/RECEIPT/1",
+              "amount": 1250.5,
+              "currency": "ILS"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

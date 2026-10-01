@@ -1,0 +1,7 @@
+{
+  "instance": "/mydhlapi/shipments",
+  "detail": "Invalid receiver postal code",
+  "title": "Bad request",
+  "message": "Bad request",
+  "status": "400"
+}

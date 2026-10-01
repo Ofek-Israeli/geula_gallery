@@ -1,0 +1,50 @@
+{
+  "provider": "paypal",
+  "scenario": "webhook-capture-refunded",
+  "recordedAt": "synthetic",
+  "note": "Synthetic PAYMENT.CAPTURE.REFUNDED event: resource is the refund, custom_id = our refund id.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/payments/paypal/webhook",
+        "body": {
+          "id": "WH-TEST-0002",
+          "event_version": "1.0",
+          "create_time": "2026-10-02T09:00:05Z",
+          "resource_type": "refund",
+          "resource_version": "2.0",
+          "event_type": "PAYMENT.CAPTURE.REFUNDED",
+          "summary": "refunded",
+          "resource": {
+            "id": "1JU08902781691411",
+            "status": "COMPLETED",
+            "amount": {
+              "currency_code": "USD",
+              "value": "100.00"
+            },
+            "custom_id": "22222222-2222-4222-8222-222222222222",
+            "invoice_id": "GG-7K3M9Q-R1",
+            "create_time": "2026-10-02T09:00:00Z",
+            "links": [
+              {
+                "href": "https://api.sandbox.paypal.com/v2/payments/refunds/1JU08902781691411",
+                "rel": "self",
+                "method": "GET"
+              },
+              {
+                "href": "https://api.sandbox.paypal.com/v2/payments/captures/3C679366HH908993F",
+                "rel": "up",
+                "method": "GET"
+              }
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": null
+      }
+    }
+  ]
+}

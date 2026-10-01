@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+/*
+ * "White cube" design tokens (spec §6.1). Frozen after M1 (spec §9.4): streams may add utilities
+ * in their own components but never change these tokens.
+ *
+ * Logical CSS only (spec §6.4): use ms-/me-/ps-/pe-, inset-s-/inset-e-, text-start/end,
+ * border-s/e, rounded-s/e, mbs/mbe and the rtl:/ltr: variants. Physical utilities (ml-, mr-, pl-,
+ * pr-, left-, right-, text-left, text-right) are rejected by tests/unit/architecture.test.ts.
+ */
+@theme {
+  --color-paper: #fbfaf7;
+  --color-wall: #f3f1ec;
+  --color-ink: #1d1c1a;
+  --color-ink-muted: #5e5a53;
+  --color-line: #e2ded6;
+  --color-reddot: #b4231a;
+  --color-hold: #7a5f14;
+
+  /* One radius everywhere: 2px. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+
+  --text-body: 1.0625rem; /* 17px */
+  --row-h: 18rem; /* JustifiedGrid row height (spec §6.3) */
+}
+
+/* Fonts are next/font CSS variables set on <html> by the root layout. */
+@theme inline {
+  --font-serif:
+    var(--font-frank-ruhl), "Frank Ruhl Libre", "Times New Roman", serif;
+  --font-sans: var(--font-assistant), "Assistant", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-size: var(--text-body);
+    line-height: 1.6;
+    background-color: var(--color-paper);
+  }
+
+  html:lang(he) body {
+    line-height: 1.7;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  /* No italics, uppercase or small caps in Hebrew (spec §6.1); `ltr:uppercase` only. */
+  :lang(he) em,
+  :lang(he) i,
+  :lang(he) cite {
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  :lang(he) * {
+    font-variant-caps: normal;
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+
+  /* Visible focus everywhere (WCAG 2.2: focus visible, not obscured). */
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-line);
+  }
+
+  /* Paintings are never cropped or placed on colour (spec §6.1). */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  dialog::backdrop {
+    background-color: rgb(29 28 26 / 0.6);
+  }
+}
+
+/* Image fade is the only motion (spec §6.1). */
+@keyframes gg-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility fade-in {
+  animation: gg-fade-in 400ms ease-out both;
+}
+
+/* Sticky bars and the admin bottom tabs respect the device safe area. */
+@utility pbe-safe {
+  padding-block-end: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must override component styles */
+    scroll-behavior: auto !important;
+  }
+}

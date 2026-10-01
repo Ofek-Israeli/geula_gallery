@@ -1,0 +1,23 @@
+{
+  "provider": "morning",
+  "scenario": "download-links",
+  "recordedAt": "synthetic",
+  "note": "Synthetic GET /documents/{id}/download/links.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/documents/6f0c8a2e-1111-4a5b-9c0d-000000000001/download/links",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "he": "https://example.com/doc/he.pdf",
+          "en": "https://example.com/doc/en.pdf",
+          "origin": "https://example.com/doc/origin.pdf"
+        }
+      }
+    }
+  ]
+}

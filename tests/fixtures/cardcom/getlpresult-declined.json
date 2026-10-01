@@ -1,0 +1,86 @@
+{
+  "provider": "cardcom",
+  "scenario": "getlpresult-declined",
+  "recordedAt": "synthetic",
+  "note": "Synthetic: the card was declined on the hosted page (TranzactionInfo.ResponseCode non-zero).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/LowProfile/GetLpResult",
+        "body": {
+          "TerminalNumber": 1000,
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ResponseCode": 0,
+          "Description": "OK",
+          "TerminalNumber": 1000,
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa",
+          "TranzactionId": 0,
+          "ReturnValue": "11111111-1111-4111-8111-111111111111",
+          "Operation": "ChargeOnly",
+          "UIValues": {
+            "CardOwnerEmail": "buyer@example.com",
+            "CardOwnerName": "Test Buyer",
+            "CardOwnerPhone": "03-000-0000",
+            "CardOwnerIdentityNumber": "000000018",
+            "NumOfPayments": 1,
+            "CardYear": 2030,
+            "CardMonth": 12,
+            "IsAbroadCard": false
+          },
+          "DocumentInfo": null,
+          "TokenInfo": {
+            "Token": "test-card-token-0000",
+            "TokenExDate": "20301231",
+            "CardYear": 2030,
+            "CardMonth": 12,
+            "TokenApprovalNumber": "0012345",
+            "CardOwnerIdentityNumber": "000000018"
+          },
+          "TranzactionInfo": {
+            "ResponseCode": 33,
+            "Description": "declined",
+            "TranzactionId": 0,
+            "TerminalNumber": 1000,
+            "Amount": 1250.5,
+            "CoinId": 1,
+            "CouponNumber": "",
+            "CreateDate": "2026-10-01T12:00:00",
+            "Last4CardDigits": 4580,
+            "Last4CardDigitsString": "4580",
+            "FirstCardDigits": 458045,
+            "JParameter": "4",
+            "CardMonth": 12,
+            "CardYear": 2030,
+            "ApprovalNumber": "0012345",
+            "FirstPaymentAmount": 1250.5,
+            "ConstPaymentAmount": 0,
+            "NumberOfPayments": 1,
+            "CardInfo": "Israeli",
+            "CardOwnerName": "Test Buyer",
+            "CardOwnerPhone": "03-000-0000",
+            "CardOwnerEmail": "buyer@example.com",
+            "CardOwnerIdentityNumber": "000000018",
+            "Token": "test-card-token-0000",
+            "CardName": "Visa",
+            "Brand": "Visa",
+            "Acquire": "Isracard",
+            "Issuer": "Isracard",
+            "PaymentType": "Standard",
+            "CardNumberEntryMode": "Internet",
+            "DealType": "Debit",
+            "IsRefund": false,
+            "IsAbroadCard": false
+          },
+          "ExternalPaymentVector": null,
+          "Country": "IL"
+        }
+      }
+    }
+  ]
+}

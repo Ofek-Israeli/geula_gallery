@@ -1,0 +1,33 @@
+{
+  "provider": "morning",
+  "scenario": "create-receipt",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /documents (201): a type 400 receipt.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/documents",
+        "body": null
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": "6f0c8a2e-1111-4a5b-9c0d-000000000001",
+          "number": 30001,
+          "type": 400,
+          "signed": true,
+          "lang": "he",
+          "client": {
+            "id": "c-1"
+          },
+          "url": {
+            "origin": "https://example.com/doc/origin.pdf",
+            "he": "https://example.com/doc/he.pdf",
+            "en": "https://example.com/doc/en.pdf"
+          }
+        }
+      }
+    }
+  ]
+}

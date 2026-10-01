@@ -1,0 +1,360 @@
+{
+  "status": {
+    "AWAITING_FULFILLMENT": "Awaiting fulfillment",
+    "PACKED": "Packed",
+    "LABEL_REQUESTED": "Label requested",
+    "LABEL_UNKNOWN": "Label status unknown",
+    "LABEL_CREATED": "Label created",
+    "PICKUP_SCHEDULED": "Pickup scheduled",
+    "IN_TRANSIT": "In transit",
+    "CUSTOMS": "In customs",
+    "OUT_FOR_DELIVERY": "Out for delivery",
+    "DELIVERED": "Delivered",
+    "EXCEPTION": "Exception",
+    "RETURNED": "Returned",
+    "CANCELLED": "Cancelled",
+    "READY_FOR_PICKUP": "Ready for pickup",
+    "COLLECTED": "Collected"
+  },
+  "method": {
+    "CARRIER_TABLE": "Carrier delivery",
+    "LOCAL_PICKUP": "Studio pickup",
+    "ARTIST_DELIVERY": "Delivery by the artist",
+    "QUOTED": "Quoted delivery"
+  },
+  "packaging": {
+    "ROLLED_TUBE": "Rolled tube",
+    "FLAT_BOX": "Flat box",
+    "STRETCHED_BOX": "Stretched-canvas box",
+    "FRAMED_BOX": "Framed-work box",
+    "CRATE": "Wooden crate"
+  },
+  "source": {
+    "MANUAL": "Manual",
+    "POLL": "Tracking",
+    "WEBHOOK": "Carrier notice",
+    "SYSTEM": "System"
+  },
+  "checklist": {
+    "noContactWithPaint": "Nothing touches the paint surface: corner protectors and a rigid spacer; silicone release paper only if contact is unavoidable – never glassine or tissue on the paint (especially acrylics)",
+    "cornerProtectors": "Corner protectors on all four corners",
+    "rigidSpacer": "Rigid spacer board over the picture surface",
+    "tubeAtLeast10in": "Tube of at least 10 in (25 cm) diameter",
+    "rolledPaintOutward": "Canvas rolled paint side out, with silicone release paper",
+    "crateIspmExempt": "Plywood crate (ISPM-15 exempt)",
+    "workCured": "The paint is fully cured – never ship uncured work",
+    "coaSigned": "Certificate of authenticity signed and enclosed",
+    "disclosureInserted": "Disclosure document printed and inserted in the parcel",
+    "receiptPrinted": "Receipt printed and inserted (no consent to an emailed receipt)"
+  },
+  "fulfill": {
+    "title": "Fulfillment",
+    "back": "Back to the order",
+    "shipmentStatus": "Shipment status",
+    "method": "Delivery method",
+    "destination": "Destination",
+    "shipTo": "Ship to",
+    "buyer": "Buyer",
+    "blocked": {
+      "title": "Fulfillment is blocked",
+      "ORDER_NOT_PAID": "The order is not paid.",
+      "FULFILLMENT_BLOCKED": "Shipping is blocked: {reason}.",
+      "CANCELLATION_ACCEPTED": "The cancellation was accepted – do not ship the work.",
+      "CANCELLATION_PENDING": "A cancellation notice was received and is not handled yet."
+    },
+    "blockReason": {
+      "PAYMENT_REVIEW": "the payment is under review",
+      "DISPUTE": "the payment is disputed",
+      "PAYMENT_REVERSED": "the payment was reversed at the provider",
+      "EXTERNAL_REFUND": "a refund was made outside the system",
+      "PENDING_CANCELLATION": "a cancellation notice is pending"
+    },
+    "override": {
+      "title": "Ship despite the cancellation notice",
+      "warning": "A cancellation notice is pending; shipping now may still require a refund.",
+      "reason": "Reason (kept in the audit log)",
+      "submit": "Allow shipping despite the notice",
+      "active": "Shipping was allowed despite a cancellation notice: {reason}"
+    },
+    "notices": "Cancellation notices: {list}",
+    "docs": {
+      "title": "Printables",
+      "packingSlip": "Packing slip",
+      "commercialInvoice": "Commercial invoice",
+      "disclosure": "Disclosure document (print and insert)",
+      "label": "Shipping label (PDF, link valid for ten minutes)",
+      "carrierInvoice": "Carrier commercial invoice (PDF)"
+    },
+    "items": {
+      "title": "Works in this order",
+      "packaging": "Packaging: {type}",
+      "suggested": "Suggested parcel: {l}×{w}×{h} cm, {kg} kg",
+      "rollable": "Can be rolled",
+      "coa": "With a certificate of authenticity"
+    },
+    "pack": {
+      "title": "1. Pack",
+      "checklist": "Checklist",
+      "required": "(required)",
+      "package": "Parcel {n}",
+      "length": "Length (mm)",
+      "width": "Width (mm)",
+      "height": "Height (mm)",
+      "weight": "Weight (g)",
+      "photos": "Packing photos",
+      "photosRequired": "At least one photo is required for international or insured parcels.",
+      "photosOptional": "Photographing the packing is recommended.",
+      "choose": "Take or choose photos",
+      "uploading": "Uploading {n} photos…",
+      "uploaded": "{count, plural, one {One photo uploaded} other {# photos uploaded}}",
+      "uploadFailed": "Upload failed ({code}).",
+      "photo": "Photo {n}",
+      "submit": "Confirm packed",
+      "update": "Update the packing details",
+      "done": "Packed."
+    },
+    "customs": {
+      "title": "2. Customs",
+      "hsCode": "HS code",
+      "description": "Description of the goods (English)",
+      "descriptionHint": "English only; printed on the commercial invoice and the waybill.",
+      "declared": "Declared value ({currency})",
+      "insured": "Insured value (₪)",
+      "insuredHint": "0 = uninsured. Cap: ₪{cap}.",
+      "exportDecl": "Export declaration",
+      "exportRequired": "An export declaration is required (value above USD {usd}).",
+      "exportNotRequired": "No export declaration is needed.",
+      "recorded": "Recorded – declaration number:",
+      "pendingCarrier": "Filed by the carrier",
+      "exportNumber": "Export declaration number",
+      "status": "Status: {status}",
+      "exportStatus": {
+        "NOT_REQUIRED": "not required",
+        "REQUIRED": "required",
+        "PENDING_CARRIER": "filed by the carrier",
+        "RECORDED": "recorded"
+      },
+      "submit": "Save customs details",
+      "invoice": "Commercial invoice {number}"
+    },
+    "ship": {
+      "title": "3. Ship",
+      "buyLabel": "Buy label ({carrier})",
+      "buyMessage": "A real label may cost money and cannot be cancelled from here. Continue?",
+      "buyConfirm": "Buy the label",
+      "labelCreated": "Label created: {waybill}",
+      "packFirst": "Confirm the packing before shipping.",
+      "customsFirst": "Complete the customs details before buying a label.",
+      "unknown": {
+        "title": "Label status unknown",
+        "body": "The carrier request did not finish clearly. Before any retry, check in MyDHL whether a waybill exists for order {number}.",
+        "none": "I checked: there is no label – back to packed",
+        "found": "The label exists – waybill number:",
+        "submitFound": "Save the label found"
+      },
+      "stale": {
+        "body": "The label request has not finished for a few minutes.",
+        "submit": "Mark as unknown"
+      },
+      "manual": {
+        "title": "Manual tracking (another carrier)",
+        "carrier": "Carrier",
+        "number": "Tracking number",
+        "url": "Tracking link",
+        "handedOver": "The parcel was handed to the carrier",
+        "submit": "Save tracking"
+      },
+      "handedOver": "Handed to the carrier",
+      "pickup": {
+        "ready": "Ready for pickup (email the address)",
+        "address": "Pickup address: {address}",
+        "collected": "Mark as collected",
+        "disclosureSent": "The disclosure document was emailed to the buyer on {date}.",
+        "disclosureNotSent": "The disclosure document was not emailed: hand over a printed copy.",
+        "handedOverCheck": "A printed copy of the disclosure document was handed to the buyer"
+      },
+      "artist": {
+        "out": "Out for delivery",
+        "delivered": "Mark as delivered"
+      },
+      "done": "Fulfillment complete: {status}."
+    },
+    "events": {
+      "title": "Shipment events",
+      "none": "No events yet.",
+      "add": "Add an event (manual carrier)",
+      "status": "Status",
+      "note": "Note only (no status change)",
+      "occurredAt": "When",
+      "description": "Description",
+      "location": "Location",
+      "submit": "Add the event"
+    },
+    "result": {
+      "saved": "Saved.",
+      "status": "Status updated: {status}.",
+      "labelRejected": "The carrier refused to create a label; the parcel is back to Packed.",
+      "labelUnknown": "The carrier's answer was unclear; the label is marked unknown."
+    }
+  },
+  "errors": {
+    "ORDER_NOT_PAID": "The order is not paid.",
+    "FULFILLMENT_BLOCKED": "Shipping is blocked.",
+    "NOTHING_TO_OVERRIDE": "There is no pending cancellation notice to override.",
+    "REASON_REQUIRED": "Please write a reason.",
+    "SHIPMENT_STATE": "Not possible in the shipment's current status.",
+    "PICKUP_NOT_PACKED": "Pickup orders are not packed.",
+    "PACKAGES_REQUIRED": "Enter at least one parcel.",
+    "PACKAGE_INVALID": "Dimensions and weight must be positive whole numbers.",
+    "TOO_MANY_PHOTOS": "Too many photos.",
+    "PHOTO_KEY_INVALID": "The photo file is not valid; upload it again.",
+    "PHOTOS_REQUIRED": "At least one packing photo is required (international or insured parcel).",
+    "CHECKLIST_INCOMPLETE": "Tick the required checklist items.",
+    "NOT_INTERNATIONAL": "Customs details are for international parcels only.",
+    "HS_CODE_INVALID": "The HS code must look like 9701.91.",
+    "DESCRIPTION_LATIN": "The description of the goods must be in English.",
+    "DECLARED_VALUE_INVALID": "The declared value must be above zero.",
+    "INSURED_VALUE_INVALID": "The insured value is not valid.",
+    "INSURED_VALUE_CAP": "The insured value is above the insurance cap.",
+    "EXPORT_DECLARATION_NUMBER": "Enter the export declaration number.",
+    "CUSTOMS_REQUIRED": "Complete the customs details (description and export declaration).",
+    "NO_LABEL_CARRIER": "This shipment has no carrier that issues labels.",
+    "SHIPPER_ADDRESS": "The business profile needs an English address (line, city and postal code).",
+    "RECIPIENT_ADDRESS": "The buyer's delivery address is incomplete.",
+    "LABEL_REQUEST_IN_FLIGHT": "The label request is still running; wait a few minutes.",
+    "WAYBILL_INVALID": "Waybill: 6–20 letters or digits.",
+    "TRACKING_REQUIRED": "Enter the carrier and the tracking number.",
+    "TRACKING_NUMBER_IN_USE": "This tracking number is already recorded for another shipment.",
+    "NOT_A_CARRIER_SHIPMENT": "Pickup and delivery by the artist have no tracking.",
+    "NOT_MANUAL_CARRIER": "Manual events are for manual carriers only.",
+    "DESCRIPTION_REQUIRED": "Enter a description.",
+    "EVENT_TIME_INVALID": "The event time is not valid.",
+    "ILLEGAL_TRANSITION": "That status change is not possible from the current status.",
+    "NOT_PICKUP": "This is not a pickup order.",
+    "NOT_ARTIST_DELIVERY": "This is not a delivery by the artist.",
+    "DISCLOSURE_REQUIRED": "The disclosure document was not emailed: confirm that a printed copy was handed to the buyer.",
+    "NOT_FOUND": "Order not found.",
+    "INVALID_INPUT": "Check the highlighted fields.",
+    "UNEXPECTED": "Something unexpected went wrong.",
+    "generic": "The action failed.",
+    "INVALID_SETTINGS": "The settings are not valid:",
+    "DENIED_FIXED": "IR, SY and LB cannot be removed from the blocked list:"
+  },
+  "settings": {
+    "title": "Shipping settings",
+    "intro": "Shipping rates, zones, insurance and country rules. Changes apply to new quotes; existing orders keep their quote.",
+    "calibratedAt": "Rates last calibrated on {date}.",
+    "notCalibrated": "The rates are still placeholders (not calibrated).",
+    "markCalibrated": "Mark the rates as calibrated today",
+    "divisor": "Volumetric divisor (cm³ per kg)",
+    "zones": {
+      "title": "Zones",
+      "enabled": "Enabled",
+      "estimateHe": "Delivery estimate (Hebrew)",
+      "estimateEn": "Delivery estimate (English)",
+      "countries": "Countries (two-letter codes, comma separated; * = everything else)",
+      "name": {
+        "IL": "Israel",
+        "EUROPE": "Europe",
+        "NORTH_AMERICA": "North America",
+        "REST_OF_WORLD": "Rest of the world"
+      }
+    },
+    "rates": {
+      "title": "Base rate by size (₪)",
+      "zone": "Zone",
+      "S": "Small (S)",
+      "M": "Medium (M)",
+      "L": "Large (L)",
+      "oversize": "Oversize parcel fee (₪)",
+      "nonConveyable": "Heavy parcel fee (25–70 kg) (₪)"
+    },
+    "surcharges": {
+      "title": "Surcharges (fuel, season and more)",
+      "id": "Id",
+      "labelHe": "Name (Hebrew)",
+      "labelEn": "Name (English)",
+      "enabled": "Active",
+      "kind": "Kind",
+      "kindPct": "Percent of the base rate",
+      "kindFixed": "Fixed amount per parcel (₪)",
+      "value": "Value",
+      "zones": "Zones (ALL or a comma-separated list)",
+      "startsOn": "From",
+      "endsOn": "Until (inclusive)",
+      "remove": "Remove",
+      "new": "New surcharge (may stay empty)"
+    },
+    "insurance": {
+      "title": "Insurance",
+      "enabled": "Insurance enabled",
+      "provider": "Insurer",
+      "providerName": {
+        "DHL": "DHL (II service)",
+        "THIRD_PARTY": "Third-party policy",
+        "NONE": "None"
+      },
+      "ratePct": "Premium rate (%)",
+      "minIls": "Minimum premium (₪)",
+      "maxInsuredIls": "Insured value cap (₪)",
+      "confirmedAt": "Coverage terms confirmed on {date}.",
+      "notConfirmed": "Coverage terms not confirmed yet (blocks going live).",
+      "confirmToday": "Confirm the coverage terms today"
+    },
+    "caps": {
+      "title": "Declared value cap by carrier (USD)",
+      "carrier": {
+        "DHL": "DHL Express",
+        "MOCK": "Demo carrier",
+        "MANUAL": "Manual carrier"
+      },
+      "none": "No cap"
+    },
+    "lists": {
+      "title": "Countries",
+      "denied": "Blocked countries",
+      "deniedHint": "IR, SY and LB are always blocked; IQ can be removed.",
+      "quoteOnly": "Quote-only countries"
+    },
+    "thresholds": {
+      "title": "Thresholds",
+      "gbLowValueGbp": "UK low value (GBP)",
+      "euLowValueEur": "EU low value (EUR)",
+      "usFormalEntryUsd": "US formal entry (USD)",
+      "exportDeclarationUsd": "Export declaration required above (USD)"
+    },
+    "pickup": {
+      "title": "Studio pickup",
+      "enabled": "Pickup available",
+      "fee": "Pickup fee (₪)"
+    },
+    "artist": {
+      "title": "Delivery by the artist",
+      "enabled": "Delivery available",
+      "fee": "Price (₪)",
+      "areaHe": "Service area (Hebrew)",
+      "areaEn": "Service area (English)"
+    },
+    "domestic": {
+      "title": "Domestic courier",
+      "nameHe": "Courier name (Hebrew)",
+      "nameEn": "Courier name (English)"
+    },
+    "fx": "Reference rates (set in the checkout settings): USD ₪{usd}, EUR ₪{eur}, GBP ₪{gbp}, as of {date}.",
+    "providers": {
+      "title": "Shipping providers (read only)",
+      "carrier": "International carrier: {carrier}",
+      "dhl": "DHL Express: {mode}",
+      "paperless": "Paperless Trade: {value}",
+      "on": "on",
+      "off": "off"
+    },
+    "submit": "Save shipping settings",
+    "saved": "Settings saved.",
+    "errors": {
+      "INVALID_SETTINGS": "The settings are not valid: {details}",
+      "DENIED_FIXED": "IR, SY and LB cannot be removed from the blocked list.",
+      "generic": "Saving failed."
+    }
+  }
+}

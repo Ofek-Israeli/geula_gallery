@@ -1,0 +1,64 @@
+{
+  "url": "https://api-mock.dhl.com/mydhlapi/shipments/1234567890/tracking",
+  "shipmentTrackingNumber": "1234567890",
+  "trackingUrl": "https://api-mock.dhl.com/mydhlapi/shipments/1234567890/tracking",
+  "packages": [
+    {
+      "referenceNumber": 1,
+      "trackingNumber": "JD014600000000000001",
+      "trackingUrl": "https://api-mock.dhl.com/mydhlapi/shipments/1234567890/tracking?pieceTrackingNumber=JD014600000000000001"
+    }
+  ],
+  "documents": [
+    {
+      "imageFormat": "PDF",
+      "content": "JVBERi0xLjQKJSBzeW50aGV0aWMgbGFiZWwgZm9yIHRlc3RzCiUlRU9GCg==",
+      "typeCode": "label"
+    },
+    {
+      "imageFormat": "PDF",
+      "content": "JVBERi0xLjQKJSBzeW50aGV0aWMgY29tbWVyY2lhbCBpbnZvaWNlIGZvciB0ZXN0cwolJUVPRgo=",
+      "typeCode": "invoice"
+    }
+  ],
+  "shipmentDetails": [
+    {
+      "serviceHandlingFeatureCodes": ["II"],
+      "volumetricWeight": 3.3,
+      "billingCode": "IEA",
+      "serviceContentCode": "WPX",
+      "customerDetails": {
+        "shipperDetails": {
+          "postalAddress": {
+            "postalCode": "6100000",
+            "cityName": "Tel Aviv",
+            "countryCode": "IL",
+            "addressLine1": "1 Test Street"
+          },
+          "contactInformation": {
+            "companyName": "Test Studio",
+            "fullName": "Test Shipper"
+          }
+        },
+        "receiverDetails": {
+          "postalAddress": {
+            "postalCode": "10001",
+            "cityName": "New York",
+            "countryCode": "US",
+            "addressLine1": "1 Example Avenue"
+          },
+          "contactInformation": {
+            "companyName": "Test Receiver",
+            "fullName": "Test Receiver"
+          }
+        }
+      },
+      "productShortName": "EXPRESS WORLDWIDE"
+    }
+  ],
+  "estimatedDeliveryDate": {
+    "estimatedDeliveryDate": "2026-10-08",
+    "estimatedDeliveryType": "QDDC"
+  },
+  "warnings": ["synthetic fixture"]
+}

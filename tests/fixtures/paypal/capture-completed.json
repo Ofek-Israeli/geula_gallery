@@ -1,0 +1,118 @@
+{
+  "provider": "paypal",
+  "scenario": "capture-completed",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST …/capture (Prefer: return=representation): order COMPLETED.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v2/checkout/orders/5O190127TN364715T/capture",
+        "body": null
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": "5O190127TN364715T",
+          "intent": "CAPTURE",
+          "status": "COMPLETED",
+          "payment_source": {
+            "paypal": {
+              "email_address": "buyer@example.com",
+              "account_id": "TESTPAYER001"
+            }
+          },
+          "purchase_units": [
+            {
+              "reference_id": "default",
+              "custom_id": "11111111-1111-4111-8111-111111111111",
+              "invoice_id": "GG-7K3M9Q-1",
+              "amount": {
+                "currency_code": "USD",
+                "value": "340.00",
+                "breakdown": {
+                  "item_total": {
+                    "currency_code": "USD",
+                    "value": "300.00"
+                  },
+                  "shipping": {
+                    "currency_code": "USD",
+                    "value": "30.00"
+                  },
+                  "insurance": {
+                    "currency_code": "USD",
+                    "value": "10.00"
+                  }
+                }
+              },
+              "payee": {
+                "email_address": "seller@example.com",
+                "merchant_id": "TESTMERCHANT01"
+              },
+              "shipping": {
+                "name": {
+                  "full_name": "Test Buyer"
+                },
+                "address": {
+                  "address_line_1": "1 Main St",
+                  "admin_area_2": "New York",
+                  "admin_area_1": "NY",
+                  "postal_code": "10001",
+                  "country_code": "US"
+                }
+              },
+              "payments": {
+                "captures": [
+                  {
+                    "id": "3C679366HH908993F",
+                    "status": "COMPLETED",
+                    "amount": {
+                      "currency_code": "USD",
+                      "value": "340.00"
+                    },
+                    "custom_id": "11111111-1111-4111-8111-111111111111",
+                    "invoice_id": "GG-7K3M9Q-1",
+                    "final_capture": true,
+                    "seller_protection": {
+                      "status": "ELIGIBLE"
+                    },
+                    "create_time": "2026-10-01T12:00:00Z",
+                    "update_time": "2026-10-01T12:00:00Z",
+                    "links": [
+                      {
+                        "href": "https://api.sandbox.paypal.com/v2/payments/captures/3C679366HH908993F",
+                        "rel": "self",
+                        "method": "GET"
+                      },
+                      {
+                        "href": "https://api.sandbox.paypal.com/v2/checkout/orders/5O190127TN364715T",
+                        "rel": "up",
+                        "method": "GET"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "payer": {
+            "name": {
+              "given_name": "Test",
+              "surname": "Buyer"
+            },
+            "email_address": "buyer@example.com",
+            "payer_id": "TESTPAYER001"
+          },
+          "create_time": "2026-10-01T11:59:00Z",
+          "links": [
+            {
+              "href": "https://api.sandbox.paypal.com/v2/checkout/orders/5O190127TN364715T",
+              "rel": "self",
+              "method": "GET"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "painterNewOrder": {
+    "subject": "New order {number}",
+    "subjectDemo": "New order {number} (demo)",
+    "preview": "A work was paid for – order {number}",
+    "title": "New order {number}",
+    "demo": "This is a demo order: no real money was taken.",
+    "buyer": "Buyer: {name} · Destination: {country}",
+    "total": "Total",
+    "open": "Open the order",
+    "next": "Next: pack the work and print the disclosure document for the parcel."
+  },
+  "paymentReview": {
+    "subject": "Your payment for order {number} is being reviewed",
+    "title": "Your payment is being reviewed",
+    "body": "The payment provider is reviewing your payment for order {number}. The work stays reserved for you meanwhile, and we will email you as soon as the review ends."
+  },
+  "notCompleted": {
+    "subject": "Order {number} could not be completed",
+    "title": "Your purchase could not be completed",
+    "reason": {
+      "LOST_RESERVATION": "We are sorry: your payment for order {number} arrived after the work had already been sold to another buyer.",
+      "LOST_BEFORE_CAPTURE": "We are sorry: the work in order {number} was sold to another buyer before your payment was taken.",
+      "DUPLICATE_PAYMENT": "We received more than one payment for order {number}. The extra payment is being returned.",
+      "STALE_QUOTE": "Your payment for order {number} was for an earlier version of the order (the delivery or the price changed). It cannot complete the order.",
+      "ORDER_CANCELLED": "Your payment for order {number} arrived after the order had been cancelled.",
+      "AMOUNT_MISMATCH": "The amount we received for order {number} does not match the order. We are checking it by hand."
+    },
+    "notCharged": "You were not charged.",
+    "refund": "The amount you paid is being refunded in full to the payment method you used.",
+    "refundAmount": "{amount} is being refunded in full to the payment method you used.",
+    "contact": "If you have any question, just reply to this email."
+  },
+  "refundIssued": {
+    "subject": "Refund for order {number}",
+    "title": "Your refund was sent",
+    "body": "We sent a refund of {amount} for order {number}.",
+    "timing": "Depending on your bank or card issuer, it can take a few business days to appear.",
+    "creditNote": "View the credit note"
+  },
+  "receipt": {
+    "subject": "Receipt {doc} for order {number}",
+    "subjectDemo": "Demo receipt {doc} for order {number}",
+    "preview": "Receipt {doc}",
+    "title": "Your receipt",
+    "demoStamp": "DEMO – not a tax document",
+    "body": "Document {doc} for order {number} is ready.",
+    "view": "View the receipt"
+  },
+  "checkoutLink": {
+    "subject": "Your link to buy “{title}”",
+    "preview": "Order {number} is reserved for you",
+    "title": "The work is reserved for you",
+    "body": "As agreed, “{title}” is reserved for you under order {number}.",
+    "total": "Total to pay: {amount}",
+    "reserved": "The reservation holds until {date}. After that the work may be offered to other buyers.",
+    "cta": "Complete the order and pay",
+    "steps": "On the order page you add the delivery address, read the purchase terms and your cancellation rights, and pay on the payment provider's secure page.",
+    "contact": "If anything is unclear, just reply to this email."
+  }
+}

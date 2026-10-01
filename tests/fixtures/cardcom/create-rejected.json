@@ -1,0 +1,38 @@
+{
+  "provider": "cardcom",
+  "scenario": "create-rejected",
+  "recordedAt": "2026-10-01",
+  "note": "LowProfile/Create refused by Cardcom (ResponseCode 603: wrong user name or password).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/LowProfile/Create",
+        "body": {
+          "TerminalNumber": 1000,
+          "Operation": "ChargeOnly",
+          "ReturnValue": "f430edb0-235a-4c37-a009-71af598bf0cc",
+          "Amount": 1,
+          "ISOCoinId": 1,
+          "Language": "he",
+          "SuccessRedirectUrl": "http://localhost:3050/api/payments/cardcom/return?a=f430edb0-235a-4c37-a009-71af598bf0cc&r=REDACTED&l=he&s=success",
+          "FailedRedirectUrl": "http://localhost:3050/api/payments/cardcom/return?a=f430edb0-235a-4c37-a009-71af598bf0cc&r=REDACTED&l=he&s=failed",
+          "CancelRedirectUrl": "http://localhost:3050/api/payments/cardcom/return?a=f430edb0-235a-4c37-a009-71af598bf0cc&r=REDACTED&l=he&s=cancel",
+          "WebHookUrl": "http://localhost:3050/api/payments/cardcom/webhook?a=f430edb0-235a-4c37-a009-71af598bf0cc&t=REDACTED",
+          "ProductName": "ציור מקורי – בדיקת חיבור (GG-CHECK1)",
+          "AdvancedDefinition": {
+            "ThreeDSecureState": "Enabled",
+            "MaxNumOfPayments": 1
+          }
+        }
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "ResponseCode": 603,
+          "Description": "שם משתמש או סיסמה שגויים"
+        }
+      }
+    }
+  ]
+}

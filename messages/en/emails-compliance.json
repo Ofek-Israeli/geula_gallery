@@ -1,0 +1,106 @@
+{
+  "orderConfirmation": {
+    "subject": "Order {number} is confirmed",
+    "preview": "Thank you – order {number} is paid",
+    "title": "Thank you for your order",
+    "intro": "Your payment for order {number} was received and the work is yours. We will let you know when it ships or is ready for pickup.",
+    "paidAt": "Paid on {date} (Israel time)",
+    "summaryTitle": "Order summary",
+    "shipping": "Shipping",
+    "insurance": "Shipping insurance",
+    "total": "Total paid",
+    "disclosureTitle": "Disclosure document – summary",
+    "disclosureLink": "Read the full disclosure document",
+    "disclosureNote": "A printed copy of the disclosure document is also included with the work.",
+    "cancelLink": "Cancel the purchase with the online form"
+  },
+  "labels": {
+    "number": "Cancellation number",
+    "fullName": "Full name",
+    "idNumber": "ID / passport",
+    "orderNumber": "Order number",
+    "channel": "Channel",
+    "receivedAt": "Received",
+    "refundDueAt": "Refund due by",
+    "reason": "Reason",
+    "message": "Message",
+    "eligibleGroup": "Eligibility declared"
+  },
+  "channel": {
+    "WEB": "Online form",
+    "PHONE": "Phone",
+    "EMAIL": "Email",
+    "REGISTERED_MAIL": "Registered mail",
+    "IN_PERSON": "In person"
+  },
+  "reason": {
+    "CHANGE_OF_MIND": "Change of mind",
+    "DEFECT": "Defect",
+    "NOT_AS_DESCRIBED": "Not as described",
+    "NOT_DELIVERED": "Not delivered",
+    "OTHER": "Other"
+  },
+  "eligibleGroup": {
+    "NONE": "None declared",
+    "SENIOR_65": "Senior citizen (65+)",
+    "DISABILITY": "Person with a disability",
+    "NEW_IMMIGRANT": "New immigrant (up to 5 years)"
+  },
+  "cancellationAck": {
+    "subject": "We received your cancellation notice {number}",
+    "title": "Your cancellation notice was received",
+    "intro": "We received your cancellation notice on {date} (Israel time). This is your acknowledgement; please keep it.",
+    "detailsTitle": "Notice details",
+    "nextTitle": "What happens next",
+    "next1": "We will review the notice and get back to you. Any refund will be made no later than {date}.",
+    "next2": "If the work has already reached you, we will send instructions for returning it.",
+    "next3": "There is no need to send another notice. If you do, it will be received and recorded as well."
+  },
+  "painterCancellation": {
+    "subject": "New cancellation notice {number}",
+    "title": "A cancellation notice was received",
+    "intro": "A cancellation notice ({channel}) was received on {date}.",
+    "duplicate": "This may be a duplicate of an open notice for the same order.",
+    "unmatched": "The notice was not matched to an order automatically. Match it on the cancellations screen.",
+    "deadline": "The refund is due by {date} (14 days from the notice).",
+    "open": "Open the notice in the admin"
+  },
+  "returnInstructions": {
+    "subject": "Return instructions – order {number}",
+    "title": "Cancellation accepted – how to return the work",
+    "intro": "We accepted cancellation notice {cancellation} for order {number}.",
+    "addressTitle": "Return address",
+    "packTitle": "Packing",
+    "pack": "Please pack the work in its original packaging or similar protective packaging, with nothing touching the paint surface, and send it with tracking. Reply to this email with the tracking number.",
+    "refund": "Refund amount: {amount}. The refund goes back to the original payment method.",
+    "contact": "Reply to this email to arrange a collection or with any question."
+  },
+  "adminAlert": {
+    "subject": "[{severity}] Alert: {kind}",
+    "title": "A new admin alert",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "kindLabel": "Kind",
+    "details": "Details",
+    "open": "Open the alerts list",
+    "kinds": {
+      "REFUND_DUE_SOON": "A cancellation refund is close to its legal deadline",
+      "REFUND_OVERDUE": "A cancellation refund is past its legal deadline",
+      "UNSHIPPED_LATE": "A paid order was not shipped on time",
+      "EXPORT_DECLARATION_PENDING": "An export declaration has been pending for more than 7 days",
+      "PAYMENT_REVIEW_LONG": "A payment has been under review for more than 24 hours",
+      "TAX_DOCUMENT_ACTION": "A tax document needs attention",
+      "OUTBOX_JOB_DEAD": "A background job failed permanently",
+      "TURNOVER_CEILING": "Yearly turnover is close to the VAT-exempt ceiling",
+      "RATES_UNCALIBRATED": "Shipping rates are not calibrated",
+      "INVARIANT_VIOLATION": "A data consistency check failed",
+      "GOLIVE_BLOCKERS": "Live payments are blocked",
+      "CONFIG_DRIFT": "Payment provider configuration drift",
+      "PAYMENT_MISMATCH": "Payment mismatch",
+      "PAYMENT_NEEDS_REFUND": "A received payment needs a refund"
+    }
+  }
+}

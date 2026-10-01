@@ -1,0 +1,23 @@
+{
+  "provider": "cardcom",
+  "scenario": "refund-refused",
+  "recordedAt": "synthetic",
+  "note": "Synthetic: Cardcom refuses the refund (any non-zero code is FAILED, e.g. already refunded).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/Transactions/RefundByTransactionId",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ResponseCode": 5040,
+          "Description": "refund refused",
+          "NewTranzactionId": null
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "ack": {
+    "subjectQuestion": "We received your question – {title}",
+    "subjectQuote": "We received your quote request – {title}",
+    "subjectOffer": "We received your offer – {title}",
+    "title": "Thank you, your message arrived",
+    "bodyQuestion": "We received your question about \"{title}\".",
+    "bodyQuote": "We received your request for a quote for \"{title}\". We will check the shipping details and come back to you with a quote.",
+    "bodyOffer": "We received your offer for \"{title}\".",
+    "bodyGeneral": "We received your message.",
+    "yourMessage": "Your message:",
+    "next": "We usually reply within two or three working days. You can reply to this email."
+  },
+  "reply": {
+    "subject": "A reply to your message – {title}",
+    "subjectGeneral": "A reply to your message",
+    "title": "A reply to your message",
+    "replyHint": "You can reply directly to this email."
+  },
+  "painter": {
+    "subject": {
+      "question": "New question from {name} – {title}",
+      "quote": "Quote request from {name} – {title}",
+      "offer": "New offer from {name} – {title}"
+    },
+    "title": {
+      "question": "New question",
+      "quote": "New quote request",
+      "offer": "New offer"
+    },
+    "artwork": "Artwork: {title}",
+    "from": "From {name}",
+    "offer": "Offer amount:",
+    "open": "Open in the inbox"
+  }
+}

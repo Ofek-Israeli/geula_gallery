@@ -1,0 +1,21 @@
+{
+  "provider": "paypal",
+  "scenario": "verify-signature",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /v1/notifications/verify-webhook-signature answers.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/notifications/verify-webhook-signature",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "verification_status": "SUCCESS"
+        }
+      }
+    }
+  ]
+}

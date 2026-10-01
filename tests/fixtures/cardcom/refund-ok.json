@@ -1,0 +1,23 @@
+{
+  "provider": "cardcom",
+  "scenario": "refund-ok",
+  "recordedAt": "synthetic",
+  "note": "Synthetic (RefundByTransactionIdResp): a refund accepted with a new deal number.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/Transactions/RefundByTransactionId",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ResponseCode": 0,
+          "Description": "OK",
+          "NewTranzactionId": 7654399
+        }
+      }
+    }
+  ]
+}

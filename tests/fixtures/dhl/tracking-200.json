@@ -1,0 +1,133 @@
+{
+  "shipments": [
+    {
+      "shipmentTrackingNumber": "1234567890",
+      "status": "Success",
+      "shipmentTimestamp": "2026-10-05T10:00:00",
+      "productCode": "P",
+      "description": "Original painting",
+      "shipperDetails": {
+        "name": "Test Studio",
+        "postalAddress": {
+          "cityName": "TEL AVIV",
+          "countryCode": "IL"
+        }
+      },
+      "receiverDetails": {
+        "name": "Test Receiver",
+        "postalAddress": {
+          "cityName": "NEW YORK",
+          "countryCode": "US"
+        }
+      },
+      "events": [
+        {
+          "date": "2026-10-06",
+          "time": "11:30:00",
+          "GMTOffset": "-04:00",
+          "typeCode": "OK",
+          "description": "Delivered",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "NEW YORK - USA"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-05",
+          "time": "10:00:00",
+          "GMTOffset": "+03:00",
+          "typeCode": "SA",
+          "description": "Shipment information received",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "TEL AVIV - ISRAEL"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-05",
+          "time": "16:20:00",
+          "GMTOffset": "+03:00",
+          "typeCode": "PU",
+          "description": "Shipment picked up",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "TEL AVIV - ISRAEL"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-05",
+          "time": "19:05",
+          "GMTOffset": "+03:00",
+          "typeCode": "PL",
+          "description": "Processed at TEL AVIV - ISRAEL",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "TEL AVIV - ISRAEL"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-05",
+          "time": "21:40:00",
+          "GMTOffset": "+03:00",
+          "typeCode": "DF",
+          "description": "Departed Facility in TEL AVIV - ISRAEL",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "TEL AVIV - ISRAEL"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "time": "04:10:00",
+          "GMTOffset": "-04:00",
+          "typeCode": "ZZ",
+          "description": "Synthetic unknown checkpoint",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "CINCINNATI HUB - USA"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "time": "05:00:00",
+          "GMTOffset": "-04:00",
+          "typeCode": "CR",
+          "description": "Clearance processing complete",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "CINCINNATI HUB - USA"
+            }
+          ]
+        },
+        {
+          "date": "2026-10-06",
+          "time": "08:15:00",
+          "GMTOffset": "-04:00",
+          "typeCode": "WC",
+          "description": "With delivery courier",
+          "serviceArea": [
+            {
+              "code": "TLV",
+              "description": "NEW YORK - USA"
+            }
+          ]
+        }
+      ],
+      "numberOfPieces": 1,
+      "estimatedDeliveryDate": "2026-10-06"
+    }
+  ]
+}

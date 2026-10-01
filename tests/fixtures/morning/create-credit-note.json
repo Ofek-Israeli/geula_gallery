@@ -1,0 +1,29 @@
+{
+  "provider": "morning",
+  "scenario": "create-credit-note",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /documents (201): a type 330 credit note.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/documents",
+        "body": null
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": "6f0c8a2e-1111-4a5b-9c0d-000000000002",
+          "number": 50001,
+          "type": 330,
+          "signed": true,
+          "lang": "he",
+          "client": {},
+          "url": {
+            "origin": "https://example.com/doc/cn.pdf"
+          }
+        }
+      }
+    }
+  ]
+}
