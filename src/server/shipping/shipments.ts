@@ -50,6 +50,7 @@ import {
 import {
   contentsDescriptionShort,
   customsDescriptionEn,
+  declaredLineValues,
   declaredValueUsdMinor,
   EXPORT_COMMODITY_CODE,
   exportDeclarationRequired,
@@ -798,6 +799,12 @@ async function buildCreateRequest(
           });
   }
   const firstMedium = items[0] ? englishMedium(items[0]) : "";
+  const declaredValueMinor =
+    shipment.declaredValueMinor ?? order.itemsTotalMinor;
+  const lineValues = declaredLineValues(
+    declaredValueMinor,
+    items.map((i) => i.declaredValueMinor ?? i.priceMinor),
+  );
   return {
     orderNumber: order.number,
     plannedShippingDate: jerusalemDateKey(now),
@@ -812,7 +819,7 @@ async function buildCreateRequest(
     },
     packages,
     isCustomsDeclarable: international,
-    declaredValueMinor: shipment.declaredValueMinor ?? order.itemsTotalMinor,
+    declaredValueMinor,
     declaredCurrency,
     ...(insured ? { insuredValueMinor: insured } : {}),
     incoterm: "DAP",
@@ -820,7 +827,7 @@ async function buildCreateRequest(
     invoiceNumber:
       shipment.commercialInvoiceNumber ?? commercialInvoiceNumber(order.number),
     contentsDescriptionEn: contentsDescriptionShort(firstMedium),
-    lineItems: items.map((i) => ({
+    lineItems: items.map((i, n) => ({
       description:
         items.length === 1 && shipment.contentsDescriptionEn
           ? shipment.contentsDescriptionEn
@@ -830,7 +837,7 @@ async function buildCreateRequest(
               artistName,
             }),
       quantity: 1 as const,
-      valueMinor: i.declaredValueMinor ?? i.priceMinor,
+      valueMinor: lineValues[n] ?? 0,
       exportCommodityCode: EXPORT_COMMODITY_CODE,
       importCommodityCode: importCommodityCode(order.shipCountry),
       originCountry: i.countryOfOrigin ?? "IL",

@@ -221,6 +221,62 @@ describe("manual carrier path (IL courier)", () => {
   });
 });
 
+describe("customs values in the declared currency", () => {
+  it("a USD order declares USD on the invoice lines and the carrier line items (never the ILS item value)", async () => {
+    const { getCommercialInvoice } = await import(
+      "@/server/shipping/documents"
+    );
+    const o = await paidShipmentOrder({ country: "US" });
+    const order = await orderOf(o.orderId);
+    expect(order.currency).toBe("USD");
+    await svc.savePacking(o.orderId, fullPacking([packingPhotoKey(1)]), ctx);
+    await svc.saveCustoms(
+      o.orderId,
+      {
+        hsCode: "9701.91",
+        contentsDescriptionEn: "Original painting, oil on canvas.",
+        declaredValueMinor: order.itemsTotalMinor,
+        insuredValueMinor: 0,
+        exportDeclaration: { status: "PENDING_CARRIER" },
+      },
+      ctx,
+    );
+    const ci = await getCommercialInvoice(ctx, o.orderId);
+    expect(ci?.currency).toBe("USD");
+    expect(ci?.lines.map((l) => l.unitValueMinor)).toEqual([
+      order.itemsTotalMinor,
+    ]);
+    expect(ci?.goodsTotalMinor).toBe(order.itemsTotalMinor);
+    expect(ci?.invoiceTotalMinor).toBe(order.totalMinor);
+
+    const real = createMockCarrier({ env });
+    let request:
+      | Parameters<NonNullable<CarrierAdapter["createShipment"]>>[0]
+      | null = null;
+    const carrier: CarrierAdapter = {
+      ...real,
+      createShipment: async (r, c) => {
+        request = r;
+        return (
+          real.createShipment as NonNullable<CarrierAdapter["createShipment"]>
+        )(r, c);
+      },
+    };
+    const s = await shipmentOf(o.orderId);
+    await svc.requestLabel(s.id, ctx, { carrier });
+    const sent = request as unknown as {
+      declaredValueMinor: number;
+      declaredCurrency: string;
+      lineItems: { valueMinor: number }[];
+    } | null;
+    expect(sent?.declaredCurrency).toBe("USD");
+    expect(sent?.declaredValueMinor).toBe(order.itemsTotalMinor);
+    expect(sent?.lineItems.map((l) => l.valueMinor)).toEqual([
+      order.itemsTotalMinor,
+    ]);
+  });
+});
+
 describe("label claim protocol", () => {
   it("requires photos abroad, customs, then creates a private label (attempt 1)", async () => {
     const o = await paidShipmentOrder({ country: "US" });

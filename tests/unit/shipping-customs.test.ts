@@ -57,3 +57,16 @@ describe("customs (spec §4.4)", () => {
     expect(declaredValueUsdMinor(12_345, "USD", 3.7)).toBe(12_345);
   });
 });
+
+describe("declaredLineValues", () => {
+  it("splits the declared total by weight and always adds up", async () => {
+    const { declaredLineValues } = await import("@/server/shipping/customs");
+    expect(declaredLineValues(185_000, [690_000])).toEqual([185_000]);
+    expect(declaredLineValues(100_00, [1, 1, 1])).toEqual([3333, 3333, 3334]);
+    const split = declaredLineValues(207_100, [690_000, 310_000]);
+    expect(split.reduce((s, v) => s + v, 0)).toBe(207_100);
+    expect(split[0]).toBe(142_899);
+    expect(declaredLineValues(500, [0, 0])).toEqual([250, 250]);
+    expect(declaredLineValues(500, [])).toEqual([]);
+  });
+});

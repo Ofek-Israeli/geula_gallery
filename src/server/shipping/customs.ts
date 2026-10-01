@@ -92,3 +92,35 @@ export function declaredValueUsdMinor(
   const twice = (BigInt(valueMinor) * 2_000_000n) / rateMicro;
   return Number((twice + 1n) / 2n);
 }
+
+/**
+ * Per-line customs values in the shipment's declared currency. The shipment's declared value is
+ * the authoritative total (order currency, editable in the customs step); `order_items`
+ * `declared_value_minor` is an ILS figure, so it is only a weight here, never a value in the
+ * declared currency. The lines always add up to the total (integer split, remainder on the last
+ * line), so the commercial invoice and the carrier's line items match the declared value.
+ */
+export function declaredLineValues(
+  totalMinor: number,
+  weights: readonly number[],
+): number[] {
+  if (weights.length === 0) return [];
+  const sum = weights.reduce((s, w) => s + Math.max(0, w), 0);
+  if (sum <= 0) {
+    const each = Math.floor(totalMinor / weights.length);
+    return weights.map((_, i) =>
+      i === weights.length - 1
+        ? totalMinor - each * (weights.length - 1)
+        : each,
+    );
+  }
+  let allocated = 0;
+  return weights.map((w, i) => {
+    if (i === weights.length - 1) return totalMinor - allocated;
+    const v = Number(
+      (BigInt(totalMinor) * BigInt(Math.max(0, w))) / BigInt(sum),
+    );
+    allocated += v;
+    return v;
+  });
+}

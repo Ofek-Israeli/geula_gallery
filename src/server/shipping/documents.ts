@@ -16,6 +16,7 @@ import { commercialInvoiceNumber } from "@/server/domain/ids";
 import { getSetting } from "@/server/settings";
 import {
   customsDescriptionEn,
+  declaredLineValues,
   EU_CULTURAL_GOODS_STATEMENT,
   EXPORT_COMMODITY_CODE,
   HS_CODE,
@@ -195,7 +196,11 @@ export async function getCommercialInvoice(
   if (!data?.shipment || data.order.shipCountry === "IL") return null;
   const { order, shipment, rows, profile } = data;
   const currency = (shipment.declaredCurrency ?? order.currency) as Currency;
-  const lines = rows.map(({ item, art }) => ({
+  const lineValues = declaredLineValues(
+    shipment.declaredValueMinor ?? order.itemsTotalMinor,
+    rows.map(({ item }) => item.declaredValueMinor ?? item.priceMinor),
+  );
+  const lines = rows.map(({ art }, i) => ({
     description:
       rows.length === 1 && shipment.contentsDescriptionEn
         ? shipment.contentsDescriptionEn
@@ -211,7 +216,7 @@ export async function getCommercialInvoice(
     importCode: importCommodityCode(order.shipCountry),
     origin: art.countryOfOrigin ?? "IL",
     quantity: 1 as const,
-    unitValueMinor: item.declaredValueMinor ?? item.priceMinor,
+    unitValueMinor: lineValues[i] ?? 0,
   }));
   const goodsTotalMinor = lines.reduce((s, l) => s + l.unitValueMinor, 0);
   const packages = (shipment.packages ?? []) as ShipmentPackage[];
