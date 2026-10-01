@@ -1,8 +1,61 @@
 # Architecture
 
 The authoritative design is [`docs/implementation-spec.md`](./implementation-spec.md). This file
-grows into the layer, state-machine and failure-mode reference during M1–M4 (spec §11.4). Until
-then, the section that matters most to later agents is **Implementation notes** below.
+is the reference for how v1 is actually built: an overview, the layers, the state machines, the
+failure modes and, under **Implementation notes**, the running log of decisions, deviations,
+spike results and gotchas from M1 to M4.
+
+## Overview
+
+One Next.js 16.3.8 app (App Router, fully dynamic rendering) and one PostgreSQL database run the
+public bilingual shop, the admin, the provider integrations and the Israeli consumer-law flows.
+
+```
+Browser ─► src/proxy.ts   next-intl routing; optimistic admin-cookie redirect (never the only check)
+   ├─ src/app/[locale]/(site)/**          public pages (dynamic)
+   ├─ src/app/[locale]/(checkout)/**      checkout + mock-pay (minimal chrome, cancel link, noindex)
+   ├─ src/app/[locale]/(print)/print/**   buyer printables (?k= token); print/admin/** (requireAdmin)
+   ├─ src/app/[locale]/admin/**           admin (requireAdmin in the layout AND every page/action/route)
+   └─ src/app/api/**                      auth, payments/[provider]/{webhook,return}, cron/[job], files, uploads, health
+          │  thin: zod-parse → guard → domain service → applyEffects(after(processOutbox), revalidatePath)
+          ▼
+   src/server/** domain services (server-only; never import next/*) ─► PostgreSQL (Drizzle core builder + pg Pool)
+          ├─ storage: .data/uploads/{public,private} (local) | Vercel Blob public + private stores
+          └─ providers over typed HTTP (openapi-fetch + generated types): Cardcom · PayPal · Morning · DHL · Resend
+```
+
+**The money path.**
+1. Checkout reserves the work atomically: locks are taken before inserts, with a 35-minute hold.
+2. Checkout creates a payment attempt bound to the order's quote version, then redirects the
+   whole page to the provider (redirect-only, PCI SAQ-A).
+3. The webhook, the return route, the `reconcile` cron and the admin's "Recheck payment" all call
+   the same idempotent `finalizeAttempt()`. It re-queries the provider with no locks held,
+   verifies amount, currency, merchant and reference exactly, then runs one short
+   compare-and-set transaction.
+4. That transaction ends in exactly one of two outcomes: a sale (the partial unique index allows
+   one active sale per artwork and one winning attempt per order), or a tracked refund.
+5. Side effects (emails, tax documents, PDFs, refund follow-ups) go through a transactional
+   outbox with dedupe keys, leases, backoff and DEAD.
+6. Every external call is preceded by a claim row. A timeout becomes UNKNOWN and is resolved by
+   a query, never by a blind retry.
+
+**Global lock order:** artworks (ORDER BY id) → per-buyer advisory xact locks → orders (ORDER BY
+id) → payment_attempts → refunds. Every row an FK insert will reference is locked `FOR UPDATE`
+before the insert.
+
+**Who owns what (M3 workstreams):**
+
+| Stream | Owns |
+|---|---|
+| WS1 storefront | public pages and SEO |
+| WS2 commerce | checkout, reservations, finalize, refunds, link orders |
+| WS3 shipping | rates, rules, DHL and manual carriers, fulfillment, tracking |
+| WS4 admin | admin, inbox, quotes and offers |
+| WS5 integrations | Cardcom, PayPal, Morning and Resend adapters |
+| WS6 compliance | cancellation, disclosure, deadlines, legal texts, retention, invariants, go-live |
+
+The streams were merged in that order (WS5 → WS2 → WS3 → WS1 → WS4 → WS6) in M4, and then
+wired together; see the M4 notes at the end.
 
 ## Layers (summary of spec §2.2)
 
@@ -24,6 +77,287 @@ then, the section that matters most to later agents is **Implementation notes** 
   (migrations table in schema `drizzle`).
 - Client: `src/server/db/client.ts` (one `pg.Pool`, `casing: "snake_case"`, core query builder).
 - Seeds: `scripts/seed/index.ts` registry `[settings, catalog, orders, users]`.
+
+## State machines
+
+Generated from `src/server/domain/state-machines.ts`, which is authoritative.
+`transition()` refuses any edge that is not listed there before it touches the DB, and the
+conditional UPDATE then enforces the actual current state. `[*]` marks a final state.
+
+### Artwork (`artworks.sale_status`)
+
+A reservation hold is a set of columns, not a state: "AVAILABLE + hold" is still AVAILABLE. → SOLD comes from a successful finalize (ONLINE sale) or an admin offline sale. Relisting voids the sale; a damaged return goes to NOT_FOR_SALE.
+
+```mermaid
+stateDiagram-v2
+  AVAILABLE --> ON_HOLD
+  AVAILABLE --> NOT_FOR_SALE
+  AVAILABLE --> SOLD
+  ON_HOLD --> AVAILABLE
+  ON_HOLD --> SOLD
+  NOT_FOR_SALE --> AVAILABLE
+  SOLD --> AVAILABLE
+  SOLD --> NOT_FOR_SALE
+```
+
+### Order
+
+EXPIRED → AWAITING_PAYMENT happens only through a capture claim on a work that is still sellable, never from the order page. PAID → CANCELLED happens once the refund has settled (the REFUND_SETTLED job). PAID → COMPLETED is done by the daily job.
+
+```mermaid
+stateDiagram-v2
+  AWAITING_PAYMENT --> PAID
+  AWAITING_PAYMENT --> PAYMENT_REVIEW
+  AWAITING_PAYMENT --> EXPIRED
+  AWAITING_PAYMENT --> CANCELLED
+  PAYMENT_REVIEW --> PAID
+  PAYMENT_REVIEW --> AWAITING_PAYMENT
+  PAYMENT_REVIEW --> CANCELLED
+  EXPIRED --> AWAITING_PAYMENT
+  EXPIRED --> PAID
+  EXPIRED --> CANCELLED
+  PAID --> CANCELLED
+  PAID --> COMPLETED
+  COMPLETED --> CANCELLED
+  CANCELLED --> [*]
+```
+
+### Payment attempt
+
+Every non-final state may also become SUCCEEDED, NEEDS_REFUND, or REFUNDED (an external refund). EXPIRED is not final: a late approval can still be captured. CAPTURING → CAPTURING is the re-entrant capture claim (reconcile/admin). CAPTURING and PAYMENT_REVIEW are "in flight": pay, release and re-quote are refused while they last.
+
+```mermaid
+stateDiagram-v2
+  CREATED --> PENDING
+  CREATED --> FAILED
+  CREATED --> SUCCEEDED
+  CREATED --> NEEDS_REFUND
+  CREATED --> REFUNDED
+  PENDING --> AWAITING_CAPTURE
+  PENDING --> CAPTURING
+  PENDING --> PAYMENT_REVIEW
+  PENDING --> CANCELED
+  PENDING --> FAILED
+  PENDING --> EXPIRED
+  PENDING --> SUCCEEDED
+  PENDING --> NEEDS_REFUND
+  PENDING --> REFUNDED
+  AWAITING_CAPTURE --> CAPTURING
+  AWAITING_CAPTURE --> PAYMENT_REVIEW
+  AWAITING_CAPTURE --> CANCELED
+  AWAITING_CAPTURE --> FAILED
+  AWAITING_CAPTURE --> EXPIRED
+  AWAITING_CAPTURE --> SUCCEEDED
+  AWAITING_CAPTURE --> NEEDS_REFUND
+  AWAITING_CAPTURE --> REFUNDED
+  CAPTURING --> CAPTURING
+  CAPTURING --> PAYMENT_REVIEW
+  CAPTURING --> FAILED
+  CAPTURING --> CANCELED
+  CAPTURING --> SUCCEEDED
+  CAPTURING --> NEEDS_REFUND
+  CAPTURING --> REFUNDED
+  PAYMENT_REVIEW --> FAILED
+  PAYMENT_REVIEW --> SUCCEEDED
+  PAYMENT_REVIEW --> NEEDS_REFUND
+  PAYMENT_REVIEW --> REFUNDED
+  EXPIRED --> CAPTURING
+  EXPIRED --> CANCELED
+  EXPIRED --> PAYMENT_REVIEW
+  EXPIRED --> SUCCEEDED
+  EXPIRED --> NEEDS_REFUND
+  EXPIRED --> REFUNDED
+  NEEDS_REFUND --> REFUNDED
+  SUCCEEDED --> [*]
+  FAILED --> [*]
+  CANCELED --> [*]
+  REFUNDED --> [*]
+```
+
+### Refund (two-phase)
+
+REQUESTED → IN_FLIGHT is the claim, written before the provider call. A crash or timeout leaves UNKNOWN, which is re-queried and never re-sent blindly. FAILED → REQUESTED (with a new idempotency key) only after the admin confirms in the provider dashboard that no money moved; until then FAILED counts toward the refund cap.
+
+```mermaid
+stateDiagram-v2
+  REQUESTED --> IN_FLIGHT
+  REQUESTED --> MANUAL_REQUIRED
+  IN_FLIGHT --> SUCCEEDED
+  IN_FLIGHT --> PROVIDER_PENDING
+  IN_FLIGHT --> FAILED
+  IN_FLIGHT --> UNKNOWN
+  IN_FLIGHT --> MANUAL_REQUIRED
+  PROVIDER_PENDING --> SUCCEEDED
+  PROVIDER_PENDING --> FAILED
+  UNKNOWN --> SUCCEEDED
+  UNKNOWN --> FAILED
+  UNKNOWN --> MANUAL_REQUIRED
+  MANUAL_REQUIRED --> MANUAL_DONE
+  FAILED --> REQUESTED
+  SUCCEEDED --> [*]
+  MANUAL_DONE --> [*]
+```
+
+### Tax document
+
+UNKNOWN is resolved by a marker search in Morning: found → ISSUED, confirmed absent → ISSUING, three inconclusive searches → NEEDS_MANUAL.
+
+```mermaid
+stateDiagram-v2
+  ISSUING --> ISSUED
+  ISSUING --> FAILED
+  ISSUING --> UNKNOWN
+  ISSUING --> NEEDS_MANUAL
+  UNKNOWN --> ISSUED
+  UNKNOWN --> ISSUING
+  UNKNOWN --> NEEDS_MANUAL
+  FAILED --> ISSUING
+  NEEDS_MANUAL --> ISSUED
+  ISSUED --> [*]
+```
+
+### Shipment
+
+Carrier tracking may skip forward. LABEL_REQUESTED is the label claim: a clear refusal goes back to PACKED, a timeout goes to LABEL_UNKNOWN, and LABEL_UNKNOWN → LABEL_REQUESTED only after the admin confirms no label exists. COLLECTED requires the disclosure to have been sent or handed over.
+
+```mermaid
+stateDiagram-v2
+  AWAITING_FULFILLMENT --> PACKED
+  AWAITING_FULFILLMENT --> READY_FOR_PICKUP
+  AWAITING_FULFILLMENT --> CANCELLED
+  PACKED --> LABEL_REQUESTED
+  PACKED --> LABEL_CREATED
+  PACKED --> IN_TRANSIT
+  PACKED --> OUT_FOR_DELIVERY
+  PACKED --> CANCELLED
+  LABEL_REQUESTED --> LABEL_CREATED
+  LABEL_REQUESTED --> PACKED
+  LABEL_REQUESTED --> LABEL_UNKNOWN
+  LABEL_UNKNOWN --> LABEL_CREATED
+  LABEL_UNKNOWN --> LABEL_REQUESTED
+  LABEL_CREATED --> PICKUP_SCHEDULED
+  LABEL_CREATED --> IN_TRANSIT
+  LABEL_CREATED --> CUSTOMS
+  LABEL_CREATED --> OUT_FOR_DELIVERY
+  LABEL_CREATED --> DELIVERED
+  LABEL_CREATED --> EXCEPTION
+  LABEL_CREATED --> CANCELLED
+  PICKUP_SCHEDULED --> IN_TRANSIT
+  PICKUP_SCHEDULED --> CUSTOMS
+  PICKUP_SCHEDULED --> OUT_FOR_DELIVERY
+  PICKUP_SCHEDULED --> DELIVERED
+  PICKUP_SCHEDULED --> LABEL_CREATED
+  PICKUP_SCHEDULED --> EXCEPTION
+  PICKUP_SCHEDULED --> CANCELLED
+  IN_TRANSIT --> CUSTOMS
+  IN_TRANSIT --> OUT_FOR_DELIVERY
+  IN_TRANSIT --> DELIVERED
+  IN_TRANSIT --> EXCEPTION
+  CUSTOMS --> OUT_FOR_DELIVERY
+  CUSTOMS --> DELIVERED
+  CUSTOMS --> IN_TRANSIT
+  CUSTOMS --> EXCEPTION
+  OUT_FOR_DELIVERY --> DELIVERED
+  OUT_FOR_DELIVERY --> EXCEPTION
+  EXCEPTION --> IN_TRANSIT
+  EXCEPTION --> RETURNED
+  EXCEPTION --> DELIVERED
+  READY_FOR_PICKUP --> COLLECTED
+  READY_FOR_PICKUP --> CANCELLED
+  DELIVERED --> [*]
+  RETURNED --> [*]
+  CANCELLED --> [*]
+  COLLECTED --> [*]
+```
+
+### Cancellation notice
+
+RECEIVED → CLOSED only for a duplicate (`duplicate_of_id` set). Notices are never rejected at intake; a second notice is stored and flagged.
+
+```mermaid
+stateDiagram-v2
+  RECEIVED --> ACCEPTED
+  RECEIVED --> REJECTED
+  RECEIVED --> CLOSED
+  ACCEPTED --> CLOSED
+  REJECTED --> [*]
+  CLOSED --> [*]
+```
+
+### Buyer request
+
+The DB column is shared, so this is the union of the per-kind graphs in `REQUEST_KIND_EDGES`: QUESTION (NEW → REPLIED → CLOSED), OFFER (NEW → AUTO_DECLINED / DECLINED / ACCEPTED / COUNTERED → CONVERTED / EXPIRED), QUOTE (NEW → QUOTED / DECLINED, QUOTED → CONVERTED / EXPIRED).
+
+```mermaid
+stateDiagram-v2
+  NEW --> REPLIED
+  NEW --> AUTO_DECLINED
+  NEW --> DECLINED
+  NEW --> ACCEPTED
+  NEW --> COUNTERED
+  NEW --> QUOTED
+  REPLIED --> CLOSED
+  ACCEPTED --> CONVERTED
+  ACCEPTED --> EXPIRED
+  COUNTERED --> CONVERTED
+  COUNTERED --> EXPIRED
+  QUOTED --> CONVERTED
+  QUOTED --> EXPIRED
+  DECLINED --> [*]
+  AUTO_DECLINED --> [*]
+  CONVERTED --> [*]
+  EXPIRED --> [*]
+  CLOSED --> [*]
+```
+
+### Outbox job
+
+RUNNING → PENDING is a retry with backoff; after 8 attempts the job goes to DEAD; RUNNING → RUNNING is an expired lease being re-claimed. DEAD jobs are re-run from Alerts.
+
+```mermaid
+stateDiagram-v2
+  PENDING --> RUNNING
+  RUNNING --> DONE
+  RUNNING --> PENDING
+  RUNNING --> DEAD
+  RUNNING --> RUNNING
+  DONE --> [*]
+  DEAD --> [*]
+```
+
+## Failure modes
+
+The full table of 33 failure modes, with detection, automatic response and residue, is spec
+§5.3. The main ones and the tests that prove them:
+
+| Failure | Response | Proven by |
+|---|---|---|
+| Two buyers pay at once | locks before inserts plus a conditional reserve: one hold, no deadlock; the other buyer sees "just reserved" | `reserve-race` (20 clients and a barrier), `race.spec` |
+| Lost webhook (always on localhost) | the return route, `reconcile` and the admin recheck re-query the provider | `finalize`, `webhook.spec` |
+| Duplicate, failed or forged webhook | `processed_at` makes repeats a no-op; a failure → 500 → redelivery or replay; authenticated before any write → 401 | `webhook-replay`, `tamper.spec` |
+| Late success, work free or gone | free → PAID; gone → NEEDS_REFUND with an automatic refund, receipt and credit note, plus a CRITICAL alert | `finalize`, `late-payment.spec` |
+| Cardcom payment after 72 h with a lost webhook | 30-day daily tail poll; the live ListTransactions sweep; an unmatched transaction → CRITICAL | `expire-job`, `cardcom-wiring` |
+| Paid twice; stale quote | DUPLICATE_PAYMENT / STALE_QUOTE refunds; never PAID at the wrong total | `finalize`, `capture-race` |
+| Amount, merchant or reference mismatch; config drift | never paid; MANUAL_REQUIRED refund with a deadline; CRITICAL | `finalize`, `tamper.spec` |
+| Capture or refund timeout | re-entrant CAPTURING with the same key; refund UNKNOWN, never re-sent blindly; Cardcom FAILED counts toward the cap until confirmed | `capture-race`, `refunds` |
+| Over-refund | lock plus a cap that also counts unconfirmed FAILED rows | `refunds` |
+| Morning timeout; DHL label timeout | UNKNOWN → marker search → NEEDS_MANUAL; LABEL_UNKNOWN → the admin checks MyDHL | `taxdocs`, `shipments` |
+| Worker crash; email outage; skipped cron | leases are reclaimed and handlers are idempotent; the outbox retries; lazy expiry plus a stale-cron warning | `outbox-core`, `reconcile-job` |
+| Demo work charged live, or a real work bought through mock | registry rule plus a DB CHECK | `schema-constraints`, `payments-registry` |
+| Hoarding | caps under advisory locks, a per-artwork budget, a cooldown, the hold span | `reserve-race`, `limits` |
+| Disclosure not delivered | packing, pickup and delivery are blocked until it is confirmed | `shipments`, `fulfill.spec` |
+| A second cancellation notice | stored, flagged as a possible duplicate, acknowledged | `cancellations`, `cancellation-il.spec` |
+
+The daily `checkInvariants()` (`src/server/invariants.ts`) re-checks the core guarantees in
+production and raises alerts. `invariants.test.ts` proves that each check catches a broken row.
+
+## Spike results
+
+The M1 spikes are recorded under "M1 steps 13–15" below:
+- (a) react-pdf Hebrew and English: GO, which enabled the Tier B disclosure PDF;
+- (b) react-email in a Route Handler and inside `after()`: works;
+- (c) `[locale]` as the only root layout with `force-dynamic`: builds;
+- (d) fonts traced into the output: works.
 
 ## Implementation notes
 
@@ -464,7 +798,7 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
   `.next/types/* 2.ts` (duplicate-identifier errors), ~80 files in `node_modules`, and
   **`.git/index 2` — at one point `.git/index` itself was replaced by a stale copy**, so commit
   `6125064` recorded the deletion of 259 files. `5bac41f` re-adds them unchanged (the working
-  tree matched `06b6383` byte for byte). **Squash `5bac41f` into `6125064` before pushing.**
+  tree matched `06b6383` byte for byte). **Squash `5bac41f` into `6125064` before pushing.** (Resolved in M4: history was not rewritten; the PR is to be squash-merged, so `6125064` never lands on `main` on its own.)
   After every commit, sanity-check `git ls-tree -r HEAD --name-only | wc -l` and
   `git diff --cached --name-status` for unexpected `D` lines. Consider moving the repo out of a
   synced folder.
@@ -607,6 +941,7 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
 - Open before push: commit `6125064` records 259 deletions that `5bac41f` restores (sync-corrupted
   index). Squash `5bac41f` into `6125064` (needs a history rewrite, so it is the integrator's call)
   and move the repo out of the synced Desktop folder. `.git/index 2` is a harmless stray.
+  (M4: not rewritten; the PR is squash-merged instead, see the M4 notes.)
 
 ### M2 part 1 (demo catalog, minimal storefront, shipping engine basics)
 
@@ -1506,3 +1841,23 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   contract cannot pass; PayPal, Morning and DHL have no credentials (live checks skip).
 - P1: the DHL "Request pickup" button, `/api/admin/blob-upload`, admin live preview, `/admin/series`,
   a structured shipper address in `business_profile`.
+
+### M4 QA, documentation and merge strategy
+
+- QA fixes, each with a regression test or assertion:
+  - `f3a2a49`: the commercial invoice and the DHL line items now split the shipment's declared
+    total in the declared currency (`shipping/customs.ts#declaredLineValues`). Before, they
+    carried the ILS item value labelled as USD.
+  - `9014347`: the dashboard cards and the cancellation detail show translated statuses.
+  - `c9288ae`: in Hebrew emails, the footer's URL, email and phone are isolated LTR runs.
+- QA findings left open (cosmetic or minor) are listed in `docs/testing.md`. The main ones: the
+  ₪ sign is on different sides of the amount in `<Price>` and in plain text on Hebrew pages; the
+  lightbox does not trap Tab; a few 20 px links; no `@page` margin on the printables.
+- Docs completed: `README.md`, `docs/deploy.md`, `docs/painter-onboarding.md` (Hebrew, then
+  English), `docs/testing.md`, `.env.example`, and in this file the overview, state machines and
+  failure modes.
+- **Merge strategy: squash-merge the PR.** Commit `6125064` on its own records 259 deletions
+  that `5bac41f` restores (a file-sync service had corrupted `.git/index`). Every later commit
+  is consistent, but history was not rewritten, so `main` must receive one squashed commit.
+- The local Postgres runs with `max_connections = 200` (`ALTER SYSTEM`, spec §8.1). This is
+  noted in the README.
