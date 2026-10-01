@@ -67,12 +67,12 @@
     "addressTitle": "Delivery address",
     "latinHint": "For international shipping please write the address in Latin (English) letters.",
     "line1": "Street and number",
-    "line2": "Apartment, floor (optional)",
+    "line2": "Apartment, floor",
     "city": "City",
-    "region": "State / region (optional)",
+    "region": "State / region",
     "postalCode": "Postal code",
-    "companyName": "Company name (optional)",
-    "vatId": "VAT / company ID for the receipt (optional)",
+    "companyName": "Company name",
+    "vatId": "VAT / company ID for the receipt",
     "pickupNote": "The studio address and pickup instructions are sent after payment."
   },
   "consent": {
