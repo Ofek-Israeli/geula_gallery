@@ -52,6 +52,8 @@ export function readSeedEnv(): SeedEnv {
       (v("SEED_E2E_USERS") ?? "").toLowerCase(),
     ),
     e2eAdminPassword: v("E2E_ADMIN_PASSWORD") ?? "e2e-admin-password",
+    storageDriver: v("STORAGE_DRIVER") ?? "local",
+    storageDir: v("LOCAL_STORAGE_DIR") ?? ".data/uploads",
   };
 }
 

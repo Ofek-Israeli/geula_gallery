@@ -13,6 +13,10 @@ export interface SeedEnv {
   authBaseUrl: string;
   seedE2eUsers: boolean;
   e2eAdminPassword: string;
+  /** STORAGE_DRIVER (default `local`); the demo catalog seed supports `local` only. */
+  storageDriver?: string;
+  /** LOCAL_STORAGE_DIR (default `.data/uploads`), where the catalog seed writes images. */
+  storageDir?: string;
 }
 
 export interface SeedContext {
