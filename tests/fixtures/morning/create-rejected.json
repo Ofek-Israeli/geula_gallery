@@ -1,0 +1,22 @@
+{
+  "provider": "morning",
+  "scenario": "create-rejected",
+  "recordedAt": "synthetic",
+  "note": "Synthetic 400 from POST /documents (validation error).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/documents",
+        "body": null
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "errorCode": 1003,
+          "errorMessage": "validation error"
+        }
+      }
+    }
+  ]
+}

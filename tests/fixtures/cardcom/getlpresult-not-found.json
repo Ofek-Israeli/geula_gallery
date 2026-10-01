@@ -1,0 +1,25 @@
+{
+  "provider": "cardcom",
+  "scenario": "getlpresult-not-found",
+  "recordedAt": "synthetic",
+  "note": "Synthetic: an unknown LowProfileId (HTTP 400 ErrorInfo).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/LowProfile/GetLpResult",
+        "body": {
+          "TerminalNumber": 1000,
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa"
+        }
+      },
+      "response": {
+        "status": 400,
+        "body": {
+          "ResponseCode": 5033,
+          "Description": "LowProfile not found"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "provider": "cardcom",
+  "scenario": "create-ok",
+  "recordedAt": "synthetic",
+  "note": "Synthetic (CreateLowProfileResponse): a hosted page was created. A live recording was not possible: the public test terminal refused Create (603).",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v11/LowProfile/Create",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "ResponseCode": 0,
+          "Description": "OK",
+          "LowProfileId": "a1b2c3d4-0000-4000-8000-0000000000aa",
+          "Url": "https://secure.cardcom.solutions/External/LowProfile.aspx?LowProfileCode=a1b2c3d4-0000-4000-8000-0000000000aa",
+          "UrlToPayPal": null,
+          "UrlToBit": null
+        }
+      }
+    }
+  ]
+}

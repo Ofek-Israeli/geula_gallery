@@ -1,0 +1,41 @@
+{
+  "provider": "paypal",
+  "scenario": "refund-completed",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /v2/payments/captures/{id}/refund: COMPLETED.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v2/payments/captures/3C679366HH908993F/refund",
+        "body": null
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "id": "1JU08902781691411",
+          "status": "COMPLETED",
+          "amount": {
+            "currency_code": "USD",
+            "value": "340.00"
+          },
+          "custom_id": "22222222-2222-4222-8222-222222222222",
+          "invoice_id": "GG-7K3M9Q-R1",
+          "create_time": "2026-10-02T09:00:00Z",
+          "links": [
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/refunds/1JU08902781691411",
+              "rel": "self",
+              "method": "GET"
+            },
+            {
+              "href": "https://api.sandbox.paypal.com/v2/payments/captures/3C679366HH908993F",
+              "rel": "up",
+              "method": "GET"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

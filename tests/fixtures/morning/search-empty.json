@@ -1,0 +1,27 @@
+{
+  "provider": "morning",
+  "scenario": "search-empty",
+  "recordedAt": "synthetic",
+  "note": "Synthetic POST /documents/search: nothing found.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/documents/search",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "total": 0,
+          "page": 1,
+          "pageSize": 50,
+          "from": 0,
+          "to": 0,
+          "pages": 0,
+          "items": []
+        }
+      }
+    }
+  ]
+}
