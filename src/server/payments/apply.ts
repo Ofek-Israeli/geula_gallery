@@ -106,7 +106,13 @@ export function paymentDetails(vp: VerifiedPayment) {
     cardBrand: vp.brand ?? null,
     isForeignCard: vp.isForeignCard ?? null,
     approvalCode: vp.approvalCode ?? null,
-    verifiedRaw: vp.rawRedacted ?? null,
+    // Gateway mode copies the document Cardcom issued with the charge (spec §4.3).
+    verifiedRaw: vp.gatewayDocument
+      ? {
+          ...((vp.rawRedacted ?? {}) as Record<string, unknown>),
+          gatewayDocument: vp.gatewayDocument,
+        }
+      : (vp.rawRedacted ?? null),
   };
 }
 

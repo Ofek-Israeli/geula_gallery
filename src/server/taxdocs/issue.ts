@@ -33,7 +33,9 @@ import {
 import { log } from "@/server/log";
 import { enqueueEmail } from "@/server/outbox/enqueue";
 import { dedupeKeys } from "@/server/outbox/types";
+import type { GatewayDocumentSpec } from "@/server/payments/types";
 import { getSetting } from "@/server/settings";
+import { buildGatewayDocument } from "./gateway";
 import { taxDocumentProvider } from "./registry";
 import {
   type IssuedDocument,
@@ -308,9 +310,82 @@ export async function issueReceiptForAttempt(
     }));
   return runDocument(c, row, {
     issue: async (r) =>
-      c.provider.issueReceipt(await receiptInput(c, attempt, r.marker)),
+      c.provider.id === "gateway"
+        ? gatewayCopy(attempt)
+        : c.provider.issueReceipt(await receiptInput(c, attempt, r.marker)),
     afterIssued: afterReceiptIssued,
   });
+}
+
+/**
+ * The `Document` block for a Cardcom charge in gateway mode (spec §4.2 `cardcom` "Document",
+ * §4.3 `gateway`): the same receipt input a standalone receipt would get, mapped by WS5's
+ * `buildGatewayDocument` (email only with receipt-by-email consent).
+ */
+export async function gatewayDocumentFor(
+  attempt: PaymentAttempt,
+  deps: TaxDocDeps = {},
+): Promise<GatewayDocumentSpec> {
+  const c = ctxOf(deps);
+  const [order] = await c.db
+    .select({
+      number: orders.number,
+      email: orders.buyerEmail,
+      consent: orders.receiptEmailConsent,
+    })
+    .from(orders)
+    .where(eq(orders.id, attempt.orderId));
+  if (!order) throw new NotFoundError("order", attempt.orderId);
+  const profile = await getSetting("business_profile", c.db);
+  const kind = profile.vatMode === "OSEK_PATUR" ? "RECEIPT" : "INVOICE_RECEIPT";
+  const input = await receiptInput(
+    c,
+    attempt,
+    taxDocumentMarker(order.number, kind, attempt.seq),
+  );
+  const consent = Boolean(order.consent && order.email);
+  return buildGatewayDocument({
+    ...input,
+    ...(consent && order.email ? { email: order.email } : {}),
+    sendByEmail: consent,
+  });
+}
+
+/**
+ * Gateway mode (spec §4.3): Cardcom issued the document together with the charge; the receipt job
+ * copies it from the verified payment (`verified_raw.gatewayDocument`, stored by `apply.ts`).
+ * PayPal and offline payments, or a Cardcom payment without a document, need the accountant:
+ * NEEDS_MANUAL.
+ */
+export function gatewayCopy(
+  attempt: Pick<
+    PaymentAttempt,
+    "provider" | "verifiedRaw" | "finalizedAt" | "updatedAt"
+  >,
+): IssuedDocument {
+  const raw = (attempt.verifiedRaw ?? {}) as {
+    gatewayDocument?: { type?: unknown; number?: unknown; url?: unknown };
+  };
+  const g = raw.gatewayDocument;
+  if (
+    attempt.provider !== "CARDCOM" ||
+    typeof g?.number !== "string" ||
+    g.number === ""
+  ) {
+    throw new TaxDocumentNeedsManualError(
+      "gateway",
+      attempt.provider === "CARDCOM"
+        ? "the Cardcom payment carries no gateway document"
+        : `no gateway document for ${attempt.provider} payments`,
+    );
+  }
+  return {
+    providerDocId: g.number,
+    docNumber: g.number,
+    docTypeCode: typeof g.type === "string" ? g.type : "",
+    ...(typeof g.url === "string" ? { url: g.url } : {}),
+    issuedAt: (attempt.finalizedAt ?? attempt.updatedAt).toISOString(),
+  };
 }
 
 async function currentReceiptRow(

@@ -31,6 +31,7 @@ import {
 import { hmacToken, orderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import type { CheckoutSettings } from "@/server/settings/schemas";
+import { gatewayDocumentFor } from "@/server/taxdocs/issue";
 import { detectConversation } from "./conversation";
 import { orderItemValues } from "./items";
 import { orderDetailsComplete } from "./link-details";
@@ -189,6 +190,9 @@ export async function launchAttempt(
           ? checkout.maxInstallments
           : 1,
       idemKey: attempt.createRequestId ?? attempt.id,
+      ...(e.TAX_DOCUMENTS_MODE === "gateway" && provider.id === "cardcom"
+        ? { gatewayDocument: await gatewayDocumentFor(attempt, { db, env: e }) }
+        : {}),
     });
     await withTx(
       (tx) =>

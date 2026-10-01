@@ -358,3 +358,66 @@ describe("credit notes", () => {
     expect(notes[0]?.status).toBe("ISSUED");
   });
 });
+
+const { taxDocumentProvider } = await import("@/server/taxdocs/registry");
+
+describe("modes: gateway and none (spec §4.3 Modes)", () => {
+  const gateway = taxDocumentProvider({ mode: "gateway" });
+  const none = taxDocumentProvider({ mode: "none" });
+
+  it("gateway: the receipt is copied from the document Cardcom issued with the charge", async () => {
+    const h = await paidOrder();
+    await execSql(
+      `UPDATE payment_attempts SET provider = 'CARDCOM', provider_mode = 'TEST',
+         verified_raw = $2::jsonb WHERE id = $1`,
+      [
+        h.attemptId,
+        JSON.stringify({
+          gatewayDocument: {
+            type: "TaxInvoiceAndReceipt",
+            number: "CC-55012",
+            url: "https://example.test/doc/55012",
+          },
+        }),
+      ],
+    );
+    const { result } = await issueReceiptForAttempt(h.attemptId, {
+      provider: gateway,
+    });
+    expect(result.kind).toBe("issued");
+    const [doc] = await docsOf(h.attemptId);
+    expect(doc).toMatchObject({
+      status: "ISSUED",
+      provider: "CARDCOM_GATEWAY",
+      docNumber: "CC-55012",
+      docUrl: "https://example.test/doc/55012",
+    });
+  });
+
+  it("gateway: a payment without a gateway document (PayPal, offline) needs the accountant", async () => {
+    const h = await paidOrder();
+    await execSql(
+      "UPDATE payment_attempts SET provider = 'PAYPAL', provider_mode = 'TEST' WHERE id = $1",
+      [h.attemptId],
+    );
+    const { result } = await issueReceiptForAttempt(h.attemptId, {
+      provider: gateway,
+    });
+    expect(result.kind).toBe("needs_manual");
+    const alerts = await db
+      .select()
+      .from(adminAlerts)
+      .where(eq(adminAlerts.kind, "TAX_DOCUMENT_NEEDS_MANUAL"));
+    expect(alerts).toHaveLength(1);
+  });
+
+  it("none: every receipt is NEEDS_MANUAL (demo deployments only)", async () => {
+    const h = await paidOrder();
+    const { result } = await issueReceiptForAttempt(h.attemptId, {
+      provider: none,
+    });
+    expect(result.kind).toBe("needs_manual");
+    const [doc] = await docsOf(h.attemptId);
+    expect(doc?.status).toBe("NEEDS_MANUAL");
+  });
+});
