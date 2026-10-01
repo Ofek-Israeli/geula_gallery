@@ -607,3 +607,96 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
 - Open before push: commit `6125064` records 259 deletions that `5bac41f` restores (sync-corrupted
   index). Squash `5bac41f` into `6125064` (needs a history rewrite, so it is the integrator's call)
   and move the repo out of the synced Desktop folder. `.git/index 2` is a harmless stray.
+
+### M2 part 1 (demo catalog, minimal storefront, shipping engine basics)
+
+**Demo images (`npm run demo:fetch-images`, run 2026-10-01)**
+- `scripts/fetch-demo-images.ts` + `scripts/lib/{demo-curation,demo-manifest,parse-aic-dimensions,
+  procedural-painting}.ts`. The curated §8.3 table (bilingual titles, artists, dates, medium and
+  surface, mm dimensions, series, statuses, prices, flags, **alt texts written from the images**)
+  lives in `demo-curation.ts`; the script merges it with the AIC metadata (one request; refuses a
+  work that is not public domain, whose `image_id` differs or whose first `dimensions` segment
+  disagrees with the curated mm by > 1 mm) and the processed images into
+  `data/demo-manifest.json` (zod schema in `demo-manifest.ts`). The seed reads only the manifest.
+- All 16 downloads succeeded (0 fallback images); ~5.1 MB of JPEGs (≤ 2000 px, q80 mozjpeg).
+  `--offline` renders deterministic procedural paintings instead; `--reuse` keeps the processed
+  images and rebuilds the manifest (use it after editing curation data); `--only <ids>`.
+- Choice: "ILS only" (212300) is read as a **domestic-only listing** (`shipsInternationally:
+  false`, no USD price). That is what makes §8.3's list of internationally purchasable works come
+  out exactly (otherwise its ₪8,900 is under the USD 2,500 cap). Featured works: 256797 (home hero)
+  and 100476. Demo works have `signed: false` (no claim we cannot verify), `coaIncluded: true`,
+  `readyToHang` for unrolled canvases.
+- `check:secrets`: the nine-digit ID rule now ignores digit runs inside longer alphanumeric
+  tokens (sha256 hex and base64 in the manifest tripped it).
+
+**Shipping engine (`shipping/rates.ts`, `rules.ts`; unit tests `shipping-rates`, `shipping-rules`)**
+- Implemented per §4.4 with these readings where the spec is open:
+  - `quote_only` and actual > 70 kg beat a size-class override; any other QUOTE reason (crate,
+    glazing, ≥ 25 kg, > 45 kg chargeable) can be overridden by the painter. `oversizePiece` =
+    does not fit M; the oversize fee is charged only for an oversize piece overridden to S/M; the
+    non-conveyable fee for 25–70 kg actual when overridden out of QUOTE.
+  - A ROLLED_TUBE work is measured as the tube (`rolledTubeBox`, from the artwork dimensions);
+    a tube for a work with `can_be_rolled = false` → QUOTE (`NOT_ROLLABLE`). The stored packed
+    weight is used.
+  - PCT surcharges are a percentage of the base class rate; FIXED is ILS per piece; windows are
+    inclusive Jerusalem calendar days (`jerusalemDateKey`).
+  - Insurance only abroad with CARRIER_TABLE, when `insurance.enabled` and provider ≠ NONE, and
+    either provider THIRD_PARTY or provider DHL with carrier DHL/MOCK. The IL domestic courier,
+    pickup and artist delivery are never insured (no setting exists for "unless the painter sets
+    otherwise"; add one in WS3 if needed). `insuredValueMinor` is 0 when not insured. Several
+    works: the artwork cap is Σ caps only when every work has one.
+  - USD: shipping and insurance are each converted with `ilsToUsdCeilWhole`; `breakdown` stays in
+    ILS minor units. `quoteShipping` throws for IL + USD.
+  - Methods: LOCAL_PICKUP / ARTIST_DELIVERY are Israel-only flat fees; outside Israel or disabled →
+    `blocked` with `ZONE_DISABLED` (no better frozen code). QUOTED → `quote_only` QUOTE_ONLY.
+    CARRIER_TABLE in IL uses carrier MANUAL; abroad the `carrier` input.
+  - Precedence: destination `blocked` → NOT_INTERNATIONAL (also used for a `local_pickup_only`
+    work by carrier anywhere) → destination `quote_only` → per-work QUOTE_ONLY → SIZE_QUOTE.
+  - `evaluateDestination`: deny list → IL ok → GB ≤ GBP 135 blocked (checked before the disabled
+    EUROPE zone) → quote-only countries → disabled zone (`quote_only` ZONE_DISABLED) → carrier
+    value cap (`quote_only` VALUE_CAP). Notices for every international destination; the EU EUR 3
+    window cannot be checked (the frozen signature has no date). Thresholds are converted to ILS
+    minor with the dated FX (exact BigInt maths), never the value to a float.
+  - `zoneEstimates`: carrier-table price on the date + the **minimum** premium when insured
+    (international zones assume DHL); value caps are not applied there.
+  - `TRANSIT_ESTIMATE` is added to every international `ok` quote.
+- Extra exports: `rolledTubeBox`, `packedBox`, `activeSurcharges`, `insuranceSupported`,
+  `insuredValueMinor`, `insurancePremiumMinor` (rates); `nonLatinAddressFields` (rules).
+- `scripts/seed/packaging.ts#demoPackaging` implements the §8.3 packaging defaults; the expected
+  class table is asserted through it (packed mm, grams, volumetric kg to 2 decimals, class).
+
+**Seeds**
+- `catalog.ts`: 5 series + 16 works from the manifest, `ON CONFLICT (slug) DO NOTHING` (painter
+  edits survive a re-seed). Images go through `media/ingest.ts` and a **seed-side
+  `StorageAdapter`** (`scripts/seed/storage.ts`, local layout only), because `@/server/storage`
+  imports key signing → `security/keys.ts` → `env.ts`, which seeds must not load. Keys are
+  content-derived (`artworks/demo/<aicId>-<hash12>.jpg`, `originals/demo/…`, `og/demo/…`), so
+  re-runs overwrite instead of piling up. `STORAGE_DRIVER=blob` makes the demo seed throw.
+  `SeedEnv` gained optional `storageDriver`/`storageDir` (`LOCAL_STORAGE_DIR`).
+- `orders.ts` (M2 stub; WS6 replaces it): locks each sold work, inserts an OFFLINE `is_mock`
+  sale at the list price and sets SOLD with a conditional UPDATE (sold 30/10/3 days ago).
+- `db:reset` (demo) takes ~4 s.
+
+**Catalog and storefront (minimal; WS1 owns and polishes)**
+- `server/catalog/commerce-state.ts`: `commerceStateOf(row, now)` + `commerceColumns`
+  (includes the in-flight-hold `EXISTS` subquery). An expired hold whose order has a
+  CAPTURING/PAYMENT_REVIEW attempt shows as `reserved` (until = now). `buyable` = published,
+  priced, not quote-only, not price-on-request (demo/live provider checks are checkout's).
+- `server/catalog/queries.ts`: `listArtworks` (current = AVAILABLE, ON_HOLD, NOT_FOR_SALE ordered
+  by status then featured then sort order; `sold` archive by `sold_at desc`), `listRecentlySold`,
+  `getFeaturedArtwork`, `getArtworkPage` (DTO + `ArtworkShipSpec`), `getDeliveryEstimates`
+  (`{ zones, pickupFree }`), `listCredits`.
+- `src/lib/catalog.ts` gained `ZoneEstimateDTO` and `CreditDTO` (additive, before contracts-v1).
+- Pages: home (featured work as LCP with `loading="eager"` + `fetchPriority="high"`; Next 16
+  deprecates `priority`), `/works` (+ `?availability=sold`, `?page`), `/works/[slug]`, `/credits`.
+  Components in `src/components/artwork/` (`ArtworkCard`, `WorksGrid`, `ArtworkStatus`,
+  `LiveBuyBox`, `ArtworkFacts`). Buy now links to `/checkout/<slug>` (the route lands in M2
+  part 2; today it 404s). Not done (WS1): filters/sorts, lightbox and thumbnails, JSON-LD,
+  sticky mobile buy bar, sitemap, full metadata, about/contact pages (links 404 for now).
+- Messages: real keys in `catalog` and `artwork` (WS1-owned files; WS1 extends them).
+- E2E: `tests/e2e/storefront-minimal.spec.ts` (@smoke) and the works/artwork cancel-link
+  smoke tests (their `fixme`s removed). Integration: `catalog-seed.test.ts`.
+- **Gotcha:** with the new pages, `next start` logs `⨯ Error: The destination stream closed
+  early.` a few times during E2E. It appears when Playwright navigates away while a response or
+  `<Link>` prefetch is still streaming; every test passes and no page errors are reported. Not
+  investigated further.
