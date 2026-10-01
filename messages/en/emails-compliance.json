@@ -1,1 +1,16 @@
-{}
+{
+  "orderConfirmation": {
+    "subject": "Order {number} is confirmed",
+    "preview": "Thank you – order {number} is paid",
+    "title": "Thank you for your order",
+    "intro": "Your payment for order {number} was received and the work is yours. We will let you know when it ships.",
+    "paidAt": "Paid on {date} (Israel time)",
+    "summaryTitle": "Order summary",
+    "shipping": "Shipping",
+    "insurance": "Shipping insurance",
+    "total": "Total paid",
+    "disclosureTitle": "Disclosure document – summary",
+    "disclosureLink": "Read the full disclosure document",
+    "disclosureNote": "A printed copy of the disclosure document is also included with the work."
+  }
+}

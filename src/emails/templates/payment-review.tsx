@@ -1,15 +1,30 @@
-import { createStubTemplate } from "../stub";
-import type { EmailTemplateProps } from "../types";
+import { Layout } from "../Layout";
+import { Greeting, P, SignOff, Title } from "../parts";
+import type { EmailTemplate, EmailTemplateProps } from "../types";
 
-/**
- * `payment-review` (spec §4.5). Rendered in the buyer's locale. M1 stub; owner: WS2.
- */
-export const paymentReview = createStubTemplate<
-  EmailTemplateProps["payment-review"]
->({
-  id: "payment-review",
+type Props = EmailTemplateProps["payment-review"];
+
+/** `payment-review` (spec §4.5): the provider is reviewing the payment; the work stays reserved. */
+export const paymentReview: EmailTemplate<Props> = {
   audience: "buyer",
-  reference: (p) => p.orderNumber,
-  recipientName: (p) => p.buyerName,
-  orderUrl: (p) => p.orderUrl,
-});
+  subject: (p, ctx) =>
+    ctx.t("emails-commerce.paymentReview.subject", { number: p.orderNumber }),
+  preview: (p, ctx) =>
+    ctx.t("emails-commerce.paymentReview.subject", { number: p.orderNumber }),
+  Component: ({ props: p, ctx }) => (
+    <Layout
+      ctx={ctx}
+      preview={ctx.t("emails-commerce.paymentReview.subject", {
+        number: p.orderNumber,
+      })}
+      orderUrl={p.orderUrl}
+    >
+      <Title>{ctx.t("emails-commerce.paymentReview.title")}</Title>
+      <Greeting ctx={ctx} name={p.buyerName} />
+      <P>
+        {ctx.t("emails-commerce.paymentReview.body", { number: p.orderNumber })}
+      </P>
+      <SignOff ctx={ctx} />
+    </Layout>
+  ),
+};

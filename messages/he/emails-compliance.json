@@ -1,1 +1,16 @@
-{}
+{
+  "orderConfirmation": {
+    "subject": "הזמנה {number} אושרה",
+    "preview": "תודה – הזמנה {number} שולמה",
+    "title": "תודה על ההזמנה",
+    "intro": "התשלום שלך עבור הזמנה {number} התקבל והיצירה שלך. נעדכן אותך כשהיא תישלח.",
+    "paidAt": "שולם ב-{date} (שעון ישראל)",
+    "summaryTitle": "סיכום ההזמנה",
+    "shipping": "משלוח",
+    "insurance": "ביטוח משלוח",
+    "total": "סה״כ ששולם",
+    "disclosureTitle": "מסמך הגילוי – תקציר",
+    "disclosureLink": "לקריאת מסמך הגילוי המלא",
+    "disclosureNote": "עותק מודפס של מסמך הגילוי מצורף גם ליצירה."
+  }
+}

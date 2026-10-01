@@ -8,6 +8,7 @@
  * the builders stay pure and testable. The seller ID number appears here (noindex documents and
  * emails) and never on legal pages or the footer.
  */
+import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import type { DimensionsMm } from "@/lib/dimensions";
 import type { Locale } from "@/lib/locale";
 import type { Currency } from "@/lib/money";
@@ -447,9 +448,121 @@ export function buildPreContract(
   };
 }
 
+// ---------------------------------------------------------------- disclosure (M2 minimal)
+
+const DOC_TEXT = {
+  he: {
+    title: "מסמך גילוי לפי סעיף 14ג(ב) לחוק הגנת הצרכן",
+    orderNumber: "מספר הזמנה",
+    orderedAt: "מועד ההזמנה",
+    paidAt: "מועד התשלום",
+    paymentMethod: "אמצעי תשלום",
+    installments: "מספר תשלומים",
+    deliveryDate: "מועד אספקה משוער",
+    copyright: "זכויות יוצרים",
+    copyrightText:
+      "זכויות היוצרים והזכות המוסרית ביצירה נשארות בידי האמנית. הרכישה מעבירה בעלות בעותק היחיד ואינה מעבירה זכות לשכפל אותו.",
+    summaryOrder: "הזמנה {n}",
+    summaryTotal: "סה״כ ששולם: {total}",
+    summaryDelivery: "אספקה: {method}",
+    summaryCancel:
+      "ניתן לבטל תוך 14 ימים מקבלת היצירה או מסמך זה, המאוחר מביניהם (4 חודשים לזכאים לאחר שיחה עם העוסק).",
+    summaryChannels:
+      'ביטול: בטופס "ביטול עסקה" באתר, בטלפון, בדוא״ל או בדואר רשום.',
+    summarySeller: "העוסק: {name}, {id}, {address}",
+  },
+  en: {
+    title: "Disclosure document (Consumer Protection Law, s.14C(b))",
+    orderNumber: "Order number",
+    orderedAt: "Ordered at",
+    paidAt: "Paid at",
+    paymentMethod: "Payment method",
+    installments: "Instalments",
+    deliveryDate: "Estimated delivery",
+    copyright: "Copyright",
+    copyrightText:
+      "Copyright and the moral rights in the work stay with the artist. The purchase transfers ownership of the single original; it grants no right to reproduce it.",
+    summaryOrder: "Order {n}",
+    summaryTotal: "Total paid: {total}",
+    summaryDelivery: "Delivery: {method}",
+    summaryCancel:
+      "You may cancel within 14 days of receiving the work or this document, whichever is later (4 months for eligible buyers after a conversation with the seller).",
+    summaryChannels:
+      'Cancel through the "Cancel a purchase" form on the site, by phone, by email or by registered mail.',
+    summarySeller: "Seller: {name}, {id}, {address}",
+  },
+} as const;
+
+function dateTime(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === "he" ? "he-IL" : "en-IL", {
+    timeZone: "Asia/Jerusalem",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
+
+function fill(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k: string) => values[k] ?? "");
+}
+
+/**
+ * The s.14C(b) disclosure document (spec §5.4): the pre-contract content plus the order details,
+ * the copyright note and a short summary for the inline email. M2 minimal text built on
+ * `buildPreContract`; WS6 owns the final, lawyer-approved document (and the Tier B PDF).
+ */
 export function buildDisclosure(
-  _input: DisclosureInput,
-  _locale: Locale,
+  input: DisclosureInput,
+  locale: Locale,
 ): DisclosureDoc {
-  throw new Error("buildDisclosure is not implemented yet (owner: WS6)");
+  const pre = buildPreContract(input, locale);
+  const t = DOC_TEXT[locale];
+  const p = PRE_TEXT[locale];
+  const orderRows: DocRow[] = [
+    { label: t.orderNumber, value: input.orderNumber },
+    { label: t.orderedAt, value: dateTime(input.orderedAt, locale) },
+    { label: t.paidAt, value: dateTime(input.paidAt, locale) },
+    ...(input.paymentMethodText
+      ? [{ label: t.paymentMethod, value: input.paymentMethodText }]
+      : []),
+    ...(input.installments && input.installments > 1
+      ? [{ label: t.installments, value: String(input.installments) }]
+      : []),
+    ...(input.deliveryDate
+      ? [{ label: t.deliveryDate, value: input.deliveryDate }]
+      : []),
+  ];
+  const sections = pre.sections.map((s) =>
+    s.id === "payment" ? { ...s, rows: [...orderRows, ...(s.rows ?? [])] } : s,
+  );
+  const linksAt = sections.findIndex((s) => s.id === "links");
+  const copyright: DocSection = {
+    id: "copyright",
+    heading: t.copyright,
+    paragraphs: [t.copyrightText],
+  };
+  sections.splice(linksAt < 0 ? sections.length : linksAt, 0, copyright);
+  const s = input.seller;
+  return {
+    locale,
+    version: LEGAL_VERSIONS.disclosure,
+    title: t.title,
+    sections,
+    orderNumber: input.orderNumber,
+    issuedAt: input.paidAt,
+    summary: [
+      fill(t.summaryOrder, { n: input.orderNumber }),
+      ...input.works.map((w) => `${w.title} (${w.inventoryNumber})`),
+      fill(t.summaryTotal, {
+        total: money(input.totalMinor, input.currency, locale),
+      }),
+      fill(t.summaryDelivery, { method: p.methods[input.shippingMethod] }),
+      fill(t.summarySeller, {
+        name: s.legalName,
+        id: s.idNumber,
+        address: s.address,
+      }),
+      t.summaryCancel,
+      t.summaryChannels,
+    ],
+  };
 }
