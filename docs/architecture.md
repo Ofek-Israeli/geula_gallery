@@ -348,3 +348,124 @@ plus `export const dynamic = "force-dynamic"` builds cleanly on Next 16.3.8 (Tur
 
 **Tests added**: `tests/unit/{security,auth-policy,display-format}.test.ts` (20 tests). Modules that
 import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
+
+### M1 steps 10–12 (storage and uploads, outbox/email/cron, contracts, lib, generated types)
+
+**Storage and uploads (step 10, commit 1c9a95d)**
+- `StorageAdapter` with the local driver (`.data/uploads/{public,private}`) and a Blob driver; keys
+  are `a/b/c.ext` segments (`isSafeKey` rejects traversal, absolute paths, backslashes).
+  Signed private URLs use HKDF purpose `file-url`, TTL capped at 10 min.
+- `/api/files/public/[...key]` (immutable caching) and `/api/files/private/[...key]` (signed `?t=`
+  token or admin session; `private, no-store`, attachment).
+- `media/ingest.ts` (sharp): bytes sniffed (JPEG/PNG/WebP only), `limitInputPixels` 100M,
+  `.rotate()` first, sRGB with embedded profile, metadata stripped, 2400 px q85 mozjpeg master,
+  16 px WebP blur, dominant colour, width/height; `media/og.ts` 1200×630.
+- `POST /api/admin/uploads?purpose=artwork|packing|return` via `adminRoute` (session + Origin).
+  `artwork` creates the `artwork_images` row → `{ fileKey, imageId }`; `packing`/`return` are
+  private-only → `{ fileKey }`.
+
+**Outbox, email, cron (step 11, commit 822558d)**
+- Outbox: id-only payload schemas per kind, `enqueue`/`enqueueEmail` (`ON CONFLICT DO NOTHING`),
+  `processOutbox` with `FOR UPDATE SKIP LOCKED`, 5-min leases, `min(2^n min, 6 h)` backoff, a
+  `reschedule` result that does not count as a failure, DEAD after 8 attempts + CRITICAL alert.
+  Every state update is conditional on `(id, RUNNING, attempts)`, so a worker whose lease was
+  taken over cannot overwrite a newer claim. The processor uses its own SQL, not `transition()`.
+- Handler stubs for all 5 kinds throw `NotImplementedError` (processor treats it as a failure).
+- Email: `EmailTemplateId` union and props in `src/emails/types.ts` (UI layer; re-exported by
+  `server/email/types.ts`), `Layout` with `lang`/`dir` and the seller/cancellation footer (no ID
+  number), stub templates for all 16 ids, react-email `render`, idempotent `sendEmail`, log driver
+  (stores html/text), typed Resend stub.
+- `GET /api/cron/[job]`: constant-time `Bearer CRON_SECRET`, `cron_runs` rows, 50 s work budget
+  inside the 60 s function limit; the `outbox` job is real, the other four are stubs.
+  `scripts/cron.ts` is an HTTP client (`--watch` follows `vercel.json`).
+- `applyEffects` now dynamically imports the real outbox processor.
+
+**Generated provider types (step 12)**
+- `npm run gen:api-types` → `src/server/integrations/generated/*.ts`. Versions used (2026-10-01):
+  Cardcom v11 swagger `11.0`; PayPal Orders v2 `2.32`, Payments v2 `2.12`, Webhooks v1 `1.11`
+  (`paypal-rest-api-specifications` main); Morning bundle `2.0.0`; **DHL MyDHL `3.3.2`** from
+  `developer.dhl.com/sites/default/files/2026-09/dpdhl-express-api-3.3.2.yaml` (the 2.7.2
+  fallback was not needed). Each file header records URL, version and sha256.
+- **Comments are stripped** by re-printing the output with the TypeScript printer
+  (`removeComments`), keeping only our provenance header: 1.4 MB → ~580 KB and no copied
+  third-party prose. Types are unchanged.
+- **Agents: never print or `Read` whole files under `src/server/integrations/generated/` or
+  `openapi/`** (a previous agent was killed by a content filter doing that). Use
+  `grep -n '<TypeName>' <file>` with small context.
+
+**`src/lib` (step 12; all implemented and unit-tested except `deadlines.ts` bodies)**
+- `money` (BigInt maths for FX and basis points; `fromDecimal` rejects > 2 places, separators,
+  exponents), `vat`, `dimensions` (+ orientation, size bucket, volumetric/chargeable weight),
+  `format` (Jerusalem formatting, `stripBidi`, DST-safe `addJerusalemDays/Months`), `countries`
+  (249 ISO codes, default zones, deny list, `zoneOf(code, settings.zones)`, Intl names; Israel
+  first; uninhabited territories hidden), `il-id` (checksum, ID-or-passport parsing, masking),
+  `phone` (E.164 without a metadata library: Israeli number plans validated, other countries
+  structurally), `script` (spec Latin regex, per-field check), `routes` (locale-less `paths.*` for
+  next-intl, `localePath`, `apiPaths.*`, `absoluteUrl`).
+- Fixed: `fromJerusalemWallClock` oscillated in the spring-forward gap and returned the instant an
+  hour *before* the gap; it now tries the offsets of the day before and after (gap → just after,
+  overlap → earlier instant). Tested on 2026-10-25 and 2027-03-26.
+- `deadlines.ts`: frozen signatures `cancellationWindow`, `refundDueAt`, `changeOfMindFee` with
+  input/output types and the rules in the header; bodies throw (WS6).
+- Additions not named in the spec: `src/lib/validation/{identifiers,common,address,messages}.ts`
+  (zod primitives; domain checks raise `custom` issues with `params.code`, and
+  `next/actions.ts`'s error map resolves them to he/en text via `customIssueMessage`), and
+  `src/lib/catalog.ts` (catalog DTOs + `CommerceState` — they live in `src/lib` because
+  components may not import `@/server`). `server/domain/ids.ts` re-exports the pure parsers from
+  `lib/validation/identifiers`.
+
+**Domain contracts (step 12)**
+- `domain/state-machines.ts`: every §3.6 machine as an edge map over the pg enum values. Choices
+  where the spec table is implicit:
+  - attempt: "any non-final → SUCCEEDED / NEEDS_REFUND / REFUNDED" includes CREATED and EXPIRED
+    (EXPIRED is not final: late capture/success); finals are SUCCEEDED, FAILED, CANCELED, REFUNDED;
+  - order: no EXPIRED → AWAITING_PAYMENT edge (the table has none). **M2 decides** whether
+    "re-reserve an expired hold" on the order page applies only while the order is still
+    AWAITING_PAYMENT (current reading) or needs that edge (then add it here);
+  - artwork: ON_HOLD ⇄ NOT_FOR_SALE goes through AVAILABLE;
+  - refund: REQUESTED → MANUAL_REQUIRED added for offline payments;
+  - tax document: ISSUING → NEEDS_MANUAL (modes that cannot issue) and NEEDS_MANUAL → ISSUED
+    (admin records a manual document) added;
+  - shipment: carrier tracking may skip forward along LABEL_CREATED → … → DELIVERED;
+    LABEL_REQUESTED/LABEL_UNKNOWN cannot be cancelled (claim protocol); PICKUP_SCHEDULED →
+    LABEL_CREATED when a pickup is cancelled; RECEIVED → CLOSED for cancellations is the duplicate
+    path only (service checks `duplicate_of_id`).
+- `domain/transition.ts`: refuses edges outside the machine before any SQL, selects the current
+  status `FOR UPDATE` (for the audit `before`), runs the conditional UPDATE (+ optional `where`),
+  throws `IllegalTransitionError` on 0 rows and audits in the same tx (`skipAudit` for
+  high-volume use). Integration-tested.
+- `db/tx.ts` (`withTx`, retries 40P01/40001, 3 attempts) was missing and is added.
+- Payments: `types.ts` is §4.2 verbatim plus `GatewayDocumentSpec`, factory input types and
+  `PROVIDER_DB_VALUE`. `registry.ts` is **implemented**: `checkoutProviders` takes two extra input
+  fields, `paypalForIsraeliDestinations` and `liveBlocked` (callers read settings and go-live
+  state, which keeps the registry pure); `providerForAttempt` returns
+  `ok | offline | not_configured | config_drift` and raises the CRITICAL `CONFIG_DRIFT` alert.
+  Cardcom/PayPal stubs expose real identity and capabilities from env (`CARDCOM_WALLETS` values
+  `applepay`/`googlepay` map to `apple_pay`/`google_pay`); every network method throws
+  `ProviderNotConfiguredError`. The mock provider is a stub for M2. `finalize/apply/refunds/
+  offline.ts` hold the frozen signatures.
+- Tax documents: contract, registry by `TAX_DOCUMENTS_MODE`, extra `none.ts` (complete) and
+  `TaxDocumentNeedsManualError`; gateway mode throws it for standalone receipts and credit notes;
+  Morning/gateway builders are WS5 stubs; mock is an M2 stub; `issue.ts` entry points.
+- Shipping: engine types (`ShippingQuoteResult` carries `insured` and `insuredValueMinor`),
+  `CarrierAdapter`, frozen `rates.ts`/`rules.ts` signatures (M2 then WS3), customs constants,
+  carriers manual (complete) / mock / dhl (bases and tracking URL; DHL host
+  `express.api.dhl.com` to be confirmed by WS3) and `carrierFor(country)`.
+- Checkout: shared types, `lockArtworks` and the §3.5 `isReservable`/`isSellable` predicates
+  (implemented and tested; the SQL forms are M2's), plus signatures for the rest of §9.3.
+- **Settings change:** shipping surcharges now use the spec's wording — `kind: 'PCT' | 'FIXED'`,
+  `zones: 'ALL' | ZoneId[]`, `startsOn`/`endsOn` inclusive. The seed is insert-only (it never
+  overwrites painter edits), so the existing `shipping` rows in `geula_dev` and `geula_e2e` were
+  converted with a one-off JSONB `UPDATE`. A fresh `db:reset` needs nothing.
+
+**Gotchas found in this step**
+- **File-sync duplicates.** Something syncing this folder (it lives under `~/Desktop`) creates
+  `"<name> 2"` copies: empty `node_modules/@types/{cors 2,ws 2}` dirs (break `tsc` with TS2688),
+  `.next/types/* 2.ts` (duplicate-identifier errors), ~80 files in `node_modules`, and
+  **`.git/index 2` — at one point `.git/index` itself was replaced by a stale copy**, so commit
+  `6125064` recorded the deletion of 259 files. `5bac41f` re-adds them unchanged (the working
+  tree matched `06b6383` byte for byte). **Squash `5bac41f` into `6125064` before pushing.**
+  After every commit, sanity-check `git ls-tree -r HEAD --name-only | wc -l` and
+  `git diff --cached --name-status` for unexpected `D` lines. Consider moving the repo out of a
+  synced folder.
+- zsh: `while read … path` overwrites `$PATH` (zsh ties `path` to `PATH`); use another name.
