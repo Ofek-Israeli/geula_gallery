@@ -1,0 +1,18 @@
+{
+  "subjectSuffix": "Geula Gallery",
+  "greeting": "Hello {name},",
+  "greetingNoName": "Hello,",
+  "signOff": "Thank you,",
+  "orderNumber": "Order number: {orderNumber}",
+  "viewOrder": "View your order",
+  "footer": {
+    "sellerTitle": "Seller details",
+    "seller": "{tradeName} · {address}",
+    "contact": "Email: {email} · Phone: {phone}",
+    "merchantCountry": "Merchant country: Israel",
+    "cancelTitle": "Cancel a purchase",
+    "cancelChannels": "You can cancel a purchase on the website ({url}), by email ({email}) or by phone ({phone}).",
+    "transactional": "This message was sent about your order or enquiry. It is not advertising.",
+    "demo": "Demo store – no real payment was taken."
+  }
+}

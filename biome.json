@@ -1,0 +1,166 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!!**/node_modules",
+      "!!**/.next",
+      "!!**/.next-*",
+      "!!**/dist",
+      "!!**/build",
+      "!!**/.data",
+      "!!src/server/integrations/generated",
+      "!!drizzle",
+      "!!data",
+      "!!openapi"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    },
+    "domains": {
+      "next": "recommended",
+      "react": "recommended"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/server/**",
+        "!src/server/next/**",
+        "!src/server/auth/options.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "next": "Domain services never import next/* (spec §2.2). Use src/server/next/**.",
+                  "better-auth/next-js": "Only src/server/next/** may import better-auth/next-js."
+                },
+                "patterns": [
+                  {
+                    "group": ["next/**"],
+                    "message": "Domain services never import next/* (spec §2.2). Use src/server/next/**."
+                  },
+                  {
+                    "group": ["next-intl", "next-intl/**"],
+                    "message": "Use createTranslator from use-intl/core in src/server (spec §2.2)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/server/auth/options.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "server-only": "auth/options.ts is shared with scripts; it must not import server-only.",
+                  "next": "auth/options.ts must not import next/*."
+                },
+                "patterns": [
+                  {
+                    "group": ["next/**", "better-auth/next-js"],
+                    "message": "auth/options.ts must not import next/*."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/lib/**",
+        "src/components/**",
+        "src/emails/**",
+        "src/content/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/server", "@/server/**"],
+                    "message": "UI and isomorphic code never import @/server (spec §2.2)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/server/jobs",
+                      "@/server/jobs/**",
+                      "@/server/outbox/process",
+                      "@/server/email/render",
+                      "@/server/documents/pdf/**",
+                      "@/server/next/**",
+                      "**/src/server/jobs/**",
+                      "**/src/server/outbox/process",
+                      "**/src/server/email/render",
+                      "**/src/server/documents/pdf/**",
+                      "**/src/server/next/**"
+                    ],
+                    "message": "Scripts never import jobs, the outbox processor or rendering code; call the cron route over HTTP (spec §2.2)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
