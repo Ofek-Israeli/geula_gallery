@@ -1,0 +1,18 @@
+{
+  "subjectSuffix": "גלריה גאולה",
+  "greeting": "שלום {name},",
+  "greetingNoName": "שלום,",
+  "signOff": "תודה,",
+  "orderNumber": "מספר הזמנה: {orderNumber}",
+  "viewOrder": "לצפייה בהזמנה",
+  "footer": {
+    "sellerTitle": "פרטי העוסק",
+    "seller": "{tradeName} · {address}",
+    "contact": "דוא״ל: {email} · טלפון: {phone}",
+    "merchantCountry": "מדינת העוסק: ישראל",
+    "cancelTitle": "ביטול עסקה",
+    "cancelChannels": "אפשר לבטל עסקה באתר ({url}), בדוא״ל ({email}) או בטלפון ({phone}).",
+    "transactional": "הודעה זו נשלחה בקשר להזמנה או לפנייה שלך. אין זו הודעה פרסומית.",
+    "demo": "חנות הדגמה – לא בוצע חיוב אמיתי."
+  }
+}
