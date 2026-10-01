@@ -15,9 +15,15 @@ test.describe("minimal storefront @smoke", () => {
     await expect(
       page.getByRole("link", { name: "Landscape no. 26" }).first(),
     ).toBeVisible();
+    // The strip shows the latest ≤ 4 sold works. Purchase specs running in parallel sell works
+    // too, so the seeded "Moonrise" may already have scrolled out: check it in the archive.
     const sold = page.getByRole("region", { name: "Recently sold" });
-    await expect(sold.getByRole("link", { name: "Moonrise" })).toBeVisible();
     await expect(sold.getByText("Sold").first()).toBeVisible();
+    expect(await sold.getByRole("link").count()).toBeLessThanOrEqual(4);
+    await page.goto("/en/works?availability=sold");
+    await expect(
+      page.getByRole("link", { name: "Moonrise" }).first(),
+    ).toBeVisible();
   });
 
   test("an available work shows price, Buy now and delivery from IL", async ({

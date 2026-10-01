@@ -83,6 +83,9 @@ test.describe("cancellation link on public pages @smoke", () => {
   for (const [name, path] of [
     ["works", "/works"],
     ["artwork", "/works/landscape-no-26"],
+    // Checkout footer (spec §1.2). The order page's link is checked in purchase-il, which needs
+    // a real order and its token.
+    ["checkout", "/checkout/landscape-no-26"],
   ] as const) {
     for (const locale of ["he", "en"] as const) {
       test(`${name} page (${locale}) links to /${locale}/cancel`, async ({
