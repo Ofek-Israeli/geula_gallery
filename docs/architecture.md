@@ -1090,3 +1090,113 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   `listTransactions` / PayPal adapters and `buildGatewayDocument` (WS5).
 - No E2E for the link-order page yet (it needs WS4's admin screen to create the order); it was
   checked by hand in he/en at 390 and 1280 px (IL and US links, pay through the mock).
+
+### M3 WS3 notes (shipping and fulfillment)
+
+**What exists**
+- `shipping/customs.ts` (description generator, `importCommodityCode` US/EU/IL, EU 2019/880 and
+  origin statements, `exportDeclarationRequired` strictly above the USD threshold,
+  `declaredValueUsdMinor`); `rates.ts` gained `insuredValueInCurrency` and drops the EU EUR 3
+  duty notice outside 2026-07-01..2028-07-01.
+- Carriers: `carriers/mock.ts` (waybill `MOCK` + 10 digits = label time in deciseconds since
+  2026-01-01, so `track()` is stateless; timeline PU/AF/SA/WC/OK scaled by
+  `MOCK_CARRIER_DELIVERY_SECONDS`; PDF label from `minimal-pdf.ts`), `carriers/dhl-map.ts` (pure
+  builders that `satisfies` the MyDHL 3.3.2 types, zod response parsing, checkpoint map, redacted
+  stored copy), `carriers/dhl.ts` (Basic auth, `x-version: 3.3.2`, `Message-Reference` on every
+  call, shipments / tracking / pickups; `ProviderNotConfiguredError` without credentials).
+- Services: `shipments.ts` (guards, override, pack, customs, label claim protocol, unknown-label
+  resolution, manual tracking and events, handed over, pickup, artist delivery,
+  `createShipmentForOrder`, `cancelShipmentForOrder` for WS6), `status.ts` (every status change:
+  event row, one buyer email per status, delivery bookkeeping), `tracking.ts` + `jobs/tracking.ts`,
+  `fulfillment-view.ts`, `documents.ts`, `checklist.ts`, `settings-form.ts`.
+- UI: `/admin/orders/[id]/fulfill`, `/admin/settings/shipping`, `/print/admin/packing-slip/[orderId]`,
+  `/print/admin/commercial-invoice/[orderId]`, `components/fulfillment/{ActionForm,PackingPhotos}`.
+- Emails: `shipment-update`, `ready-for-pickup` (+ its props builder in `email/props.ts`, refId =
+  shipment id). Messages: `shipping`, `emails-shipping`, `documents-shipping`.
+- Tests: unit `shipping-customs`, `dhl-builder`, `dhl-map`, `shipping-settings-form` (+ additions to
+  `shipping-rates`); contract `carrier.suite.ts` / `carrier.test.ts` (mock, manual, dhl fixtures;
+  `DHL_CONTRACT=1` adds a read-only api-mock call); integration `shipments` (15), `tracking-job` (7);
+  e2e `fulfill`, `shipping-rules`. Fixtures `tests/fixtures/dhl/*` are synthetic (README there).
+
+**DHL without credentials (probed 2026-10-01, read-only GETs)**
+- `express.api.dhl.com/mydhlapi` and `/mydhlapi/test` exist (401 without credentials) – the M1
+  hosts are right.
+- `api-mock.dhl.com/mydhlapi` answers **only** with DHL's published demo pair
+  `demo-key` / `demo-secret` (other pairs → 401, no auth → 500) and returns canned data (one `PU`
+  event from 2020, no GMT offset). Good for a reachability smoke test (`DHL_CONTRACT=1`), not for
+  contract truth. No POST was sent to it.
+- `check:dhl` is WS5's script; it can reuse `createDhlCarrier({ env, baseUrl: DHL_BASES.mock })`.
+
+**Decisions and deviations**
+- Guard codes: a refused fulfillment throws `FulfillmentBlockedError` (code `ORDER_NOT_PAID` or
+  `FULFILLMENT_BLOCKED`, `block.code` ∈ ORDER_NOT_PAID / FULFILLMENT_BLOCKED / CANCELLATION_ACCEPTED /
+  CANCELLATION_PENDING). A RECEIVED cancellation row **or** `fulfillment_blocked_reason =
+  PENDING_CANCELLATION` blocks until `overrideCancellationBlock` stores
+  `shipments.cancellation_override_reason` (audited). Other block reasons and ACCEPTED
+  cancellations are never overridable. The guard reads `cancellations` itself, so it works before
+  WS6 sets the flag.
+- `shipments.idempotency_key` is a uuid column, so the spec's `<orderId>:<n>` key is stored as a
+  name-based UUID (`uuidFromName`, SHA-256, v5 layout). `message_reference` is a new UUID per claim
+  (DHL wants 28–36 characters).
+- Label outcomes: `ProviderNotConfiguredError` and 4xx `ProviderRejectedError` → PACKED
+  (`LABEL_REJECTED`); timeouts, garbled replies, **5xx** and a 201 without a PDF label →
+  LABEL_UNKNOWN + WARNING alert `LABEL_UNKNOWN`. A label created but not recordable → LABEL_UNKNOWN +
+  CRITICAL. LABEL_UNKNOWN is resolved by "found" (waybill typed in → LABEL_CREATED) or "none"
+  (LABEL_UNKNOWN → LABEL_REQUESTED → PACKED, then a new claim n+1). A LABEL_REQUESTED older than 2 min
+  can be marked unknown (crash between claim and result).
+- `shipments.insured_value_minor` stays in **ILS** (what `apply.ts` writes from the quote). The DHL
+  `II` value is converted to the declared currency at label time (`insuredValueInCurrency`, whole
+  dollars rounded down).
+- Shipper address for DHL: `business_profile` has only free-text addresses, so `shipperFromProfile`
+  reads `address.en` as "line 1, city postal code[, Israel]"; unreadable → `SHIPPER_ADDRESS` before
+  any claim. The mock carrier uses a demo shipper instead. (Suggestion for M4/WS4: a structured
+  shipper address in `business_profile`; not done – frozen settings schema.)
+- Packing: required checklist items are the printed disclosure and (without email consent) the
+  printed receipt; the rest are recorded guidance. Photos are required for international or insured
+  parcels; keys must match the `purpose=packing` key shape. Pickup orders skip packing.
+- Manual tracking from the order page (M2 quick form) still auto-packs (AWAITING_FULFILLMENT →
+  PACKED → LABEL_CREATED) so `purchase-il` and `admin-orders` keep working; the fulfillment screen is
+  the path with the checklist.
+- Buyer emails: LABEL_CREATED, IN_TRANSIT, CUSTOMS, OUT_FOR_DELIVERY, DELIVERED, EXCEPTION, RETURNED,
+  COLLECTED (`shipment-update`) and READY_FOR_PICKUP (`ready-for-pickup`); PACKED, the label claim
+  states and CANCELLED are silent.
+- Delivery bookkeeping calls WS6's `cancellationWindow` (eligible group NONE). Until WS6's body
+  lands it throws; `status.ts` logs `shipping.cancellation_window_unavailable` and leaves
+  `orders.cancellation_window_ends_at` null (the integration test stubs `@/lib/deadlines`).
+- Tracking advance is monotonic by rank (LABEL_CREATED < PICKUP_SCHEDULED < IN_TRANSIT < CUSTOMS <
+  OUT_FOR_DELIVERY < DELIVERED/RETURNED) plus EXCEPTION and its machine exits; after an exception a
+  later checkpoint without a direct edge passes IN_TRANSIT first. Carrier errors stamp
+  `last_tracked_at` (retried next hour).
+- DHL checkpoint map: common Express codes (PU PL DF AF AR TR → IN_TRANSIT; CR RR CD HP → CUSTOMS;
+  WC → OUT_FOR_DELIVERY; OK → DELIVERED; NH BA CA MD RD OH → EXCEPTION; RT → RETURNED; SA CC
+  informational). To be checked against DHL's current list once an account exists (go-live).
+- Settings editor: flat field names parsed by `shippingSettingsFromForm`; IR, SY and LB cannot leave
+  the deny list; "Mark calibrated today" / "Confirm the coverage terms today" stamp the time; FX is
+  shown read-only (it lives in `settings.checkout`, WS4's editor); fresh session required.
+- E2E arranges its paid orders directly in the E2E database (`e2eArrangePaidOrder`: an
+  **unpublished** SOLD work, a paid order with a SUCCEEDED mock attempt bound to quote v1, the ONLINE
+  sale, the shipment) instead of buying shared demo works. `shipping-rules` temporarily adds a MOCK
+  value cap and raises the GB threshold (E2E runs the mock carrier, which has no cap; no demo work is
+  under GBP 135) and restores both.
+
+**Gotchas**
+- `npm run typecheck` with the worktree's `NEXT_DIST_DIR` rewrites `tsconfig.json`; running it as
+  `NEXT_DIST_DIR=.next-e2e npm run typecheck` uses the pre-registered includes and leaves the tree
+  clean.
+- React SSR splits adjacent JSX text into separate nodes (`a<!-- --> / <!-- -->b`); print pages
+  that tests grep build such strings with a template literal.
+- `playwright.request.newContext()` inside a spec that `test.use({ storageState })` still sends the
+  admin cookies unless `storageState: { cookies: [], origins: [] }` is passed.
+
+**Not done / for other streams**
+- WS4: link the order detail page to `/admin/orders/[id]/fulfill` (the M2 quick tracking form stays);
+  the order detail still shows raw shipment enums and the country as the pickup "address" (M2 open
+  item) – `shipping.status.*` / `shipping.method.*` hold the labels.
+- WS2: the checkout's "insured up to ₪X" for USD orders should use `insuredValueInCurrency(quote)`;
+  the buyer order page can show the shipment timeline with the DHL attribution
+  (`emails-shipping.update.dhl` text).
+- WS6: `cancelShipmentForOrder(tx, orderId, actor)` for accepted cancellations; the daily job's
+  "export declaration pending > 7 days" and "unshipped beyond dispatch_days+2" alerts; the 30-day
+  purge of DHL raw tracking (`shipment_events.raw`, source POLL).
+- P1 (unchanged): the DHL "Request pickup" button (`requestPickup` / `cancelPickup` exist and are
+  contract-tested).
