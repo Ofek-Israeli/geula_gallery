@@ -591,3 +591,19 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
 - npm 11 gates install scripts: `npm install-scripts ls` lists esbuild, @swc/core and
   @parcel/watcher as not approved. Nothing in build or tests needs them (platform binaries come
   from optional dependencies); approve them only if a tool fails.
+
+**Independent M1 acceptance review (2026-10-01)**
+- Re-ran from a clean state: `npm ci`, `db:setup`, `db:reset -- --seed none --yes`, lint,
+  typecheck, `check:secrets` (tree and `git log -p --all` history), build, `npm test`,
+  `test:integration`, smoke E2E. All pass. `npm run db:generate` reports no schema drift.
+- Built server on a spare port (`APP_URL` set to that port so Better Auth's origin check
+  passes): `/` → 307 `/he` (`/en` for English), `dir` rtl/ltr, logged-out `/he/admin` → login,
+  sign-in 200 / dashboard 200 / wrong password 401, `ADMIN_REQUIRE_2FA=true` → enroll-2fa with no
+  loop. `/api/admin/uploads`: `packing` and `return` → 201 `{ fileKey }`, `artwork` with a real
+  artwork → 201 `{ fileKey, imageId }`, missing/unknown artwork → 400/404, bad purpose → 400,
+  foreign Origin → 403, anonymous → 403; anonymous private file → 401; anonymous cron → 401.
+- Added `tests/unit/csp.test.ts` (§10.1 `csp`) and `tests/unit/env.test.ts` (step 5 derivations
+  and §4.8 cross-field rules); neither had coverage.
+- Open before push: commit `6125064` records 259 deletions that `5bac41f` restores (sync-corrupted
+  index). Squash `5bac41f` into `6125064` (needs a history rewrite, so it is the integrator's call)
+  and move the repo out of the synced Desktop folder. `.git/index 2` is a harmless stray.
