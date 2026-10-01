@@ -9,7 +9,7 @@ import { settingsSeedValues } from "../../scripts/seed/settings";
 const seedEnv = {
   authBaseUrl: "http://localhost:3000",
   seedE2eUsers: false,
-  e2eAdminPassword: "unused-password",
+  e2eAdminPassword: "test-unused-password",
 };
 
 describe("settings schemas", () => {
