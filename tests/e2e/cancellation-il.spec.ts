@@ -211,7 +211,13 @@ test("IL cancellation: form → ack → duplicate → admin accept → refund �
       .getByTestId("relist")
       .getByRole("button", { name: he.admin.relist })
       .click();
-    await expect(ap.getByTestId("relist-result")).toHaveText(he.admin.done);
+    // The page re-renders without the relist form once the work is AVAILABLE again.
+    await expect(ap.getByTestId("relist")).toHaveCount(0);
+    const [art] = await e2eQuery<{ sale_status: string }>(
+      "SELECT sale_status FROM artworks WHERE slug = $1",
+      [SLUG],
+    );
+    expect(art?.sale_status).toBe("AVAILABLE");
   } finally {
     await admin.close();
   }
