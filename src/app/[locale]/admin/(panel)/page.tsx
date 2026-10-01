@@ -23,6 +23,7 @@ export async function generateMetadata({
 }
 
 const CARD_LINK: Partial<Record<AttentionCard["key"], string>> = {
+  cancellationRefunds: paths.admin.cancellations(),
   openRequests: paths.admin.inbox(),
   ratesUncalibrated: paths.admin.settings("shipping"),
   criticalAlerts: paths.admin.alerts(),
@@ -33,7 +34,7 @@ const CARD_LINK: Partial<Record<AttentionCard["key"], string>> = {
  * Dashboard (spec §6.10 `/admin`): needs-attention cards (refund deadlines, refunds and tax
  * documents that need the admin, deferred payments, unknown labels, orders to fulfil, blocks,
  * open requests, uncalibrated rates, stale cron, critical alerts), the year-to-date turnover
- * against the osek-patur ceiling and the go-live readiness list.
+ * against the osek-patur ceiling and the go-live readiness list (`golive.ts` blockers first).
  */
 export default async function AdminDashboardPage({
   params,
@@ -48,6 +49,7 @@ export default async function AdminDashboardPage({
   const data = await getDashboard(ctx);
   const active = data.cards.filter((c) => c.count > 0);
   const { turnover } = data;
+  const blockers = data.goLive.filter((g) => g.blocker && !g.ok).length;
   const pct =
     turnover.ceilingIlsMinor !== null && turnover.ceilingIlsMinor > 0
       ? Math.round((turnover.totalIlsMinor / turnover.ceilingIlsMinor) * 100)
@@ -87,7 +89,13 @@ export default async function AdminDashboardPage({
                   <ul className="flex flex-col gap-1 text-sm">
                     {c.items.map((item) => (
                       <li key={`${item.orderId ?? ""}:${item.label}`}>
-                        {item.orderId ? (
+                        {item.cancellationId ? (
+                          <Link
+                            href={paths.admin.cancellation(item.cancellationId)}
+                          >
+                            <bdi dir="ltr">{item.label}</bdi>
+                          </Link>
+                        ) : item.orderId ? (
                           <Link href={paths.admin.order(item.orderId)}>
                             <bdi dir="ltr">{item.label}</bdi>
                           </Link>
@@ -169,13 +177,24 @@ export default async function AdminDashboardPage({
         <h2 id="golive" className="text-xl">
           {t("goLive.title")}
         </h2>
-        <ul className="flex flex-col gap-1">
+        <p className="text-sm text-ink-muted">
+          {blockers === 0
+            ? t("goLive.noBlockers")
+            : t("goLive.blockers", { count: blockers })}
+        </p>
+        <ul className="flex flex-col gap-1" data-testid="dashboard-golive">
           {data.goLive.map((g) => (
-            <li key={g.key} className="flex items-center gap-2">
+            <li
+              key={g.key}
+              className="flex items-center gap-2"
+              data-key={g.key}
+              data-ok={g.ok}
+            >
               <span aria-hidden="true">{g.ok ? "✓" : "✗"}</span>
-              <span>{t(`goLive.items.${g.key}` as "goLive.items.email")}</span>
+              <span>{t(`goLive.items.${g.key}`)}</span>
               <span className="text-sm text-ink-muted">
-                ({g.ok ? t("goLive.ok") : t("goLive.missing")})
+                ({g.ok ? t("goLive.ok") : t("goLive.missing")}
+                {g.blocker ? "" : ` · ${t("goLive.optional")}`})
               </span>
             </li>
           ))}

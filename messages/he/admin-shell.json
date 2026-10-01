@@ -28,6 +28,7 @@
     "more": "ועוד {count}",
     "due": "עד {date}",
     "cards": {
+      "cancellationRefunds": "החזרי ביטול שמועדם מתקרב",
       "refundsDue": "החזרים שמועדם מתקרב",
       "refundProblems": "החזרים שדורשים טיפול",
       "deferredPayments": "תשלומים שנדחו",
@@ -41,6 +42,7 @@
       "criticalAlerts": "התראות קריטיות"
     },
     "links": {
+      "cancellationRefunds": "לכל הביטולים",
       "openRequests": "לתיבת ההודעות",
       "ratesUncalibrated": "להגדרות המשלוח",
       "criticalAlerts": "לכל ההתראות",
@@ -58,15 +60,22 @@
       "ok": "מוכן",
       "missing": "חסר",
       "items": {
-        "businessProfile": "פרטי העסק הושלמו",
-        "demoModeOff": "מצב הדגמה כבוי",
-        "livePayments": "סליקה אמיתית מופעלת",
+        "DEMO_MODE": "מצב הדגמה כבוי",
+        "PROFILE_INCOMPLETE": "פרטי העסק הושלמו",
+        "LEGAL_NOT_APPROVED": "הטקסטים המשפטיים אושרו על ידי עורך הדין",
+        "RATES_UNCALIBRATED": "מחירי המשלוח כוילו",
+        "INSURANCE_UNCONFIRMED": "תנאי כיסוי הביטוח אושרו",
+        "MOCK_SALES_ON_REAL_WORKS": "אין תשלומי הדגמה על יצירות אמיתיות",
+        "DEMO_WORKS_PUBLISHED": "יצירות ההדגמה הוסרו מהאתר",
+        "ADMIN_2FA_MISSING": "אימות דו־שלבי לכל המשתמשים",
+        "CARDCOM_NOT_LIVE": "קארדקום במצב אמיתי עם סיסמת API",
         "taxDocuments": "הפקת מסמכים חשבונאיים מחוברת",
         "email": "שליחת דוא״ל אמיתית",
-        "storage": "אחסון קבצים בענן",
-        "twoFactor": "אימות דו־שלבי לכל המשתמשים",
-        "ratesCalibrated": "מחירי המשלוח כוילו"
-      }
+        "storage": "אחסון קבצים בענן"
+      },
+      "noBlockers": "אין חסמים: אפשר לקבל תשלומים אמיתיים.",
+      "blockers": "{count, plural, one {חסם אחד מונע} two {שני חסמים מונעים} other {# חסמים מונעים}} תשלומים אמיתיים.",
+      "optional": "לא חוסם"
     }
   },
   "login": {

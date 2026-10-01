@@ -28,6 +28,7 @@
     "more": "and {count} more",
     "due": "by {date}",
     "cards": {
+      "cancellationRefunds": "Cancellation refunds due soon",
       "refundsDue": "Refunds due soon",
       "refundProblems": "Refunds that need you",
       "deferredPayments": "Deferred payments",
@@ -41,6 +42,7 @@
       "criticalAlerts": "Critical alerts"
     },
     "links": {
+      "cancellationRefunds": "See all cancellations",
       "openRequests": "Go to the inbox",
       "ratesUncalibrated": "Go to shipping settings",
       "criticalAlerts": "See all alerts",
@@ -58,15 +60,22 @@
       "ok": "Ready",
       "missing": "Missing",
       "items": {
-        "businessProfile": "Business details completed",
-        "demoModeOff": "Demo mode off",
-        "livePayments": "Live payments enabled",
+        "DEMO_MODE": "Demo mode off",
+        "PROFILE_INCOMPLETE": "Business details completed",
+        "LEGAL_NOT_APPROVED": "Legal texts approved by the lawyer",
+        "RATES_UNCALIBRATED": "Shipping rates calibrated",
+        "INSURANCE_UNCONFIRMED": "Insurance coverage terms confirmed",
+        "MOCK_SALES_ON_REAL_WORKS": "No demo payments on real works",
+        "DEMO_WORKS_PUBLISHED": "Demo works unpublished",
+        "ADMIN_2FA_MISSING": "Two-step verification for every user",
+        "CARDCOM_NOT_LIVE": "Cardcom live, with an API password",
         "taxDocuments": "Tax documents connected",
         "email": "Real email sending",
-        "storage": "Cloud file storage",
-        "twoFactor": "Two-step verification for every user",
-        "ratesCalibrated": "Shipping rates calibrated"
-      }
+        "storage": "Cloud file storage"
+      },
+      "noBlockers": "No blockers: live payments can be accepted.",
+      "blockers": "{count, plural, one {One blocker prevents} other {# blockers prevent}} live payments.",
+      "optional": "not a blocker"
     }
   },
   "login": {

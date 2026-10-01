@@ -65,6 +65,7 @@
     "noDocuments": "No tax documents yet.",
     "viewDocument": "View",
     "shipment": "Shipment",
+    "openFulfillment": "Open the fulfillment screen (packing, label, tracking)",
     "noShipment": "No shipment yet.",
     "tracking": "Tracking: {carrier} {number}",
     "emails": "Emails",

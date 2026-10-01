@@ -252,3 +252,42 @@ describe("unpaid orders and the dashboard", () => {
     expect(badges).toMatchObject({ inbox: 1, orders: 1 });
   });
 });
+
+describe("dashboard: cancellation refunds and go-live (M4 wiring)", () => {
+  it("a RECEIVED notice due tomorrow is a critical card; go-live lists golive.ts blockers", async () => {
+    const svc = await import("@/server/cancellations/service");
+    const { goLiveBlockers } = await import("@/server/golive");
+    const h = await paid();
+    const [order] = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, h.orderId));
+    const { result } = await svc.recordCancellationNotice(
+      {
+        fullName: order?.buyerName ?? "",
+        orderNumber: order?.number,
+        eligibleGroup: "NONE",
+      } as Parameters<typeof svc.recordCancellationNotice>[0],
+      {
+        locale: "he",
+        actor: "anonymous",
+        receivedAt: new Date(Date.now() - 13 * 86_400_000),
+      },
+    );
+    const d = await getDashboard(ctx);
+    const card = d.cards.find((c) => c.key === "cancellationRefunds");
+    expect(card).toMatchObject({ count: 1, severity: "critical" });
+    expect(card?.items[0]).toMatchObject({ cancellationId: result.id });
+
+    const report = await goLiveBlockers({ db });
+    const blockers = d.goLive.filter((g) => g.blocker);
+    expect(blockers.filter((g) => !g.ok).map((g) => g.key)).toEqual(
+      report.blockers,
+    );
+    expect(d.goLive.filter((g) => !g.blocker).map((g) => g.key)).toEqual([
+      "taxDocuments",
+      "email",
+      "storage",
+    ]);
+  });
+});

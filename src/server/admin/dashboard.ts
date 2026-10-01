@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm";
 import { jerusalemWallClock } from "@/lib/format";
 import { PATUR_CEILING } from "@/lib/vat";
+import { refundDeadlines } from "@/server/cancellations/service";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import {
   adminAlerts,
@@ -26,22 +27,29 @@ import {
   sales,
   shipments,
   taxDocuments,
-  user,
 } from "@/server/db/schema";
 import type { AdminContext } from "@/server/domain/admin";
 import { env as defaultEnv, type Env } from "@/server/env";
+import {
+  GOLIVE_BLOCKERS,
+  type GoLiveBlocker,
+  goLiveBlockers,
+} from "@/server/golive";
 import { countOpenRequests } from "@/server/requests/service";
 import { getSetting } from "@/server/settings";
 
 /**
- * Dashboard read model (spec §6.10 `/admin`): needs-attention cards, the year-to-date turnover
- * against the osek-patur ceiling (mock and demo sales excluded; approximate), and a go-live
- * readiness list from env and settings. WS4-owned; the authoritative go-live blockers are
- * `server/golive.ts` (WS6) — M4 should feed that list in here.
+ * Dashboard read model (spec §6.10 `/admin`): needs-attention cards (including the cancellation
+ * refund deadlines of `cancellations/service.ts#refundDeadlines`), the year-to-date turnover
+ * against the osek-patur ceiling (mock and demo sales excluded; approximate), and the go-live
+ * readiness list: WS6's authoritative blockers (`golive.ts#goLiveBlockers`) plus the operational
+ * drivers that are not blockers (tax documents, email, storage).
  */
 export interface AttentionItem {
   /** Order id for a link, when the item belongs to an order. */
   orderId: string | null;
+  /** Cancellation id for a link (cancellation refund deadlines). */
+  cancellationId?: string;
   label: string;
   /** Due date for deadline items. */
   dueAt?: Date | null;
@@ -49,6 +57,7 @@ export interface AttentionItem {
 
 export interface AttentionCard {
   key:
+    | "cancellationRefunds"
     | "refundsDue"
     | "refundProblems"
     | "deferredPayments"
@@ -73,7 +82,15 @@ export interface DashboardData {
     ceilingIlsMinor: number | null;
     salesCount: number;
   };
-  goLive: { key: string; ok: boolean }[];
+  goLive: GoLiveItem[];
+}
+
+export interface GoLiveItem {
+  /** A `golive.ts` blocker code, or an operational item (`taxDocuments`, `email`, `storage`). */
+  key: GoLiveBlocker | "taxDocuments" | "email" | "storage";
+  ok: boolean;
+  /** True for `golive.ts` blockers: live checkout is refused while one is missing. */
+  blocker: boolean;
 }
 
 const DAY = 24 * 60 * 60_000;
@@ -96,6 +113,28 @@ export async function getDashboard(
   const env = deps.env ?? defaultEnv;
   const now = deps.now ?? new Date();
   const cards: AttentionCard[] = [];
+
+  // Cancellation refunds not settled yet, due within 5 days or overdue (spec §5.7 step 10),
+  // counted from the notice: a RECEIVED notice has no refund row yet.
+  const cancelDue = (await refundDeadlines(db)).filter(
+    (d) =>
+      !d.refundSettled && d.refundDueAt.getTime() < now.getTime() + 5 * DAY,
+  );
+  cards.push({
+    key: "cancellationRefunds",
+    severity: cancelDue.some(
+      (d) => d.refundDueAt.getTime() < now.getTime() + 2 * DAY,
+    )
+      ? "critical"
+      : "warning",
+    count: cancelDue.length,
+    items: cancelDue.slice(0, ITEMS).map((d) => ({
+      orderId: null,
+      cancellationId: d.id,
+      label: d.number,
+      dueAt: d.refundDueAt,
+    })),
+  });
 
   // Refunds due within 5 days or overdue (spec §5.7 step 10).
   const openRefund = and(
@@ -400,32 +439,31 @@ async function turnover(db: DbOrTx, now: Date) {
   };
 }
 
-async function goLive(db: DbOrTx, env: Env) {
-  const profile = await getSetting("business_profile", db);
-  const shipping = await getSetting("shipping", db);
-  const [admins] = await db
-    .select({ n: count() })
-    .from(user)
-    .where(sql`${user.twoFactorEnabled} IS NOT TRUE`);
+async function goLive(db: DbOrTx, env: Env): Promise<GoLiveItem[]> {
+  const report = await goLiveBlockers({ db, env });
   return [
-    { key: "businessProfile", ok: profile.completed },
-    { key: "demoModeOff", ok: !env.DEMO_MODE },
+    ...GOLIVE_BLOCKERS.map((key) => ({
+      key,
+      ok: !report.blockers.includes(key),
+      blocker: true,
+    })),
     {
-      key: "livePayments",
-      ok:
-        !env.PAYMENT_PROVIDERS.includes("mock") &&
-        (env.CARDCOM_MODE === "live" || env.PAYPAL_MODE === "live"),
-    },
-    {
-      key: "taxDocuments",
+      key: "taxDocuments" as const,
       ok:
         env.TAX_DOCUMENTS_MODE === "morning" ||
         env.TAX_DOCUMENTS_MODE === "gateway",
+      blocker: false,
     },
-    { key: "email", ok: env.EMAIL_DRIVER === "resend" },
-    { key: "storage", ok: env.STORAGE_DRIVER === "blob" },
-    { key: "twoFactor", ok: (admins?.n ?? 0) === 0 },
-    { key: "ratesCalibrated", ok: shipping.calibratedAt !== null },
+    {
+      key: "email" as const,
+      ok: env.EMAIL_DRIVER === "resend",
+      blocker: false,
+    },
+    {
+      key: "storage" as const,
+      ok: env.STORAGE_DRIVER === "blob",
+      blocker: false,
+    },
   ];
 }
 

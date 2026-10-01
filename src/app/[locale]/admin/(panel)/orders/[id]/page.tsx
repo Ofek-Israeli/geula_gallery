@@ -68,7 +68,8 @@ function Section({
 /**
  * `/admin/orders/[id]` (spec §6.10): summary, buyer, payment attempts with "Recheck payment",
  * refunds, tax documents, shipment with minimal manual tracking, emails, alerts and the audit
- * timeline. M2 version; WS4 adds refund dialogs and record payment, WS3 the fulfillment screen.
+ * timeline, with the refund dialogs and record payment (WS4) and a link to WS3's fulfillment
+ * screen (`/admin/orders/[id]/fulfill`).
  */
 export default async function AdminOrderPage({
   params,
@@ -682,6 +683,18 @@ export default async function AdminOrderPage({
               </code>{" "}
               {t(`method.${shipment.method}`)}
             </p>
+            {order.status === "PAID" ||
+            order.status === "COMPLETED" ||
+            shipment.status !== "AWAITING_FULFILLMENT" ? (
+              <p>
+                <Link
+                  href={paths.admin.fulfill(order.id)}
+                  data-testid="open-fulfillment"
+                >
+                  {t("detail.openFulfillment")}
+                </Link>
+              </p>
+            ) : null}
             {shipment.trackingNumber ? (
               <p>
                 {shipment.trackingUrl ? (

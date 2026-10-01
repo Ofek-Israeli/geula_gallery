@@ -65,6 +65,7 @@
     "noDocuments": "אין עדיין מסמכים.",
     "viewDocument": "צפייה",
     "shipment": "משלוח",
+    "openFulfillment": "למסך המשלוח (אריזה, תווית ומעקב)",
     "noShipment": "אין עדיין משלוח.",
     "tracking": "מעקב: {carrier} {number}",
     "emails": "הודעות דוא״ל",
