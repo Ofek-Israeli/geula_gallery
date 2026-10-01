@@ -1,1 +1,42 @@
-{}
+{
+  "update": {
+    "subject": "Shipping update for order {number}",
+    "title": {
+      "LABEL_CREATED": "Your order is ready to ship",
+      "IN_TRANSIT": "Your artwork is on its way",
+      "CUSTOMS": "Your parcel is in customs",
+      "OUT_FOR_DELIVERY": "Out for delivery today",
+      "DELIVERED": "Your parcel was delivered",
+      "EXCEPTION": "Your parcel is delayed",
+      "RETURNED": "Your parcel came back to us",
+      "COLLECTED": "Your artwork was collected",
+      "OTHER": "Shipping update"
+    },
+    "body": {
+      "LABEL_CREATED": "The artwork from order {number} is packed and ready to be handed to the carrier.",
+      "IN_TRANSIT": "The artwork from order {number} was handed to the carrier and is on its way.",
+      "CUSTOMS": "The parcel for order {number} is being cleared by customs in the destination country. As agreed at checkout (DAP), any import duties and taxes are collected from the recipient by the carrier.",
+      "OUT_FOR_DELIVERY": "The parcel for order {number} is with the courier and should be delivered today.",
+      "DELIVERED": "The parcel for order {number} was delivered. We hope the artwork arrived safely.",
+      "EXCEPTION": "The carrier reported a delay for the parcel of order {number}. We are following it; if the carrier contacts you, please reply to them. For any question, just reply to this email.",
+      "RETURNED": "The parcel for order {number} came back to us. We will contact you to arrange what happens next.",
+      "COLLECTED": "Thank you for collecting the artwork from order {number}.",
+      "OTHER": "The shipping status of order {number} was updated."
+    },
+    "carrier": "Carrier: {carrier}",
+    "tracking": "Tracking number: {number}",
+    "track": "Track the parcel",
+    "estimate": "Estimated delivery: {date}",
+    "dhl": "Delivered by Deutsche Post DHL Group.",
+    "orderPage": "The order details and the shipping status are always on your order page."
+  },
+  "pickup": {
+    "subject": "Order {number} is ready for pickup",
+    "title": "Your artwork is ready for pickup",
+    "body": "The artwork from order {number} is packed and waiting for you at the studio.",
+    "address": "Pickup address",
+    "instructions": "Directions and scheduling",
+    "schedule": "Please arrange a pickup time in advance, by replying to this email or by phone.",
+    "disclosure": "At pickup you will receive a printed copy of the disclosure document (the terms of the sale and your right to cancel)."
+  }
+}

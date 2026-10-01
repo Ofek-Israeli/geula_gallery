@@ -21,6 +21,7 @@ import { buyerOrderUrls, loadDisclosure } from "@/server/documents/data";
 import { NotFoundError, notImplemented } from "@/server/domain/errors";
 import type { ShipmentStatus } from "@/server/domain/state-machines";
 import { env as defaultEnv, type Env } from "@/server/env";
+import { getSetting } from "@/server/settings";
 
 /**
  * Fresh props for each email template (spec §5.4 `SEND_EMAIL`: "render fresh data in
@@ -35,6 +36,7 @@ import { env as defaultEnv, type Env } from "@/server/env";
  * | receipt | tax document id |
  * | checkout-link | order id |
  * | shipment-update | `<shipmentId>:<status>` |
+ * | ready-for-pickup | shipment id |
  *
  * Templates whose flows land in later streams (requests, cancellations, links, pickup, alerts)
  * throw `NotImplementedError` naming the owner, who adds the builder here.
@@ -271,7 +273,25 @@ export const EMAIL_PROPS: Builders = {
     };
   },
 
-  "ready-for-pickup": later("WS3"),
+  // WS3: the pickup address is revealed here (refId = shipment id).
+  "ready-for-pickup": async (refId, _locale, { db, env }) => {
+    const [shipment] = await db
+      .select()
+      .from(shipments)
+      .where(eq(shipments.id, refId));
+    if (!shipment) throw new NotFoundError("shipment", refId);
+    const order = await orderById(db, shipment.orderId);
+    const profile = await getSetting("business_profile", db);
+    return {
+      locale: order.locale,
+      orderId: order.id,
+      props: {
+        ...orderRef(order, order.locale, env),
+        pickupAddress: profile.pickupAddress[order.locale],
+        pickupInstructions: profile.pickupInstructions[order.locale],
+      },
+    };
+  },
   "checkout-link": async (refId, _locale, { db, env }) => {
     // refId = the link order (spec §5.8). Fresh: the total after any requote, the live hold.
     const order = await orderById(db, refId);

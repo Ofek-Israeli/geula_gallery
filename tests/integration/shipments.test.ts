@@ -30,11 +30,13 @@ const {
   adminAlerts,
   auditLog,
   cancellations,
+  emailMessages,
   orders,
   outboxJobs,
   shipmentEvents,
   shipments,
 } = await import("@/server/db/schema");
+const { processOutbox } = await import("@/server/outbox/process");
 const svc = await import("@/server/shipping/shipments");
 const { resetMockProviderHooks } = await import(
   "@/server/payments/providers/mock"
@@ -586,5 +588,37 @@ describe("shipment row", () => {
       carrier: "MANUAL",
       exportDeclStatus: "NOT_REQUIRED",
     });
+  });
+});
+
+describe("shipping emails", () => {
+  it("send in the buyer's locale: ready for pickup (with the address) and shipment updates", async () => {
+    const pickup = await paidShipmentOrder({ method: "LOCAL_PICKUP" });
+    await svc.markReadyForPickup(pickup.orderId, ctx);
+    const courier = await paidShipmentOrder();
+    await svc.recordManualTracking(
+      courier.orderId,
+      {
+        carrierName: "Israel Post",
+        trackingNumber: "RR000000003IL",
+        trackingUrl: "https://example.test/track/RR000000003IL",
+        handedOver: true,
+      },
+      ctx,
+    );
+    for (let i = 0; i < 3; i++) await processOutbox({ limit: 50 });
+    const sent = await db.select().from(emailMessages);
+    const ready = sent.find((m) => m.template === "ready-for-pickup");
+    expect(ready?.status).toBe("SENT");
+    expect(ready?.subject).toContain("מוכנה לאיסוף");
+    expect(ready?.html).toContain("data-pickup-address");
+    const updates = sent.filter((m) => m.template === "shipment-update");
+    expect(updates.map((m) => m.status)).toEqual(["SENT", "SENT"]);
+    const inTransit = updates.find((m) => m.html?.includes("היצירה בדרך"));
+    expect(inTransit?.html).toContain("RR000000003IL");
+    expect(inTransit?.html).toContain(
+      "https://example.test/track/RR000000003IL",
+    );
+    expect(inTransit?.html).toContain('dir="rtl"');
   });
 });
