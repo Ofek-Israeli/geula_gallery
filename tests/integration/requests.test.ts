@@ -206,7 +206,8 @@ describe("inbox", () => {
       buyer: { name: "B", email: "b@example.test", phone: "" },
       country: "IL",
       currency: "ILS" as const,
-      itemPriceMinor: 100_000,
+      // The factory's list price: a different price would need `priceChangeReason` (WS2).
+      itemPriceMinor: 150_000,
       shippingMethod: "QUOTED" as const,
       lockedShippingMinor: 10_000,
     };
