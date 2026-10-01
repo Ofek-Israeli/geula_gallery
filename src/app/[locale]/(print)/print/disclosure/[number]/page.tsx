@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { DocumentSections } from "@/components/docs/DocumentSections";
+import { LEGAL_TEXTS_APPROVED } from "@/content/legal/versions";
 import { formatDateTime } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
 import { getBuyerDisclosure } from "@/server/documents/buyer";
@@ -12,7 +13,8 @@ import { checkLimit } from "@/server/security/rate-limit";
 /**
  * `/[locale]/print/disclosure/[number]?k=<token>` (spec §5.4): the s.14C(b) disclosure document as
  * printable HTML (A4). The same builder feeds the inline email summary. Buyer access by the order
- * token; a bad token is rate limited and 404s. M2 minimal page; WS6 owns the final document.
+ * token; a bad token is rate limited and 404s. The printed copy goes in the parcel or is handed over
+ * at pickup (spec §5.4). A DRAFT note shows until the lawyer approves the texts.
  */
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -53,6 +55,11 @@ export default async function DisclosurePrintPage({
             version: doc.version,
           })}
         </p>
+        {LEGAL_TEXTS_APPROVED ? null : (
+          <p className="text-sm text-hold" data-testid="disclosure-draft">
+            {t("draft")}
+          </p>
+        )}
       </header>
       <DocumentSections sections={doc.sections} />
       <footer className="border-t border-line pbs-4 text-sm text-ink-muted">

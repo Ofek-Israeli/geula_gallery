@@ -1,7 +1,9 @@
 {
   "disclosure": {
     "meta": "Order {number} · {date} · version {version}",
-    "printNote": "Keep this document. A printed copy is included with the work."
+    "printNote": "Keep this document. A printed copy is included with the work.",
+    "draft": "Draft – the wording of this document has not yet been approved by a lawyer.",
+    "cancel": "To cancel the purchase:"
   },
   "receipt": {
     "kind": {
@@ -38,5 +40,36 @@
       "cheque": "cheque",
       "other": "other"
     }
+  },
+  "studioNotice": {
+    "title": "Notice to studio customers",
+    "subtitle": "Under s.4C of the Consumer Protection Law – draft for the lawyer's approval",
+    "seller": "Seller",
+    "body1": "Every work in the studio is a unique original. Each price is shown next to the work or given on request, and includes {vat}.",
+    "vatPatur": "all taxes (VAT-exempt dealer – no VAT)",
+    "vatMurshe": "VAT",
+    "body2": "Studio purchases come with a receipt and a written summary of the transaction. Cancellation and returns for studio purchases: {policy}",
+    "policy": "You may cancel within 14 days if the work is returned in its original condition, subject to the law and regulations. [For the lawyer]",
+    "body3": "Distance purchases (on the website, by phone or WhatsApp) can be cancelled as described on the \"Cancel a purchase\" page:",
+    "contact": "Phone <ltr>{phone}</ltr> · Email <ltr>{email}</ltr>",
+    "print": "Print and display in the studio."
+  },
+  "coa": {
+    "title": "Certificate of authenticity",
+    "intro": "I certify that the work described below is an original work created by me.",
+    "work": "Work",
+    "inventory": "Inventory number",
+    "year": "Year",
+    "medium": "Medium",
+    "dimensions": "Dimensions",
+    "signed": "Signed",
+    "date": "Date of sale",
+    "buyer": "Buyer",
+    "copyright": "Copyright in the work remains with the artist (Copyright Act, s.37(c)), as do the moral rights in it (s.45(b)). The owner may display and resell the work but may not reproduce it. [For the lawyer]",
+    "signature": "Artist's signature",
+    "verify": "Verify: scan the code",
+    "demo": "DEMO – sample certificate only",
+    "yes": "Yes",
+    "no": "No"
   }
 }
