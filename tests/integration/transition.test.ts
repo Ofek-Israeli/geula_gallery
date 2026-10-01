@@ -1,33 +1,13 @@
 import { sql } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { cleanDatabaseBeforeEach } from "../helpers/db";
 
 /**
  * M1 step 12: `transition()` and `withTx()` against real Postgres (TEST_DATABASE_URL).
- * Self-contained until the step-14 harness (globalSetup, truncation helpers) exists.
+ * Environment, migration and pool cleanup come from the integration harness
+ * (tests/integration/{global-setup,setup}.ts); tables are truncated per test.
  */
-try {
-  process.loadEnvFile(".env.local");
-} catch {
-  // CI / fresh clone: rely on the shell environment.
-}
-const TEST_DB = process.env.TEST_DATABASE_URL;
-if (!TEST_DB) throw new Error("TEST_DATABASE_URL is not set");
-if (!["localhost", "127.0.0.1", "::1"].includes(new URL(TEST_DB).hostname)) {
-  throw new Error("integration tests only run against a local database");
-}
-
-vi.mock("@/server/env", () => ({
-  env: {
-    APP_ENV: "test",
-    APP_URL: "http://localhost:3000",
-    APP_SECRET: "test-app-secret-at-least-32-characters-long",
-    DATABASE_URL: process.env.TEST_DATABASE_URL,
-    DEMO_MODE: true,
-    isProduction: false,
-  },
-}));
-
-const { db, pool } = await import("@/server/db/client");
+const { db } = await import("@/server/db/client");
 const { buyerRequests } = await import("@/server/db/schema");
 const { withTx } = await import("@/server/db/tx");
 const { transition } = await import("@/server/domain/transition");
@@ -48,15 +28,7 @@ async function newQuestion(): Promise<string> {
   return row.id;
 }
 
-beforeEach(async () => {
-  await db.execute(
-    sql`TRUNCATE buyer_requests, audit_log RESTART IDENTITY CASCADE`,
-  );
-});
-
-afterAll(async () => {
-  await pool.end();
-});
+cleanDatabaseBeforeEach({ seed: false });
 
 describe("transition", () => {
   it("updates the status and patch, and audits in the same transaction", async () => {
