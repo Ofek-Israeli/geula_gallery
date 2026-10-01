@@ -700,3 +700,99 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
   early.` a few times during E2E. It appears when Playwright navigates away while a response or
   `<Link>` prefetch is still streaming; every test passes and no page errors are reported. Not
   investigated further.
+
+### M2 part 2 (checkout, reservations, mock provider, finalization, refunds, order page)
+
+**What exists**
+- `server/checkout/`: `quote.ts` (`getCheckoutQuote`), `pricing.ts` (ship spec, item price per
+  currency, shipping options, order amounts + VAT), `reservations.ts` (lock helpers, SQL forms of the
+  predicates, advisory locks, caps, reserve, takeover expiry, release), `start.ts` (`startCheckout`,
+  `startPaymentForOrder`, `launchAttempt`, `orderUrlFor`), `release.ts` (`releaseReservation`,
+  `expireStaleOrders`), `requote.ts` (`requoteOrder`, `shippingQuoteForOrder`), `conversation.ts`,
+  `order-view.ts` (buyer order page data, token-checked).
+- `server/payments/`: `finalize.ts`, `capture.ts`, `apply.ts` (`applySuccessfulPayment`,
+  `markNeedsRefund`, `lockPaymentContext`), `refunds.ts` (request / execute / reconcile / lease expiry /
+  manual done / confirm failure / retry / settle), `post-success.ts` (refund, reversal and dispute
+  sync with matching), `webhook.ts` (`handlePaymentWebhook`, `processPaymentEvent`,
+  `unprocessedEventIds`, `handlePaymentReturn`), `providers/mock.ts` (full mock).
+- Routes: `POST /api/payments/[provider]/webhook`, `GET /api/payments/[provider]/return`,
+  `POST /api/mock-pay`; pages `(checkout)/checkout/[slug]`, `(checkout)/checkout/returned`,
+  `(checkout)/mock-pay/[ref]`, `(site)/orders/[number]`.
+- Outbox handlers `REFUND_PAYMENT` (→ `executeRefund`) and `REFUND_SETTLED` (→ `settleRefund`).
+  `SEND_EMAIL` and `ISSUE_TAX_DOCUMENT` / `ISSUE_CREDIT_NOTE` are **still stubs** (M2 part 3 / WS6 /
+  WS2): jobs are enqueued correctly and back off until their handlers land.
+- Tests: integration `reserve-race`, `finalize`, `capture-race`, `refunds` (49 tests); unit
+  `mock-signature`; e2e `checkout-minimal` (desktop only, it buys `icebound`). Factories in
+  `tests/helpers/factories/commerce.ts` drive the real services (`heldOrder`, `clickMockPay`,
+  `patchSetting`, `execSql`).
+
+**Decisions and deviations**
+- Contract changes before `contracts-v1` (additive or renamed):
+  - `FinalizeOutcome` now follows spec §5.2 (`paid` instead of `applied`, plus `refunded`,
+    `lost_before_capture`, `unknown`, `capturing`); `FinalizeResult` has `orderId`;
+    `FinalizeOptions.db` is a `Db` (not a tx) and takes `env`.
+  - `ApplyOutcome` gained `deferred` and `late`.
+  - `CheckoutQuote.ok.providers[]` carries `wallets` and `installments`; `label` is just the id (the
+    UI translates `checkout.provider.<id>`).
+  - Services take an optional `deps` (`{ db, env }`) so race tests run each contender on its own
+    connection. `requestRefund(input, db)` joins the caller's transaction when `db` is a tx.
+- State machines: order `EXPIRED → AWAITING_PAYMENT` (only the capture claim / a late review re-opens
+  an expired order); attempt `PENDING/AWAITING_CAPTURE/EXPIRED → PAYMENT_REVIEW` (a provider that
+  reports review without a capture: the mock's "Mark under review") and `EXPIRED → CANCELED` (late
+  capture claim on a lost work).
+- The order page "Pay" never re-opens an EXPIRED order (the M1 open question): only
+  AWAITING_PAYMENT orders get a new attempt; an expired *hold* on an AWAITING_PAYMENT order is
+  re-reserved within the budget (hold_count ≤ 3, WEB span ≤ 2 h, caps).
+- Anti-hoarding: only WEB orders count; the cooldown counts orders of the same buyer (email or IP
+  hash) whose `expires_at` lapsed within `holdCooldownMinutes` with reason null / HOLD_EXPIRED /
+  HOLD_TAKEN_OVER (an explicit "release" is not a lapse). The 24 h per-artwork budget counts orders
+  by `first_held_at`.
+- A concurrent double submit with the same `client_request_id`: the loser re-checks for the twin
+  after locking the artwork and resumes it (otherwise it would see `just_reserved`).
+- Go-live blockers (`golive.ts`, WS6) are approximated by `!business_profile.completed` for
+  `liveBlocked` (only affects LIVE providers).
+- `requoteOrder` refuses a currency change (items are immutable and priced in the order currency).
+- Review: a direct-flow "review" moves attempt and order to PAYMENT_REVIEW only when the order is
+  open, bound, sellable and has no other in-flight attempt; otherwise the attempt just keeps being
+  polled (a success later goes through `applySuccessfulPayment`, i.e. NEEDS_REFUND when lost).
+- Capture watch release: the hold is shortened to `now()` (and the order's `expires_at`), the expiry
+  sweep then releases it.
+- A verification mismatch on a `requires_capture` approval → FAILED + CRITICAL alert (no money).
+  With money taken → NEEDS_REFUND AMOUNT_MISMATCH with a MANUAL_REQUIRED refund for the *received*
+  amount, no job, no receipt.
+- Refund outcomes: `ProviderRejectedError` → FAILED; timeouts, invalid responses and
+  `ProviderUnavailableError` → UNKNOWN (reconcile asks `getRefund`; `not_found` → FAILED, still
+  counted until an admin confirms); no `getRefund` → MANUAL_REQUIRED. `retryRefund(id, actor)` is an
+  extra function (FAILED + confirmed → REQUESTED with a new `idem_key` and job dedupe key
+  `refund:<id>:<idemKey>`).
+- The mock hosted page buttons are a plain `POST /api/mock-pay` answered with 303, not Server
+  Actions: a Server Action `redirect()` to a same-origin `/api/...` URL is soft-navigated by the
+  App Router and never reaches the return route. Real providers are other origins, unaffected.
+- The return route reports an `already_final` attempt by its final state (`payment=paid`, …).
+- `buildPreContract` got a minimal bilingual body (seller incl. ID number and "Merchant country:
+  Israel", work, price with VAT wording, delivery, payment, cancellation, DAP, s.11, links). WS6 owns
+  the final text and `buildDisclosure` (still throws). `src/content/legal/versions.ts` holds draft
+  versions stored on orders.
+- Mock provider hooks (`mockProviderHooks`, test only, ignored in production) inject capture/refund
+  timeouts (before or after applying), review-on-capture, rejected/pending refunds and fetch timeouts;
+  `resolveMockReview(ref, "PAID" | "DECLINED")` resolves a review.
+
+**Gotchas**
+- `providers/mock.ts` loads the DB client lazily (`appDb()`): unit tests import its constants
+  without an environment.
+- Pass a dedicated-connection `db` through every service call in race tests; quote/start read
+  settings sequentially because one `pg.Client` cannot run parallel queries (pg 8 warns).
+- In dev, Playwright screenshots taken before hydration inject `caret-color` styles and cause a
+  harmless hydration warning.
+- `checkout/returned` is a static segment next to `checkout/[slug]`: an artwork slug `returned` would
+  be shadowed.
+- Running `next dev` with `NEXT_DIST_DIR` rewrites `tsconfig.json`; revert it before committing.
+
+**Not done here (M2 part 3 / streams)**: the `reconcile` cron job body (all building blocks exist:
+`unprocessedEventIds` + `processPaymentEvent`, attempts by `next_check_at` + `finalizeAttempt(…,
+"reconcile")`, `refundsToReconcile` + `reconcileRefund`, `expireRefundLeases`, `expireStaleOrders`),
+the SEND_EMAIL handler with `order-confirmation` / `painter-new-order` / `purchase-not-completed` /
+`payment-review` / `refund-issued` props, mock tax documents, the admin order list/detail with
+Recheck, the PayPal refund-webhook routing into `syncPostSuccessEvent` (WS5), link orders
+(`createLinkOrder`), offline payments, and the e2e specs `purchase-il`, `webhook`, `order-retry`,
+`race`.
