@@ -15,6 +15,7 @@ import { isLocale, type Locale } from "@/lib/locale";
 import { formatMoney } from "@/lib/money";
 import { localePath, paths } from "@/lib/routes";
 import { getArtworkPage } from "@/server/catalog/queries";
+import { insuredValueForDisplay } from "@/server/checkout/pricing";
 import { getCheckoutQuote } from "@/server/checkout/quote";
 import type { CheckoutQuote } from "@/server/checkout/types";
 import { issueFormStartToken } from "@/server/security/tokens";
@@ -86,6 +87,7 @@ export default async function CheckoutPage({
   const { artwork } = data;
   const t = await getTranslations({ locale, namespace: "checkout" });
   const shipping = await getSetting("shipping");
+  const ilsPerUsd = (await getSetting("checkout")).fx.ilsPerUsd;
   const countries = countryOptions(locale, shipping.deniedCountries);
   const checkoutPath = localePath(locale, paths.checkout(slug));
   const main = artwork.images[0] ?? null;
@@ -109,7 +111,7 @@ export default async function CheckoutPage({
         />
       </div>
       {quote.kind === "ok" ? (
-        <DeliveryChoices quote={quote} locale={locale} />
+        <DeliveryChoices quote={quote} locale={locale} ilsPerUsd={ilsPerUsd} />
       ) : null}
       <div>
         <button type="submit" className={buttonClasses("secondary", "sm")}>
@@ -388,9 +390,11 @@ export default async function CheckoutPage({
 async function DeliveryChoices({
   quote,
   locale,
+  ilsPerUsd,
 }: {
   quote: Extract<CheckoutQuote, { kind: "ok" }>;
   locale: Locale;
+  ilsPerUsd: number;
 }) {
   const t = await getTranslations({ locale, namespace: "checkout" });
   return (
@@ -413,7 +417,11 @@ async function DeliveryChoices({
             m.method === "CARRIER_TABLE" ? t("delivery.tracked") : null,
             m.insured
               ? t("delivery.insuredUpTo", {
-                  amount: formatMoney(m.insuredValueMinor, "ILS", locale),
+                  amount: formatMoney(
+                    insuredValueForDisplay(m, quote.currency, ilsPerUsd),
+                    quote.currency,
+                    locale,
+                  ),
                 })
               : null,
             m.estimate?.[locale] || null,

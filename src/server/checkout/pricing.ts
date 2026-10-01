@@ -164,3 +164,20 @@ export function orderAmounts(i: {
     vatMinor: vat.vatMinor,
   };
 }
+
+/**
+ * The insured value shown to the buyer, in the order currency (M2 open item: a USD checkout said
+ * "insured up to ₪5,800"). The engine caps the insured value in ILS minor units; for USD it is
+ * converted with the quote's locked rate and rounded **down** to whole dollars, so the page never
+ * promises more cover than the ILS cap.
+ */
+export function insuredValueForDisplay(
+  quote: Pick<ShippingQuoteResult, "insuredValueMinor" | "fxIlsPerUsd">,
+  currency: Currency,
+  fallbackIlsPerUsd: number,
+): number {
+  if (currency === "ILS") return quote.insuredValueMinor;
+  const rate = quote.fxIlsPerUsd ?? fallbackIlsPerUsd;
+  if (!(rate > 0) || quote.insuredValueMinor <= 0) return 0;
+  return Math.floor(quote.insuredValueMinor / 100 / rate) * 100;
+}

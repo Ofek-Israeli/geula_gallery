@@ -78,6 +78,13 @@ export function CheckoutForm(props: CheckoutFormProps) {
     null,
   );
   const v = values.current;
+  /** Optional fields say so (M2 open item: the IL postal code had neither marker). */
+  const optional = (label: string): ReactNode => (
+    <>
+      {label}
+      <span className="ms-1 font-normal text-ink-muted">{tf("optional")}</span>
+    </>
+  );
   const fieldErrors = state && !state.ok ? (state.error.fieldErrors ?? {}) : {};
   const errorFor = (name: string): string | undefined => {
     const list = fieldErrors[name];
@@ -239,7 +246,9 @@ export function CheckoutForm(props: CheckoutFormProps) {
             <Field
               key={name}
               id={FIELD_IDS[name] ?? name}
-              label={t(`details.${name}`)}
+              label={
+                req ? t(`details.${name}`) : optional(t(`details.${name}`))
+              }
               required={req}
               error={errorFor(name)}
             >
@@ -262,7 +271,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <fieldset className="flex flex-col gap-4">
         <Field
           id={FIELD_IDS.companyName ?? "co-company"}
-          label={t("details.companyName")}
+          label={optional(t("details.companyName"))}
           error={errorFor("companyName")}
         >
           {(c) => (
@@ -276,7 +285,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
         </Field>
         <Field
           id={FIELD_IDS.vatId ?? "co-vat"}
-          label={t("details.vatId")}
+          label={optional(t("details.vatId"))}
           error={errorFor("vatId")}
         >
           {(c) => (
