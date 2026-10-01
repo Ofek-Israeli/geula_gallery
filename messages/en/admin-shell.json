@@ -145,7 +145,8 @@
       "open": "Open",
       "quotes": "Quotes",
       "questions": "Questions",
-      "all": "All"
+      "all": "All",
+      "offers": "Offers"
     },
     "kind": {
       "QUESTION": "Question",
@@ -228,8 +229,21 @@
       "NOT_QUOTABLE": "Only a new quote request can be quoted.",
       "IL_REQUIRES_ILS": "An order to Israel must be in ILS.",
       "PRICE_REASON_REQUIRED": "The price differs from the list price; please give a reason.",
-      "NOT_RESERVABLE": "The artwork cannot be held right now."
-    }
+      "NOT_RESERVABLE": "The artwork cannot be held right now.",
+      "NOT_ANSWERABLE": "Only a new offer can be answered.",
+      "ACCEPT_MUST_MATCH": "Accepting keeps the offered amount and currency.",
+      "COUNTER_SAME_PRICE": "A counter-offer needs a price different from the offer."
+    },
+    "offerAmount": "Offer: {amount}",
+    "offer": "Answer the offer",
+    "offerIntro": "Accepting sends the buyer a payment link for the amount they offered; a counter-offer sends a link at another price. Either way the work is held for them.",
+    "accept": "Accept and send the link",
+    "acceptConfirm": "Accept the offer and email the buyer a payment link for this amount?",
+    "counter": "Counter-offer",
+    "counterPrice": "Counter-offer price",
+    "counterSubmit": "Send the counter-offer",
+    "counterConfirm": "Email the buyer a payment link at this price?",
+    "offerSent": "Sent."
   },
   "more": {
     "title": "More"

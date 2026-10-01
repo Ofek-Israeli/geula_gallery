@@ -24,7 +24,8 @@
     "message": "Message",
     "messageQuoteHint": "For example your city, a preferred date or a shipping question.",
     "offerAmount": "Offer amount",
-    "currency": "Currency"
+    "currency": "Currency",
+    "offerAmountHint": "The total for the work, before shipping."
   },
   "submit": "Send",
   "submitting": "Sending…",
@@ -41,7 +42,9 @@
     "NOT_FOUND": "The artwork was not found.",
     "NOT_REQUESTABLE": "This kind of request is not available for this work.",
     "OFFER_PENDING": "You already have an open offer for this work.",
-    "generic": "Something went wrong. Please try again."
+    "generic": "Something went wrong. Please try again.",
+    "OFFER_AMOUNT": "Please enter an offer amount.",
+    "IL_REQUIRES_ILS": "Offers for delivery in Israel are in ILS."
   },
   "privacy": "We use your details only to answer your message (and, for a quote, to price the shipping and send a payment link). You are not legally required to provide them, but we cannot get back to you without them. They are kept by us and sent only through our email provider.",
   "replyTemplates": {
@@ -49,5 +52,6 @@
     "sold": "Hello {name},\nThank you for your interest. This work has already been sold, but the gallery has similar works, and commissions are welcome.",
     "quoteSoon": "Hello {name},\nThank you for your request. I am checking the shipping cost and will send a full quote with a payment link soon.",
     "moreDetails": "Hello {name},\nThank you for your message. To price the shipping, could you tell me your city and postal code?"
-  }
+  },
+  "autoDecline": "Hello {name},\nThank you for your offer for \"{title}\". Unfortunately we cannot accept it. You are welcome to make another offer or to buy the work at the price shown on the site."
 }

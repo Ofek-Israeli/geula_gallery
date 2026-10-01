@@ -11,6 +11,7 @@ import {
 } from "@/lib/validation/common";
 import { adminAction } from "@/server/next/actions";
 import {
+  answerOffer,
   closeRequest,
   declineRequest,
   replyToRequest,
@@ -46,46 +47,66 @@ export const closeAction = adminAction(
   { name: "inbox.close" },
 );
 
+const linkSchema = id
+  .extend({
+    name: personNameSchema,
+    email: emailSchema,
+    phone: z.string().trim().max(40).default(""),
+    country: countrySchema,
+    currency: currencySchema,
+    itemPrice: amountMinorSchema,
+    shippingMethod: z.enum([
+      "CARRIER_TABLE",
+      "QUOTED",
+      "LOCAL_PICKUP",
+      "ARTIST_DELIVERY",
+    ]),
+    lockedShipping: optionalAmountMinorSchema,
+    expiresInHours: intSchema(1, 24 * 14, 48),
+    priceChangeReason: nullableText(500),
+  })
+  .superRefine((v, ctx) => {
+    if (v.shippingMethod === "QUOTED" && v.lockedShipping === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lockedShipping"],
+        message: "required",
+      });
+    }
+  });
+
+type LinkInput = z.output<typeof linkSchema>;
+
+function linkInput(i: LinkInput) {
+  return {
+    buyer: { name: i.name, email: i.email, phone: i.phone },
+    country: i.country,
+    currency: i.currency,
+    itemPriceMinor: i.itemPrice,
+    shippingMethod: i.shippingMethod,
+    lockedShippingMinor: i.lockedShipping ?? undefined,
+    expiresInHours: i.expiresInHours,
+    priceChangeReason: i.priceChangeReason ?? undefined,
+  };
+}
+
 export const sendQuoteAction = adminAction(
-  id
-    .extend({
-      name: personNameSchema,
-      email: emailSchema,
-      phone: z.string().trim().max(40).default(""),
-      country: countrySchema,
-      currency: currencySchema,
-      itemPrice: amountMinorSchema,
-      shippingMethod: z.enum([
-        "CARRIER_TABLE",
-        "QUOTED",
-        "LOCAL_PICKUP",
-        "ARTIST_DELIVERY",
-      ]),
-      lockedShipping: optionalAmountMinorSchema,
-      expiresInHours: intSchema(1, 24 * 14, 48),
-      priceChangeReason: nullableText(500),
-    })
-    .superRefine((v, ctx) => {
-      if (v.shippingMethod === "QUOTED" && v.lockedShipping === null) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["lockedShipping"],
-          message: "required",
-        });
-      }
-    }),
+  linkSchema,
   async (i, ctx) =>
-    domainErrors(() =>
-      sendQuote(ctx, i.requestId, {
-        buyer: { name: i.name, email: i.email, phone: i.phone },
-        country: i.country,
-        currency: i.currency,
-        itemPriceMinor: i.itemPrice,
-        shippingMethod: i.shippingMethod,
-        lockedShippingMinor: i.lockedShipping ?? undefined,
-        expiresInHours: i.expiresInHours,
-        priceChangeReason: i.priceChangeReason ?? undefined,
-      }),
-    ),
+    domainErrors(() => sendQuote(ctx, i.requestId, linkInput(i))),
   { name: "inbox.send_quote", fresh: true },
+);
+
+export const acceptOfferAction = adminAction(
+  linkSchema,
+  async (i, ctx) =>
+    domainErrors(() => answerOffer(ctx, i.requestId, "accept", linkInput(i))),
+  { name: "inbox.accept_offer", fresh: true },
+);
+
+export const counterOfferAction = adminAction(
+  linkSchema,
+  async (i, ctx) =>
+    domainErrors(() => answerOffer(ctx, i.requestId, "counter", linkInput(i))),
+  { name: "inbox.counter_offer", fresh: true },
 );

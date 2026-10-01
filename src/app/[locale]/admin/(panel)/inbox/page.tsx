@@ -13,6 +13,7 @@ import { type InboxFilter, listRequests } from "@/server/requests/service";
 const FILTERS = [
   "open",
   "quotes",
+  "offers",
   "questions",
   "all",
 ] as const satisfies readonly InboxFilter[];

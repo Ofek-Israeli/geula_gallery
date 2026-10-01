@@ -15,7 +15,9 @@ import { requireAdmin } from "@/server/next/guards";
 import { getRequest } from "@/server/requests/service";
 import { getSetting } from "@/server/settings";
 import {
+  acceptOfferAction,
   closeAction,
+  counterOfferAction,
   declineAction,
   replyAction,
   sendQuoteAction,
@@ -69,10 +71,109 @@ export default async function RequestDetailPage({
       ? artwork.priceIlsMinor
       : artwork.priceUsdMinor
     : null;
+  const canAnswerOffer =
+    r.kind === "OFFER" &&
+    r.status === "NEW" &&
+    artwork?.saleStatus === "AVAILABLE";
   const canQuote =
     r.kind === "QUOTE" &&
     r.status === "NEW" &&
     artwork?.saleStatus === "AVAILABLE";
+
+  /** The link-order fields shared by "send quote", "accept" and "counter" (price null = fixed). */
+  const linkFields = (o: { currency: "ILS" | "USD"; price: string | null }) => (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          name="name"
+          label={t("buyerName")}
+          defaultValue={r.name}
+          required
+        />
+        <FormField
+          name="email"
+          label={t("buyerEmail")}
+          type="email"
+          defaultValue={r.email}
+          required
+        />
+        <FormField
+          name="phone"
+          label={t("buyerPhone")}
+          type="tel"
+          defaultValue={r.phone}
+        />
+        <FormField
+          name="country"
+          label={t("destination")}
+          type="select"
+          defaultValue={country}
+          options={countryOptions(locale).map((c) => ({
+            value: c.code,
+            label: c.name,
+          }))}
+          required
+        />
+        {o.price === null ? null : (
+          <>
+            <FormField
+              name="currency"
+              label={t("currency")}
+              hint={t("currencyHint")}
+              type="select"
+              defaultValue={o.currency}
+              options={[
+                { value: "ILS", label: "ILS ₪" },
+                { value: "USD", label: "USD $" },
+              ]}
+            />
+            <FormField
+              name="itemPrice"
+              label={t("itemPrice")}
+              type="number"
+              defaultValue={o.price}
+              required
+            />
+          </>
+        )}
+        <FormField
+          name="shippingMethod"
+          label={t("shippingMethod")}
+          type="select"
+          defaultValue="QUOTED"
+          options={(
+            [
+              "QUOTED",
+              "CARRIER_TABLE",
+              "LOCAL_PICKUP",
+              "ARTIST_DELIVERY",
+            ] as const
+          ).map((m) => ({
+            value: m,
+            label: t(`methods.${m}`),
+          }))}
+        />
+        <FormField
+          name="lockedShipping"
+          label={t("lockedShipping")}
+          hint={t("lockedShippingHint")}
+          type="number"
+        />
+        <FormField
+          name="expiresInHours"
+          label={t("expiresInHours")}
+          type="number"
+          inputMode="numeric"
+          defaultValue={checkout.linkHoursDefault}
+        />
+      </div>
+      <FormField
+        name="priceChangeReason"
+        label={t("priceChangeReason")}
+        hint={t("priceChangeHint")}
+      />
+    </>
+  );
 
   return (
     <div className="flex max-w-3xl flex-col gap-6" data-testid="request-detail">
@@ -185,93 +286,69 @@ export default async function RequestDetailPage({
             }}
             testId="send-quote-form"
           >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                name="name"
-                label={t("buyerName")}
-                defaultValue={r.name}
-                required
-              />
-              <FormField
-                name="email"
-                label={t("buyerEmail")}
-                type="email"
-                defaultValue={r.email}
-                required
-              />
-              <FormField
-                name="phone"
-                label={t("buyerPhone")}
-                type="tel"
-                defaultValue={r.phone}
-              />
-              <FormField
-                name="country"
-                label={t("destination")}
-                type="select"
-                defaultValue={country}
-                options={countryOptions(locale).map((c) => ({
-                  value: c.code,
-                  label: c.name,
-                }))}
-                required
-              />
-              <FormField
-                name="currency"
-                label={t("currency")}
-                hint={t("currencyHint")}
-                type="select"
-                defaultValue={currency}
-                options={[
-                  { value: "ILS", label: "ILS ₪" },
-                  { value: "USD", label: "USD $" },
-                ]}
-              />
-              <FormField
-                name="itemPrice"
-                label={t("itemPrice")}
-                type="number"
-                defaultValue={
-                  listPrice !== null ? toDecimalString(listPrice) : ""
-                }
-                required
-              />
-              <FormField
-                name="shippingMethod"
-                label={t("shippingMethod")}
-                type="select"
-                defaultValue="QUOTED"
-                options={(
-                  [
-                    "QUOTED",
-                    "CARRIER_TABLE",
-                    "LOCAL_PICKUP",
-                    "ARTIST_DELIVERY",
-                  ] as const
-                ).map((m) => ({
-                  value: m,
-                  label: t(`methods.${m}`),
-                }))}
-              />
-              <FormField
-                name="lockedShipping"
-                label={t("lockedShipping")}
-                hint={t("lockedShippingHint")}
-                type="number"
-              />
-              <FormField
-                name="expiresInHours"
-                label={t("expiresInHours")}
-                type="number"
-                inputMode="numeric"
-                defaultValue={checkout.linkHoursDefault}
-              />
-            </div>
-            <FormField
-              name="priceChangeReason"
-              label={t("priceChangeReason")}
-              hint={t("priceChangeHint")}
+            {linkFields({
+              currency,
+              price: listPrice !== null ? toDecimalString(listPrice) : "",
+            })}
+          </ActionForm>
+        </section>
+      ) : null}
+
+      {canAnswerOffer && r.offerAmountMinor && r.offerCurrency ? (
+        <section
+          className="flex flex-col gap-3 border border-line p-4"
+          data-testid="answer-offer"
+        >
+          <h2 className="text-xl">{t("offer")}</h2>
+          <p>
+            {t("offerAmount", { amount: "" })}
+            <Price
+              amountMinor={r.offerAmountMinor}
+              currency={r.offerCurrency}
+              locale={locale}
             />
+          </p>
+          <p className="text-sm text-ink-muted">{t("offerIntro")}</p>
+          <ActionForm
+            action={acceptOfferAction}
+            locale={locale}
+            hidden={{
+              ...hidden,
+              itemPrice: toDecimalString(r.offerAmountMinor),
+              currency: r.offerCurrency,
+            }}
+            submitLabel={t("accept")}
+            successText={t("offerSent")}
+            errorNamespace={err}
+            confirm={{
+              title: t("accept"),
+              message: t("acceptConfirm"),
+              confirmLabel: t("accept"),
+            }}
+            testId="accept-offer-form"
+          >
+            {linkFields({ currency: r.offerCurrency, price: null })}
+          </ActionForm>
+          <h3 className="font-sans font-semibold">{t("counter")}</h3>
+          <ActionForm
+            action={counterOfferAction}
+            locale={locale}
+            hidden={hidden}
+            submitLabel={t("counterSubmit")}
+            submitVariant="secondary"
+            successText={t("offerSent")}
+            errorNamespace={err}
+            confirm={{
+              title: t("counter"),
+              message: t("counterConfirm"),
+              confirmLabel: t("counterSubmit"),
+            }}
+            testId="counter-offer-form"
+          >
+            {linkFields({
+              currency: r.offerCurrency,
+              price: listPrice !== null ? toDecimalString(listPrice) : "",
+            })}
           </ActionForm>
         </section>
       ) : null}

@@ -23,7 +23,14 @@ type State =
     }
   | null;
 
-const FIELDS = ["name", "email", "phone", "country", "message"] as const;
+const FIELDS = [
+  "name",
+  "email",
+  "phone",
+  "country",
+  "offerAmount",
+  "message",
+] as const;
 
 /**
  * The public question / quote form (spec §5.8). Works as a plain POST before hydration (Server
@@ -40,7 +47,7 @@ export function RequestForm({
 }: {
   action: (prev: State, payload: FormData) => Promise<State>;
   locale: Locale;
-  kind: "question" | "quote";
+  kind: "question" | "quote" | "offer";
   slug: string;
   formStart: string;
   countries: { code: string; name: string }[];
@@ -122,7 +129,7 @@ export function RequestForm({
         id="req-country"
         label={t("fields.country")}
         hint={kind === "quote" ? t("fields.countryHint") : undefined}
-        required={kind === "quote"}
+        required={kind !== "question"}
         error={err("country")}
       >
         {(c) => (
@@ -134,6 +141,34 @@ export function RequestForm({
           />
         )}
       </Field>
+      {kind === "offer" ? (
+        <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
+          <Field
+            id="req-offerAmount"
+            label={t("fields.offerAmount")}
+            hint={t("fields.offerAmountHint")}
+            required
+            error={err("offerAmount")}
+          >
+            {(c) => (
+              <Input {...c} name="offerAmount" inputMode="decimal" dir="ltr" />
+            )}
+          </Field>
+          <Field id="req-offerCurrency" label={t("fields.currency")}>
+            {(c) => (
+              <Select
+                {...c}
+                name="offerCurrency"
+                defaultValue="ILS"
+                options={[
+                  { value: "ILS", label: "ILS ₪" },
+                  { value: "USD", label: "USD $" },
+                ]}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
       <Field
         id="req-message"
         label={t("fields.message")}

@@ -12,11 +12,11 @@ import { getSetting } from "@/server/settings";
 import { submitRequestAction } from "./actions";
 import { RequestForm } from "./RequestForm";
 
-type Kind = "question" | "quote";
+type Kind = "question" | "quote" | "offer";
 
 function kindOf(v: string | string[] | undefined): Kind {
   const k = Array.isArray(v) ? v[0] : v;
-  return k === "quote" ? "quote" : "question";
+  return k === "quote" || k === "offer" ? k : "question";
 }
 
 export async function generateMetadata({
@@ -37,7 +37,7 @@ export async function generateMetadata({
 /**
  * `/[locale]/works/[slug]/request?kind=question|quote` (spec §5.8): ask about a work or request a
  * quote (quote-only works and blocked shipping results such as SIZE_QUOTE / VALUE_CAP /
- * GB_LOW_VALUE / ZONE_DISABLED). Offers (`kind=offer`) are Tier B and fall back to a question.
+ * GB_LOW_VALUE / ZONE_DISABLED), or make an offer (Tier B) on works that accept offers.
  */
 export default async function RequestPage({
   params,
@@ -50,11 +50,14 @@ export default async function RequestPage({
   if (!data) notFound();
   const { artwork } = data;
   const requested = kindOf(sp.kind);
-  // A quote needs an available work; anything else becomes a question.
+  // A quote needs an available work, an offer one that accepts offers; else a question.
+  const available = artwork.state.kind === "available";
   const kind: Kind =
-    requested === "quote" && artwork.state.kind === "available"
+    requested === "quote" && available
       ? "quote"
-      : "question";
+      : requested === "offer" && available && artwork.offersEnabled
+        ? "offer"
+        : "question";
   const t = await getTranslations({ locale, namespace: "requests" });
   const shipping = await getSetting("shipping");
   const to = Array.isArray(sp.to) ? sp.to[0] : sp.to;

@@ -72,8 +72,10 @@ function Section({
  */
 export default async function AdminOrderPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/admin/orders/[id]">) {
   const { locale, id } = await params;
+  const created = Boolean((await searchParams).created);
   if (!isLocale(locale)) notFound();
   const ctx = await requireAdmin({ locale });
   const detail = await getAdminOrder(ctx, id);
@@ -159,6 +161,11 @@ export default async function AdminOrderPage({
             </a>
           ) : null}
         </p>
+        {created ? (
+          <p role="status" data-testid="order-created">
+            {t("detail.orderCreated")}
+          </p>
+        ) : null}
       </header>
 
       <Section title={t("detail.summary")}>

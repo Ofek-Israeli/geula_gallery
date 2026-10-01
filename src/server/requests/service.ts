@@ -27,6 +27,7 @@ import {
 import type { RequestStatus } from "@/server/domain/state-machines";
 import { transition } from "@/server/domain/transition";
 import type { Env } from "@/server/env";
+import { getUntypedTranslator } from "@/server/i18n";
 import { enqueueEmail } from "@/server/outbox/enqueue";
 import { getSetting } from "@/server/settings";
 
@@ -74,19 +75,36 @@ export async function submitRequest(
 ): Promise<ServiceResult<{ requestId: string }>> {
   const db = deps.db ?? defaultDb;
   if (input.kind === "OFFER") {
-    // Offers are Tier B (spec §1.2); the public form does not offer them yet.
-    throw new ConflictError("NOT_REQUESTABLE", "offers are not enabled");
+    if (
+      !input.offerAmountMinor ||
+      input.offerAmountMinor <= 0 ||
+      !input.offerCurrency
+    ) {
+      throw new ConflictError("OFFER_AMOUNT", "an offer amount is required");
+    }
+    if (input.country === "IL" && input.offerCurrency !== "ILS") {
+      throw new ConflictError(
+        "IL_REQUIRES_ILS",
+        "offers for Israel are in ILS",
+      );
+    }
   }
   try {
     const requestId = await withTx(
       async (tx) => {
         let artworkId: string | null = null;
+        let autoDecline = false;
+        let title = "";
         if (input.artworkSlug) {
           const [a] = await tx
             .select({
               id: artworks.id,
               isPublished: artworks.isPublished,
               saleStatus: artworks.saleStatus,
+              offersEnabled: artworks.offersEnabled,
+              autoDeclineBelow: artworks.offerAutoDeclineBelowIlsMinor,
+              titleHe: artworks.titleHe,
+              titleEn: artworks.titleEn,
             })
             .from(artworks)
             .where(eq(artworks.slug, input.artworkSlug));
@@ -97,7 +115,21 @@ export async function submitRequest(
               "quotes are only for available works",
             );
           }
+          if (
+            input.kind === "OFFER" &&
+            (!a.offersEnabled || a.saleStatus !== "AVAILABLE")
+          ) {
+            throw new ConflictError(
+              "NOT_REQUESTABLE",
+              "offers are not enabled",
+            );
+          }
           artworkId = a.id;
+          autoDecline =
+            input.kind === "OFFER" &&
+            a.autoDeclineBelow !== null &&
+            (await offerInIlsMinor(tx, input)) < a.autoDeclineBelow;
+          title = input.locale === "he" ? a.titleHe : a.titleEn;
         } else if (input.kind !== "QUESTION") {
           throw new ConflictError("NOT_REQUESTABLE", "an artwork is required");
         }
@@ -119,6 +151,31 @@ export async function submitRequest(
           })
           .returning({ id: buyerRequests.id });
         if (!row) throw new Error("buyer_requests insert returned no row");
+        if (autoDecline) {
+          // Below the painter's threshold (spec §5.8): declined at once with a polite reply in
+          // the buyer's language; the painter is not notified.
+          const reply = getUntypedTranslator(input.locale)(
+            "requests.autoDecline",
+            { name: input.name, title },
+          );
+          await transition(
+            tx,
+            "buyerRequest",
+            row.id,
+            ["NEW"],
+            "AUTO_DECLINED",
+            { adminReply: reply, repliedAt: new Date() },
+            "system",
+            { action: "request.auto_declined" },
+          );
+          await enqueueEmail(tx, {
+            template: "request-reply",
+            to: input.email,
+            locale: input.locale,
+            refId: `${row.id}:1`,
+          });
+          return row.id;
+        }
         await enqueueEmail(tx, {
           template: "request-ack",
           to: input.email,
@@ -155,6 +212,17 @@ export async function submitRequest(
   }
 }
 
+/** The offer in ILS minor units (USD converted with the settings FX), for the threshold. */
+async function offerInIlsMinor(
+  db: DbOrTx,
+  input: Pick<SubmitRequestInput, "offerAmountMinor" | "offerCurrency">,
+): Promise<number> {
+  const amount = input.offerAmountMinor ?? 0;
+  if (input.offerCurrency !== "USD") return amount;
+  const checkout = await getSetting("checkout", db);
+  return Math.round(amount * checkout.fx.ilsPerUsd);
+}
+
 // ---------------------------------------------------------------- admin inbox
 
 /** Statuses that need the painter's attention. */
@@ -162,7 +230,7 @@ export const OPEN_REQUEST_STATUSES = [
   "NEW",
 ] as const satisfies readonly RequestStatus[];
 
-export type InboxFilter = "open" | "quotes" | "questions" | "all";
+export type InboxFilter = "open" | "quotes" | "offers" | "questions" | "all";
 
 export interface InboxRow {
   id: string;
@@ -189,6 +257,7 @@ export async function listRequests(
       ? inArray(buyerRequests.status, [...OPEN_REQUEST_STATUSES])
       : undefined,
     f === "quotes" ? eq(buyerRequests.kind, "QUOTE") : undefined,
+    f === "offers" ? eq(buyerRequests.kind, "OFFER") : undefined,
     f === "questions" ? eq(buyerRequests.kind, "QUESTION") : undefined,
   );
   const rows = await db
@@ -508,6 +577,75 @@ export async function sendQuote(
       locale: r.locale,
       requestId: r.id,
       priceChangeReason: input.priceChangeReason,
+    },
+    ctx,
+  );
+}
+
+/**
+ * Offers (spec §5.8, Tier B): "accept" sends a link at exactly the offered amount and currency;
+ * "counter" sends a link at the admin's price. Both go through `createLinkOrder({ kind: 'OFFER',
+ * requestId })`, which moves the request to ACCEPTED or COUNTERED (WS2 contract: the link price
+ * equal to the offer ⇒ ACCEPTED, otherwise COUNTERED).
+ */
+export async function answerOffer(
+  ctx: AdminContext,
+  id: string,
+  mode: "accept" | "counter",
+  input: SendQuoteInput,
+  deps: RequestDeps = {},
+): Promise<
+  ServiceResult<{ orderId: string; orderNumber: string; linkUrl: string }>
+> {
+  const db = deps.db ?? defaultDb;
+  const [r] = await db
+    .select()
+    .from(buyerRequests)
+    .where(eq(buyerRequests.id, id));
+  if (!r) throw new NotFoundError("buyer_request", id);
+  if (r.kind !== "OFFER" || r.status !== "NEW" || !r.artworkId) {
+    throw new ConflictError(
+      "NOT_ANSWERABLE",
+      "only a new offer can be answered",
+    );
+  }
+  if (input.country === "IL" && input.currency !== "ILS") {
+    throw new ConflictError("IL_REQUIRES_ILS", "Israeli orders are in ILS");
+  }
+  const accept = mode === "accept";
+  if (
+    accept &&
+    (input.itemPriceMinor !== r.offerAmountMinor ||
+      input.currency !== r.offerCurrency)
+  ) {
+    throw new ConflictError(
+      "ACCEPT_MUST_MATCH",
+      "accepting keeps the offered price",
+    );
+  }
+  if (!accept && input.itemPriceMinor === r.offerAmountMinor) {
+    throw new ConflictError(
+      "COUNTER_SAME_PRICE",
+      "a counter-offer needs another price",
+    );
+  }
+  return createLinkOrder(
+    {
+      kind: "OFFER",
+      artworkId: r.artworkId,
+      buyer: input.buyer,
+      country: input.country,
+      currency: input.currency,
+      itemPriceMinor: input.itemPriceMinor,
+      lockedShippingMinor: input.lockedShippingMinor,
+      shippingMethod: input.shippingMethod,
+      conversationTookPlace: true,
+      expiresInHours: input.expiresInHours,
+      locale: r.locale,
+      requestId: r.id,
+      priceChangeReason:
+        input.priceChangeReason ??
+        (accept ? "accepted offer" : "counter-offer"),
     },
     ctx,
   );

@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 import {
+  amountMinorSchema,
   countrySchema,
+  currencySchema,
   emailSchema,
   optionalText,
   personNameSchema,
@@ -30,13 +32,18 @@ const optionalCountry = z.preprocess(
 export const submitRequestAction = publicAction(
   z
     .object({
-      kind: z.enum(["question", "quote"]),
+      kind: z.enum(["question", "quote", "offer"]),
       slug: slugSchema,
       name: personNameSchema,
       email: emailSchema,
       phone: optionalPhone,
       country: optionalCountry,
       message: optionalText(4000),
+      offerAmount: z.preprocess(
+        (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+        amountMinorSchema.optional(),
+      ),
+      offerCurrency: currencySchema.default("ILS"),
     })
     .superRefine((v, ctx) => {
       if (v.kind === "question" && !v.message) {
@@ -48,7 +55,7 @@ export const submitRequestAction = publicAction(
           path: ["message"],
         });
       }
-      if (v.kind === "quote" && !v.country) {
+      if (v.kind !== "question" && !v.country) {
         ctx.addIssue({
           code: "too_small",
           minimum: 1,
@@ -57,18 +64,38 @@ export const submitRequestAction = publicAction(
           path: ["country"],
         });
       }
+      if (v.kind === "offer" && !v.offerAmount) {
+        ctx.addIssue({
+          code: "too_small",
+          minimum: 1,
+          origin: "number",
+          inclusive: true,
+          path: ["offerAmount"],
+        });
+      }
     }),
   async (input, meta) => {
     try {
       const out = await submitRequest(
         {
-          kind: input.kind === "quote" ? "QUOTE" : "QUESTION",
+          kind:
+            input.kind === "quote"
+              ? "QUOTE"
+              : input.kind === "offer"
+                ? "OFFER"
+                : "QUESTION",
           artworkSlug: input.slug,
           name: input.name,
           email: input.email,
           phone: input.phone ?? null,
           country: input.country ?? null,
           message: input.message ?? "",
+          ...(input.kind === "offer"
+            ? {
+                offerAmountMinor: input.offerAmount ?? null,
+                offerCurrency: input.offerCurrency,
+              }
+            : {}),
           locale: meta.locale,
         },
         { ipHash: meta.ipHash },

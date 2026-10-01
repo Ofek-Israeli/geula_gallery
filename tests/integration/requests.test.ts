@@ -81,7 +81,7 @@ describe("submitRequest", () => {
     expect(note?.html).toContain(`/he/admin/inbox/${result.requestId}`);
   });
 
-  it("refuses quotes for sold or unpublished works, and offers (Tier B)", async () => {
+  it("refuses quotes and offers for sold or unpublished works", async () => {
     const sold = await insertArtwork(db, {
       saleStatus: "SOLD",
       soldAt: new Date(),
@@ -115,7 +115,13 @@ describe("submitRequest", () => {
     expect(
       await code(
         svc.submitRequest(
-          { ...base, kind: "OFFER", artworkSlug: sold.slug },
+          {
+            ...base,
+            kind: "OFFER",
+            artworkSlug: sold.slug,
+            offerAmountMinor: 100_000,
+            offerCurrency: "ILS",
+          },
           { ipHash: null },
         ),
       ),
@@ -226,6 +232,108 @@ describe("inbox", () => {
       expect(row?.orderId).toBe(out.result.orderId);
     } catch (error) {
       // createLinkOrder is a WS2 stub until M4 integration.
+      if (error instanceof NotImplementedError) t.skip();
+      throw error;
+    }
+  });
+});
+
+describe("offers (Tier B)", () => {
+  const offer = (slug: string, amount: number, extra = {}) =>
+    svc.submitRequest(
+      {
+        kind: "OFFER",
+        artworkSlug: slug,
+        name: "Olive Offer",
+        email: "offer@example.test",
+        country: "US",
+        message: "",
+        offerAmountMinor: amount,
+        offerCurrency: "USD",
+        locale: "en",
+        ...extra,
+      },
+      { ipHash: null },
+    );
+
+  it("stores an offer; one pending offer per email and work; below the threshold it is auto-declined", async () => {
+    const a = await insertArtwork(db, {
+      offersEnabled: true,
+      offerAutoDeclineBelowIlsMinor: 100_000,
+      titleEn: "Harbour",
+    });
+    const checkout = await getSetting("checkout");
+    // USD 400 ≈ ILS 400 × fx, above ILS 1,000 at any realistic rate.
+    const ok = await offer(a.slug, 40_000);
+    const [row] = await db
+      .select()
+      .from(buyerRequests)
+      .where(eq(buyerRequests.id, ok.result.requestId));
+    expect(row).toMatchObject({
+      kind: "OFFER",
+      status: "NEW",
+      offerAmountMinor: 40_000,
+      offerCurrency: "USD",
+    });
+    expect(await code(offer(a.slug, 45_000))).toBe("OFFER_PENDING");
+
+    const low = Math.floor(90_000 / checkout.fx.ilsPerUsd);
+    const declined = await offer(a.slug, low, { email: "low@example.test" });
+    const [d] = await db
+      .select()
+      .from(buyerRequests)
+      .where(eq(buyerRequests.id, declined.result.requestId));
+    expect(d?.status).toBe("AUTO_DECLINED");
+    await drain();
+    const mail = await mailbox.latest({
+      template: "request-reply",
+      to: "low@example.test",
+    });
+    expect(mail?.text).toContain("Harbour");
+    expect(
+      await mailbox.latest({ template: "request-ack", to: "low@example.test" }),
+    ).toBeUndefined();
+  });
+
+  it("refuses offers when disabled, and USD for Israel", async () => {
+    const off = await insertArtwork(db, { offersEnabled: false });
+    expect(await code(offer(off.slug, 40_000))).toBe("NOT_REQUESTABLE");
+    const on = await insertArtwork(db, { offersEnabled: true });
+    expect(await code(offer(on.slug, 40_000, { country: "IL" }))).toBe(
+      "IL_REQUIRES_ILS",
+    );
+  });
+
+  it("accept keeps the offered price, a counter needs another one, then createLinkOrder (WS2)", async (t) => {
+    const a = await insertArtwork(db, { offersEnabled: true });
+    const { result } = await offer(a.slug, 40_000);
+    const link = {
+      buyer: { name: "Olive", email: "offer@example.test", phone: "" },
+      country: "US",
+      currency: "USD" as const,
+      itemPriceMinor: 40_000,
+      shippingMethod: "QUOTED" as const,
+      lockedShippingMinor: 8_000,
+    };
+    expect(
+      await code(
+        svc.answerOffer(ctx, result.requestId, "accept", {
+          ...link,
+          itemPriceMinor: 41_000,
+        }),
+      ),
+    ).toBe("ACCEPT_MUST_MATCH");
+    expect(
+      await code(svc.answerOffer(ctx, result.requestId, "counter", link)),
+    ).toBe("COUNTER_SAME_PRICE");
+    try {
+      await svc.answerOffer(ctx, result.requestId, "accept", link);
+      const [row] = await db
+        .select()
+        .from(buyerRequests)
+        .where(eq(buyerRequests.id, result.requestId));
+      expect(row?.status).toBe("ACCEPTED");
+    } catch (error) {
       if (error instanceof NotImplementedError) t.skip();
       throw error;
     }
