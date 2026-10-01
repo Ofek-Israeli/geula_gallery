@@ -71,8 +71,10 @@ export const orderMachine = machine<OrderStatus>(
     AWAITING_PAYMENT: ["PAID", "PAYMENT_REVIEW", "EXPIRED", "CANCELLED"],
     // Review outcome: PAID, back to AWAITING_PAYMENT (hold shortened), or LOST_RESERVATION.
     PAYMENT_REVIEW: ["PAID", "AWAITING_PAYMENT", "CANCELLED"],
-    // Late success while still sellable, or LOST_RESERVATION.
-    EXPIRED: ["PAID", "CANCELLED"],
+    // Late success while still sellable, or LOST_RESERVATION. → AWAITING_PAYMENT only through a
+    // capture claim on a still-sellable work (spec §5.2 `requires_capture` step 1), never the
+    // order page (M2 decision: an EXPIRED order is not re-opened by "pay again").
+    EXPIRED: ["AWAITING_PAYMENT", "PAID", "CANCELLED"],
     // CANCELLED once the refund settled (REFUND_SETTLED job); COMPLETED by the daily job.
     PAID: ["CANCELLED", "COMPLETED"],
     COMPLETED: ["CANCELLED"],
@@ -94,9 +96,12 @@ export const attemptMachine = machine<AttemptStatus>(
   attemptStatusEnum.enumValues,
   {
     CREATED: ["PENDING", "FAILED", ...ATTEMPT_ANY_NON_FINAL],
+    // → PAYMENT_REVIEW without a capture: a provider that reports "under review" on a direct
+    // payment (the mock's "Mark under review" button). M2 addition.
     PENDING: [
       "AWAITING_CAPTURE",
       "CAPTURING",
+      "PAYMENT_REVIEW",
       "CANCELED",
       "FAILED",
       "EXPIRED",
@@ -104,6 +109,7 @@ export const attemptMachine = machine<AttemptStatus>(
     ],
     AWAITING_CAPTURE: [
       "CAPTURING",
+      "PAYMENT_REVIEW",
       "CANCELED",
       "FAILED",
       "EXPIRED",
@@ -119,7 +125,14 @@ export const attemptMachine = machine<AttemptStatus>(
     ],
     PAYMENT_REVIEW: ["FAILED", ...ATTEMPT_ANY_NON_FINAL],
     // EXPIRED is not final: a late approval can still be captured, a late success applied.
-    EXPIRED: ["CAPTURING", ...ATTEMPT_ANY_NON_FINAL],
+    // M2 additions: → CANCELED when a late capture claim finds the work gone or the quote stale
+    // (nothing captured); → PAYMENT_REVIEW for a late "under review" report.
+    EXPIRED: [
+      "CAPTURING",
+      "CANCELED",
+      "PAYMENT_REVIEW",
+      ...ATTEMPT_ANY_NON_FINAL,
+    ],
     NEEDS_REFUND: ["REFUNDED"],
     SUCCEEDED: [],
     FAILED: [],

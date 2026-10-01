@@ -2,7 +2,7 @@ import "server-only";
 import type { Locale } from "@/lib/locale";
 import type { Currency } from "@/lib/money";
 import type { PostalAddress } from "@/lib/validation/address";
-import type { ProviderId } from "@/server/payments/types";
+import type { ProviderId, Wallet } from "@/server/payments/types";
 import type {
   BlockReason,
   NoticeCode,
@@ -32,7 +32,13 @@ export type CheckoutQuote =
       totalMinor: number;
       vatMinor: number;
       vatRateBp: number;
-      providers: { id: ProviderId; label: string }[];
+      /** Offered providers; the UI builds labels from the id and capabilities. */
+      providers: {
+        id: ProviderId;
+        label: string;
+        wallets: Wallet[];
+        installments: boolean;
+      }[];
       notices: NoticeCode[];
       usdAvailable: boolean;
     }
@@ -90,6 +96,10 @@ export type StartCheckoutResult =
     }
   | { kind: "price_changed"; quote: CheckoutQuote }
   | { kind: "just_reserved" }
+  /**
+   * A guard refused the start: a blocked quote reason, `provider_unavailable`, a hold refusal
+   * (`too_many_holds`, `artwork_hold_budget`, `hold_cooldown`), `go_live_blocked`.
+   */
   | { kind: "refused"; code: string }
   /** The provider call failed; the hold is kept and the order page offers a retry. */
   | {
