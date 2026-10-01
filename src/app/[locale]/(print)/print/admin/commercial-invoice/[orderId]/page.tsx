@@ -116,7 +116,7 @@ export default async function CommercialInvoicePage({
               <td className="py-1 pe-2">{l.description}</td>
               <td className="py-1">{l.hsCode}</td>
               <td className="py-1" data-testid="ci-codes">
-                {l.exportCode} / {l.importCode}
+                {`${l.exportCode} / ${l.importCode}`}
               </td>
               <td className="py-1">{l.origin}</td>
               <td className="py-1 text-end">{l.quantity}</td>

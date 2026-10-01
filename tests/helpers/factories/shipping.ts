@@ -370,3 +370,22 @@ export async function e2eArrangePaidOrder(
     await client.end();
   }
 }
+
+/** One statement against the E2E database (arranging settings for a spec, then restoring them). */
+export async function e2eExec(
+  connectionString: string,
+  text: string,
+  params: unknown[] = [],
+): Promise<void> {
+  const pg = (await import("pg")).default;
+  const client = new pg.Client({
+    connectionString,
+    application_name: "geula-e2e-arrange",
+  });
+  await client.connect();
+  try {
+    await client.query(text, params);
+  } finally {
+    await client.end();
+  }
+}
