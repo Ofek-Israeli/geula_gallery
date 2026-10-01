@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { ZONE_IDS } from "@/lib/countries";
 import type { SettingsKey } from "@/server/db/schema/enums";
 
 /**
@@ -67,14 +68,8 @@ export const checkoutSettingsSchema = z.object({
 export type CheckoutSettings = z.infer<typeof checkoutSettingsSchema>;
 
 // ------------------------------------------------------------------ shipping
-export const ZONE_IDS = [
-  "IL",
-  "EUROPE",
-  "NORTH_AMERICA",
-  "REST_OF_WORLD",
-] as const;
+export { ZONE_IDS, type ZoneId } from "@/lib/countries";
 export const zoneIdSchema = z.enum(ZONE_IDS);
-export type ZoneId = z.infer<typeof zoneIdSchema>;
 
 export const shippingZoneSchema = z.object({
   id: zoneIdSchema,

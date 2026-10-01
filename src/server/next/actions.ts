@@ -5,6 +5,7 @@ import { z } from "zod";
 import { en as zodEn, he as zodHe } from "zod/locales";
 import { FORM_START_FIELD, HONEYPOT_FIELD, LOCALE_FIELD } from "@/lib/forms";
 import { isLocale, LOCALE_VALUES, type Locale } from "@/lib/locale";
+import { customIssueMessage } from "@/lib/validation/messages";
 import type { AdminContext } from "@/server/domain/admin";
 import type { ServiceResult } from "@/server/domain/effects";
 import { env } from "@/server/env";
@@ -83,8 +84,10 @@ function toObject(payload: Payload | undefined): Record<string, unknown> {
 
 const localeSchema = z.enum(LOCALE_VALUES);
 
-function zodErrorMap(locale: Locale) {
-  return (locale === "he" ? zodHe() : zodEn()).localeError;
+function zodErrorMap(locale: Locale): z.core.$ZodErrorMap {
+  const base = (locale === "he" ? zodHe() : zodEn()).localeError;
+  // Custom issues from src/lib/validation carry a code with bilingual text.
+  return (issue) => customIssueMessage(issue, locale) ?? base(issue);
 }
 
 function parseLocale(raw: Record<string, unknown>): Locale | null {
