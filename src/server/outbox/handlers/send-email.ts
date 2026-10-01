@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import { db } from "@/server/db/client";
-import { orders } from "@/server/db/schema";
+import { cancellations, orders } from "@/server/db/schema";
 import { buildEmail } from "@/server/email/props";
 import { sendEmail } from "@/server/email/send";
 import type { JobHandler } from "../types";
@@ -18,6 +18,8 @@ import type { JobHandler } from "../types";
  *    `orders.disclosure_sent_at` / `disclosure_version` are set (first send only). The disclosure
  *    PDF attachment is Tier B (WS6: `ensureDisclosurePdf`, sending without it plus a WARNING on a
  *    render failure).
+ * 4. `cancellation-ack`: once sent, `cancellations.ack_sent_at` is set (first send only); the
+ *    on-screen acknowledgement is stored in `ack_snapshot` when the notice is received.
  */
 export const sendEmailHandler: JobHandler<"SEND_EMAIL"> = async (
   payload,
@@ -45,6 +47,17 @@ export const sendEmailHandler: JobHandler<"SEND_EMAIL"> = async (
       })
       .where(
         and(eq(orders.id, built.orderId), isNull(orders.disclosureSentAt)),
+      );
+  }
+  if (payload.template === "cancellation-ack") {
+    await db
+      .update(cancellations)
+      .set({ ackSentAt: new Date() })
+      .where(
+        and(
+          eq(cancellations.id, payload.refId),
+          isNull(cancellations.ackSentAt),
+        ),
       );
   }
   return { kind: "done" };

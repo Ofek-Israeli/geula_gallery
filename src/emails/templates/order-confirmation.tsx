@@ -9,8 +9,9 @@ type Props = EmailTemplateProps["order-confirmation"];
 /**
  * `order-confirmation` (spec §4.5, §5.4): the order summary plus the **inline disclosure summary**
  * and a link to the full disclosure document (HTML). Rendered in the buyer's locale. Sending it sets
- * `orders.disclosure_sent_at` (the SEND_EMAIL handler). The PDF attachment is Tier B (WS6), which
- * also owns the final wording of this template (`emails-compliance.orderConfirmation`).
+ * `orders.disclosure_sent_at` (the SEND_EMAIL handler, which also attaches the disclosure PDF when
+ * it renders — Tier B). The email also links the cancellation form with the order number prefilled
+ * (spec §5.7 step 1: "in every buyer email"). Final wording is for the lawyer.
  */
 export const orderConfirmation: EmailTemplate<Props> = {
   audience: "buyer",
@@ -64,6 +65,14 @@ export const orderConfirmation: EmailTemplate<Props> = {
           </Link>
         </P>
         <P muted>{t("disclosureNote")}</P>
+        <P>
+          <Link
+            href={`${ctx.brand.cancelUrl}?order=${encodeURIComponent(p.orderNumber)}`}
+            style={{ color: "#1a1a1a" }}
+          >
+            {t("cancelLink")}
+          </Link>
+        </P>
         <SignOff ctx={ctx} />
       </Layout>
     );

@@ -112,7 +112,9 @@ export function isWithinWindow(
 
 /** `receivedAt` + 14 Jerusalem calendar days (the legal refund deadline). */
 export function refundDueAt(receivedAt: Date): Date {
-  return addJerusalemDays(receivedAt, 14);
+  // The wall-clock helpers work in whole seconds; keep the notice's milliseconds.
+  const due = addJerusalemDays(receivedAt, 14);
+  return new Date(due.getTime() + receivedAt.getUTCMilliseconds());
 }
 
 export interface ChangeOfMindFeeInput {

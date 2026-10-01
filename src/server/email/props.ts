@@ -7,6 +7,11 @@ import type {
 } from "@/emails";
 import type { Locale } from "@/lib/locale";
 import { absoluteUrl, localePath, paths } from "@/lib/routes";
+import {
+  cancellationAckProps,
+  painterCancellationProps,
+  returnInstructionsProps,
+} from "@/server/cancellations/email-props";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import {
   type Order,
@@ -18,9 +23,10 @@ import {
   taxDocuments,
 } from "@/server/db/schema";
 import { buyerOrderUrls, loadDisclosure } from "@/server/documents/data";
-import { NotFoundError, notImplemented } from "@/server/domain/errors";
+import { NotFoundError } from "@/server/domain/errors";
 import type { ShipmentStatus } from "@/server/domain/state-machines";
 import { env as defaultEnv, type Env } from "@/server/env";
+import { adminAlertProps } from "@/server/jobs/alert-emails";
 import {
   painterNewRequestEmail,
   requestAckEmail,
@@ -43,8 +49,7 @@ import { getSetting } from "@/server/settings";
  * | shipment-update | `<shipmentId>:<status>` |
  * | ready-for-pickup | shipment id |
  *
- * Templates whose flows land in later streams (requests, cancellations, links, pickup, alerts)
- * throw `NotImplementedError` naming the owner, who adds the builder here.
+ * Every template has a builder; requests, cancellations and alerts delegate to their modules.
  */
 export interface BuiltEmail<K extends EmailTemplateId> {
   props: EmailTemplateProps[K];
@@ -108,9 +113,6 @@ const NOT_COMPLETED: readonly NotCompletedReason[] = [
   "ORDER_CANCELLED",
   "AMOUNT_MISMATCH",
 ];
-
-const later = (owner: string) => async (): Promise<never> =>
-  notImplemented("email props builder", owner);
 
 export const EMAIL_PROPS: Builders = {
   "order-confirmation": async (refId, _locale, { db, env }) => {
@@ -318,12 +320,12 @@ export const EMAIL_PROPS: Builders = {
   },
   "request-ack": (refId, _locale, { db }) => requestAckEmail(refId, db),
   "request-reply": (refId, _locale, { db }) => requestReplyEmail(refId, db),
-  "cancellation-ack": later("WS6"),
-  "return-instructions": later("WS6"),
+  "cancellation-ack": cancellationAckProps,
+  "return-instructions": returnInstructionsProps,
   "painter-new-request": (refId, _locale, { db, env }) =>
     painterNewRequestEmail(refId, db, env),
-  "painter-cancellation": later("WS6"),
-  "admin-alert": later("WS6"),
+  "painter-cancellation": painterCancellationProps,
+  "admin-alert": adminAlertProps,
 };
 
 export async function buildEmail<K extends EmailTemplateId>(
