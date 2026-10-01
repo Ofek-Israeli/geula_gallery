@@ -15,7 +15,8 @@ export const BUY_BOX_ID = "buy-box";
  * The live buy box (spec §6.3). Rendered per request from the DB (never cached):
  * - the ILS price for an available work (also while another buyer is checking out), and the
  *   status in text;
- * - Buy now (→ checkout) when buyable; Ask; sold works offer "similar works" and "commission";
+ * - Buy now (→ checkout) when buyable; Ask; "Make an offer" when the work accepts offers (Tier B);
+ *   sold works offer "similar works" and "commission";
  * - "Delivery in Israel from ₪X · free studio pickup" and per-zone estimates, linking to the
  *   shipping page; the DAP note;
  * - the trust row, with "insured" only when the cheapest Israeli quote includes insurance.
@@ -115,6 +116,15 @@ export function LiveBuyBox({
             {t("buy.ask")}
           </Link>
         )}
+        {available && artwork.offersEnabled ? (
+          <Link
+            href={paths.artworkRequest(slug, "offer")}
+            className={buttonClasses("ghost")}
+            data-testid="make-offer"
+          >
+            {t("buy.makeOffer")}
+          </Link>
+        ) : null}
         {locale === "en" && price.usdMinor !== null && available ? (
           <p className="text-sm text-ink-muted">{t("buy.usdAbroad")}</p>
         ) : null}

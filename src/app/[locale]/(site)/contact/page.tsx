@@ -6,20 +6,21 @@ import { JsonLd } from "@/components/site/JsonLd";
 import { pageMetadata } from "@/components/site/metadata";
 import { personJsonLd } from "@/components/site/structured-data";
 import { CancelPurchaseLink } from "@/components/ui/CancelPurchaseLink";
+import { PrivacyNotice } from "@/components/ui/PrivacyNotice";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
 import { getPublicProfile } from "@/server/catalog/queries";
 import { env } from "@/server/env";
+import { issueFormStartToken } from "@/server/security/tokens";
+import { submitContactAction } from "./actions";
+import { ContactForm } from "./ContactForm";
 
 /**
  * `/contact` (spec §6.2): general questions and commissions (`?topic=commission` puts the
- * commission section first), email and phone isolated LTR, the cancellation route, and the Person
- * JSON-LD.
- *
- * The on-site contact form (spec §5.8: `buyer_requests` with topic GENERAL / COMMISSION, s.11
- * notice, honeypot, 5/h/IP, `request-ack` + `painter-new-request`) needs WS4's
- * `server/requests/service.ts#submitRequest`, which lands after WS1 in the M4 rebase order; it is
- * wired in M4 (see docs/architecture.md "M3 storefront notes").
+ * commission section first and preselects the form's topic), email and phone isolated LTR, the
+ * contact form (spec §5.8: a `buyer_requests` QUESTION with topic GENERAL / COMMISSION, the s.11
+ * notice, honeypot, 5/h/IP, `request-ack` + `painter-new-request`), the cancellation route, and the
+ * Person JSON-LD.
  */
 function topicOf(v: string | string[] | undefined): "general" | "commission" {
   return (Array.isArray(v) ? v[0] : v) === "commission"
@@ -109,6 +110,23 @@ export default async function ContactPage({
           ) : null}
         </section>
       ))}
+      <section
+        id="message"
+        aria-labelledby="message-title"
+        className="flex flex-col gap-3 border-t border-line pt-6"
+      >
+        <h2 id="message-title" className="text-2xl">
+          {t("formTitle")}
+        </h2>
+        <p className="max-w-prose">{t("formIntro")}</p>
+        <ContactForm
+          action={submitContactAction}
+          locale={locale}
+          topic={topic === "commission" ? "COMMISSION" : "GENERAL"}
+          formStart={issueFormStartToken()}
+        />
+        <PrivacyNotice>{t("privacy")}</PrivacyNotice>
+      </section>
       <section
         aria-labelledby="cancel-title"
         className="flex flex-col gap-2 border-t border-line pt-6"

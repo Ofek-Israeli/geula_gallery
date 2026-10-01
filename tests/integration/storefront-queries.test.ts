@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   getArtworkOgImage,
@@ -9,7 +9,7 @@ import {
   listSitemapArtworks,
 } from "@/server/catalog/queries";
 import { db } from "@/server/db/client";
-import { artworks } from "@/server/db/schema";
+import { artworkImages, artworks } from "@/server/db/schema";
 import { catalogSeed } from "../../scripts/seed/catalog";
 import { ordersSeed } from "../../scripts/seed/orders";
 import type { SeedContext } from "../../scripts/seed/types";
@@ -163,12 +163,43 @@ describe("series, sitemap and SEO reads", () => {
     }
   });
 
+  it("falls back to the MAIN image when it has no OG rendition (a promoted DETAIL)", async () => {
+    const [main] = await db
+      .select()
+      .from(artworkImages)
+      .innerJoin(artworks, eq(artworks.id, artworkImages.artworkId))
+      .where(and(eq(artworks.slug, "antibes"), eq(artworkImages.role, "MAIN")));
+    if (!main) throw new Error("no MAIN image");
+    const img = main.artwork_images;
+    await db
+      .update(artworkImages)
+      .set({ ogKey: null })
+      .where(eq(artworkImages.id, img.id));
+    try {
+      const og = await getArtworkOgImage("antibes");
+      expect(og).toEqual({
+        url: expect.stringContaining(img.publicKey),
+        width: img.width,
+        height: img.height,
+      });
+      const page = await getArtworkPage("en", "antibes");
+      expect(page?.artwork.ogImage).toBe(page?.artwork.images[0]?.src);
+    } finally {
+      await db
+        .update(artworkImages)
+        .set({ ogKey: img.ogKey })
+        .where(eq(artworkImages.id, img.id));
+    }
+  });
+
   it("returns SEO extras, the OG image and the public profile without the ID number", async () => {
     const page = await getArtworkPage("en", "landscape-no-26");
     expect(page?.seo).toMatchObject({ medium: "OIL", surface: "CARDBOARD" });
-    expect(await getArtworkOgImage("landscape-no-26")).toMatch(
-      /^\/api\/files\/public\/og\//,
-    );
+    expect(await getArtworkOgImage("landscape-no-26")).toMatchObject({
+      url: expect.stringMatching(/^\/api\/files\/public\/og\//),
+      width: 1200,
+      height: 630,
+    });
     const profile = await getPublicProfile("en");
     expect(Object.keys(profile).sort()).toEqual([
       "artistName",

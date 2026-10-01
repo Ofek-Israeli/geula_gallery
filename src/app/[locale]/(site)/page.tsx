@@ -42,9 +42,7 @@ export async function generateMetadata({
     title: `${tc("siteName")} · ${t("title")}`,
     absoluteTitle: true,
     description: t("metaDescription"),
-    images: og
-      ? [{ url: og, width: 1200, height: 630, alt: featured?.title }]
-      : undefined,
+    images: og ? [{ ...og, alt: featured?.title }] : undefined,
   });
 }
 

@@ -412,6 +412,7 @@ export async function getArtworkPage(
     .select({
       ...detailColumns,
       ogKey: artworkImages.ogKey,
+      mainPublicKey: artworkImages.publicKey,
       medium: artworks.medium,
       surface: artworks.surface,
       publishedAt: artworks.publishedAt,
@@ -484,7 +485,13 @@ export async function getArtworkPage(
     offersEnabled: row.offersEnabled,
     dispatchDays: row.dispatchDays,
     creditLine: row.creditLine,
-    ogImage: row.ogKey ? storage().publicUrl(row.ogKey) : null,
+    // A DETAIL promoted to MAIN has no OG rendition (only uploads create one): fall back to the
+    // MAIN image itself (the page then declares that image's own size).
+    ogImage: row.ogKey
+      ? storage().publicUrl(row.ogKey)
+      : row.mainPublicKey
+        ? storage().publicUrl(row.mainPublicKey)
+        : null,
   };
   const shipSpec: ArtworkShipSpec = {
     artworkId: row.id,
@@ -580,13 +587,21 @@ export async function listCredits(
   }));
 }
 
-/** The OG image (1200×630, from the MAIN image's `og_key`) of a published work, or null. */
+/**
+ * The OG image of a published work: the MAIN image's 1200×630 `og_key` rendition, else the MAIN
+ * image itself (a DETAIL promoted to MAIN has no rendition), with its size; or null.
+ */
 export async function getArtworkOgImage(
   slug: string,
   db: DbOrTx = defaultDb,
-): Promise<string | null> {
+): Promise<{ url: string; width: number; height: number } | null> {
   const [row] = await db
-    .select({ ogKey: artworkImages.ogKey })
+    .select({
+      ogKey: artworkImages.ogKey,
+      publicKey: artworkImages.publicKey,
+      width: artworkImages.width,
+      height: artworkImages.height,
+    })
     .from(artworks)
     .innerJoin(
       artworkImages,
@@ -597,7 +612,15 @@ export async function getArtworkOgImage(
     )
     .where(and(eq(artworks.slug, slug), eq(artworks.isPublished, true)))
     .limit(1);
-  return row?.ogKey ? storage().publicUrl(row.ogKey) : null;
+  if (!row) return null;
+  // The 1200×630 OG rendition, or the MAIN image itself when it has none (a promoted DETAIL).
+  return row.ogKey
+    ? { url: storage().publicUrl(row.ogKey), width: 1200, height: 630 }
+    : {
+        url: storage().publicUrl(row.publicKey),
+        width: row.width,
+        height: row.height,
+      };
 }
 
 export interface SitemapArtwork {

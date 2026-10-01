@@ -45,6 +45,12 @@ export async function generateMetadata({
   const data = await getArtworkPage(locale, slug);
   if (!data) return {};
   const { artwork } = data;
+  // `ogImage` is the 1200×630 rendition, or the MAIN image itself when it has none.
+  const main = artwork.images[0];
+  const ogSize =
+    main && artwork.ogImage === main.src
+      ? { width: main.width, height: main.height }
+      : { width: 1200, height: 630 };
   return pageMetadata({
     locale,
     path: paths.artwork(slug),
@@ -60,8 +66,7 @@ export async function generateMetadata({
       ? [
           {
             url: artwork.ogImage,
-            width: 1200,
-            height: 630,
+            ...ogSize,
             alt: artwork.images[0]?.alt ?? artwork.title,
           },
         ]
