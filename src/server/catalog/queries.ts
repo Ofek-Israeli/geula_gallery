@@ -5,8 +5,11 @@ import {
   count,
   desc,
   eq,
+  gte,
   inArray,
   isNotNull,
+  lt,
+  type SQL,
   sql,
 } from "drizzle-orm";
 import type {
@@ -136,39 +139,111 @@ function cardQuery(db: DbOrTx) {
 /** Available first, then on hold, then not for sale; featured first within a status. */
 const statusRank = sql`CASE ${artworks.saleStatus} WHEN 'AVAILABLE' THEN 0 WHEN 'ON_HOLD' THEN 1 ELSE 2 END`;
 
-export type WorksView = "current" | "sold";
+/**
+ * `current`: available, on-hold and not-for-sale works (available first); `available`: only works
+ * whose sale status is AVAILABLE (including ones in another buyer's live checkout hold); `sold`:
+ * the archive.
+ */
+export type WorksView = "current" | "available" | "sold";
+export type WorksSort =
+  | "featured"
+  | "newest"
+  | "price-asc"
+  | "price-desc"
+  | "size-asc"
+  | "size-desc";
+
+/** `/works` filters and sort (spec §6.2). Price bounds are ILS minor units, `[min, max)`. */
+export interface ArtworkListQuery {
+  view?: WorksView;
+  page?: number;
+  pageSize?: number;
+  seriesSlug?: string | null;
+  sizeBucket?: ArtworkCardDTO["sizeBucket"] | null;
+  orientation?: ArtworkCardDTO["orientation"] | null;
+  priceMinIlsMinor?: number | null;
+  priceMaxIlsMinor?: number | null;
+  sort?: WorksSort;
+}
+
+/** The visible ILS price (null when the price is on request). */
+const visiblePrice = sql`CASE WHEN ${artworks.priceOnRequest} THEN NULL ELSE ${artworks.priceIlsMinor} END`;
+const area = sql`(${artworks.heightMm}::bigint * ${artworks.widthMm})`;
+
+function listWhere(q: ArtworkListQuery): SQL | undefined {
+  const view = q.view ?? "current";
+  const conds: (SQL | undefined)[] = [eq(artworks.isPublished, true)];
+  if (view === "sold") conds.push(eq(artworks.saleStatus, "SOLD"));
+  else if (view === "available")
+    conds.push(eq(artworks.saleStatus, "AVAILABLE"));
+  else
+    conds.push(
+      inArray(artworks.saleStatus, ["AVAILABLE", "ON_HOLD", "NOT_FOR_SALE"]),
+    );
+  if (q.seriesSlug) {
+    conds.push(
+      sql`${artworks.seriesId} = (SELECT s.id FROM series s WHERE s.slug = ${q.seriesSlug})`,
+    );
+  }
+  if (q.sizeBucket) conds.push(eq(artworks.sizeBucket, q.sizeBucket));
+  if (q.orientation) conds.push(eq(artworks.orientation, q.orientation));
+  if (q.priceMinIlsMinor != null || q.priceMaxIlsMinor != null) {
+    conds.push(
+      eq(artworks.priceOnRequest, false),
+      isNotNull(artworks.priceIlsMinor),
+    );
+    if (q.priceMinIlsMinor != null)
+      conds.push(gte(artworks.priceIlsMinor, q.priceMinIlsMinor));
+    if (q.priceMaxIlsMinor != null)
+      conds.push(lt(artworks.priceIlsMinor, q.priceMaxIlsMinor));
+  }
+  return and(...conds);
+}
+
+function listOrder(q: ArtworkListQuery): SQL[] {
+  const view = q.view ?? "current";
+  const sort = q.sort ?? "featured";
+  // Available works always come first in the current view (spec §1.2 "available works first").
+  const rank = view === "current" ? [statusRank] : [];
+  switch (sort) {
+    case "newest":
+      return [
+        ...rank,
+        sql`${artworks.yearCreated} DESC NULLS LAST`,
+        sql`${artworks.publishedAt} DESC NULLS LAST`,
+        asc(artworks.sortOrder),
+      ];
+    case "price-asc":
+      return [...rank, sql`${visiblePrice} ASC NULLS LAST`];
+    case "price-desc":
+      return [...rank, sql`${visiblePrice} DESC NULLS LAST`];
+    case "size-asc":
+      return [...rank, sql`${area} ASC`];
+    case "size-desc":
+      return [...rank, sql`${area} DESC`];
+    case "featured":
+      return view === "sold"
+        ? [sql`${artworks.soldAt} DESC NULLS LAST`, asc(artworks.sortOrder)]
+        : [...rank, desc(artworks.featured), asc(artworks.sortOrder)];
+  }
+}
 
 /**
- * `/works`: the default view lists available, on-hold and not-for-sale works (available first);
- * `?availability=sold` is the archive, newest sale first.
+ * `/works`: filtered, sorted and paginated (24 per page). The default view lists available, on-hold
+ * and not-for-sale works (available first); `view: "sold"` is the archive, newest sale first.
  */
 export async function listArtworks(
   locale: Locale,
-  opts: { view?: WorksView; page?: number; pageSize?: number } = {},
+  opts: ArtworkListQuery = {},
   db: DbOrTx = defaultDb,
 ): Promise<CatalogPage<ArtworkCardDTO>> {
-  const view = opts.view ?? "current";
   const pageSize = opts.pageSize ?? PAGE_SIZE;
   const page = Math.max(1, Math.floor(opts.page ?? 1));
-  const where =
-    view === "sold"
-      ? and(eq(artworks.isPublished, true), eq(artworks.saleStatus, "SOLD"))
-      : and(
-          eq(artworks.isPublished, true),
-          inArray(artworks.saleStatus, [
-            "AVAILABLE",
-            "ON_HOLD",
-            "NOT_FOR_SALE",
-          ]),
-        );
-  const order =
-    view === "sold"
-      ? [desc(artworks.soldAt), asc(artworks.sortOrder)]
-      : [statusRank, desc(artworks.featured), asc(artworks.sortOrder)];
+  const where = listWhere(opts);
   const [rows, [total]] = await Promise.all([
     cardQuery(db)
       .where(where)
-      .orderBy(...order, asc(artworks.id))
+      .orderBy(...listOrder(opts), asc(artworks.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
     db.select({ n: count() }).from(artworks).where(where),
@@ -180,6 +255,81 @@ export async function listArtworks(
     pageSize,
     total: total?.n ?? 0,
   };
+}
+
+export interface SeriesSummary {
+  slug: string;
+  name: string;
+  /** Published works in the current view (available, on hold, not for sale). */
+  count: number;
+  /** MAIN image of the series' first work (available and featured first). */
+  cover: ArtworkImageDTO | null;
+}
+
+/** Series with at least one published, unsold work (filters and the home page). */
+export async function listSeries(
+  locale: Locale,
+  db: DbOrTx = defaultDb,
+): Promise<SeriesSummary[]> {
+  const current = and(
+    eq(artworks.isPublished, true),
+    inArray(artworks.saleStatus, ["AVAILABLE", "ON_HOLD", "NOT_FOR_SALE"]),
+  );
+  const [counts, covers] = await Promise.all([
+    db
+      .select({
+        id: series.id,
+        slug: series.slug,
+        nameHe: series.nameHe,
+        nameEn: series.nameEn,
+        n: count(artworks.id),
+      })
+      .from(series)
+      .innerJoin(artworks, and(eq(artworks.seriesId, series.id), current))
+      .groupBy(series.id)
+      .orderBy(asc(series.sortOrder), asc(series.slug)),
+    db
+      .selectDistinctOn([artworks.seriesId], {
+        seriesId: artworks.seriesId,
+        image: {
+          id: artworkImages.id,
+          role: artworkImages.role,
+          publicKey: artworkImages.publicKey,
+          width: artworkImages.width,
+          height: artworkImages.height,
+          altHe: artworkImages.altHe,
+          altEn: artworkImages.altEn,
+          blurDataUrl: artworkImages.blurDataUrl,
+          dominantColor: artworkImages.dominantColor,
+          creditLine: artworkImages.creditLine,
+        },
+      })
+      .from(artworks)
+      .innerJoin(
+        artworkImages,
+        and(
+          eq(artworkImages.artworkId, artworks.id),
+          eq(artworkImages.role, "MAIN"),
+        ),
+      )
+      .where(and(current, isNotNull(artworks.seriesId)))
+      .orderBy(
+        artworks.seriesId,
+        statusRank,
+        desc(artworks.featured),
+        asc(artworks.sortOrder),
+      ),
+  ]);
+  const coverOf = new Map(covers.map((c) => [c.seriesId, c.image]));
+  return counts.map((s) => {
+    const img = coverOf.get(s.id);
+    return {
+      slug: s.slug,
+      name: locale === "he" ? s.nameHe : s.nameEn,
+      count: s.n,
+      cover: img ? imageDto(img, locale) : null,
+    };
+  });
 }
 
 /** The "Recently sold" strip (≤ 4). */
@@ -241,6 +391,15 @@ export interface ArtworkPageData {
   artwork: ArtworkDetailDTO;
   /** Shipping engine input for the live buy box (server-only; never sent to the client). */
   shipSpec: ArtworkShipSpec;
+  /** Structured-data and metadata extras (JSON-LD `artMedium` / `artworkSurface`, dates). */
+  seo: ArtworkSeo;
+}
+
+export interface ArtworkSeo {
+  medium: (typeof artworks.$inferSelect)["medium"];
+  surface: (typeof artworks.$inferSelect)["surface"];
+  publishedAt: string | null;
+  updatedAt: string;
 }
 
 /** `/works/[slug]`: a published work with its images, or null. */
@@ -253,6 +412,10 @@ export async function getArtworkPage(
     .select({
       ...detailColumns,
       ogKey: artworkImages.ogKey,
+      medium: artworks.medium,
+      surface: artworks.surface,
+      publishedAt: artworks.publishedAt,
+      updatedAt: artworks.updatedAt,
       packagingType: artworks.packagingType,
       canBeRolled: artworks.canBeRolled,
       packedLengthMm: artworks.packedLengthMm,
@@ -343,7 +506,13 @@ export async function getArtworkPage(
     maxInsurableValueMinor: row.maxInsurableValueMinor,
     dispatchDays: row.dispatchDays,
   };
-  return { artwork, shipSpec };
+  const seo: ArtworkSeo = {
+    medium: row.medium,
+    surface: row.surface,
+    publishedAt: row.publishedAt?.toISOString() ?? null,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+  return { artwork, shipSpec, seo };
 }
 
 export interface DeliveryEstimates {
@@ -409,4 +578,89 @@ export async function listCredits(
     title: locale === "he" ? r.titleHe : r.titleEn,
     caption: r.creditLine ?? "",
   }));
+}
+
+/** The OG image (1200×630, from the MAIN image's `og_key`) of a published work, or null. */
+export async function getArtworkOgImage(
+  slug: string,
+  db: DbOrTx = defaultDb,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ ogKey: artworkImages.ogKey })
+    .from(artworks)
+    .innerJoin(
+      artworkImages,
+      and(
+        eq(artworkImages.artworkId, artworks.id),
+        eq(artworkImages.role, "MAIN"),
+      ),
+    )
+    .where(and(eq(artworks.slug, slug), eq(artworks.isPublished, true)))
+    .limit(1);
+  return row?.ogKey ? storage().publicUrl(row.ogKey) : null;
+}
+
+export interface SitemapArtwork {
+  slug: string;
+  lastModified: Date;
+  /** Public image URLs (relative to the site unless the storage driver returns absolute URLs). */
+  images: string[];
+}
+
+/** Every published work (any sale status) for `sitemap.ts`, with its image URLs. */
+export async function listSitemapArtworks(
+  db: DbOrTx = defaultDb,
+): Promise<SitemapArtwork[]> {
+  const rows = await db
+    .select({
+      id: artworks.id,
+      slug: artworks.slug,
+      updatedAt: artworks.updatedAt,
+      publicKey: artworkImages.publicKey,
+    })
+    .from(artworks)
+    .leftJoin(artworkImages, eq(artworkImages.artworkId, artworks.id))
+    .where(eq(artworks.isPublished, true))
+    .orderBy(
+      asc(artworks.sortOrder),
+      asc(artworks.id),
+      sql`CASE WHEN ${artworkImages.role} = 'MAIN' THEN 0 ELSE 1 END`,
+      asc(artworkImages.sortOrder),
+    );
+  const out = new Map<string, SitemapArtwork>();
+  for (const r of rows) {
+    let entry = out.get(r.id);
+    if (!entry) {
+      entry = { slug: r.slug, lastModified: r.updatedAt, images: [] };
+      out.set(r.id, entry);
+    }
+    if (r.publicKey) entry.images.push(storage().publicUrl(r.publicKey));
+  }
+  return [...out.values()];
+}
+
+/**
+ * The public face of the business profile (about, contact, JSON-LD). Never includes the ID
+ * number, the legal name or addresses (spec §1.2 "Seller identity", §4.7).
+ */
+export interface PublicProfile {
+  tradeName: string;
+  artistName: string;
+  email: string;
+  phoneIntl: string;
+  phoneLocal: string;
+}
+
+export async function getPublicProfile(
+  locale: Locale,
+  db: DbOrTx = defaultDb,
+): Promise<PublicProfile> {
+  const p = await getSetting("business_profile", db);
+  return {
+    tradeName: p.tradeName[locale],
+    artistName: p.artistName[locale],
+    email: p.email,
+    phoneIntl: p.phoneIntl,
+    phoneLocal: p.phoneLocal,
+  };
 }
