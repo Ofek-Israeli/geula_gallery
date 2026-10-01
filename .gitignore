@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# next.js
+.next/
+.next-*/
+out/
+next-env.d.ts
+
+# production
+build/
+
+# env files (only .env.example is committed)
+.env*
+!.env.example
+
+# local data (database files, uploads)
+.data/
+
+# testing
+coverage/
+playwright-report/
+test-results/
+blob-report/
+tests/e2e/.auth/
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
