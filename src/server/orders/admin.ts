@@ -69,12 +69,14 @@ export async function listAdminOrders(
         )
       : undefined,
   );
+  // The outer column is written out qualified: Drizzle renders `${orders.id}` in a single-table
+  // select list as a bare "id", which inside this subquery would resolve to `oi.id`.
   const firstItem = sql<
     string | null
-  >`(SELECT oi.title_he FROM order_items oi WHERE oi.order_id = ${orders.id} ORDER BY oi.created_at LIMIT 1)`;
+  >`(SELECT oi.title_he FROM order_items oi WHERE oi.order_id = "orders"."id" ORDER BY oi.created_at LIMIT 1)`;
   const firstItemEn = sql<
     string | null
-  >`(SELECT oi.title_en FROM order_items oi WHERE oi.order_id = ${orders.id} ORDER BY oi.created_at LIMIT 1)`;
+  >`(SELECT oi.title_en FROM order_items oi WHERE oi.order_id = "orders"."id" ORDER BY oi.created_at LIMIT 1)`;
   const rows = await db
     .select({
       id: orders.id,

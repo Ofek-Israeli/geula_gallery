@@ -56,6 +56,9 @@ describe("admin order reads", () => {
     const all = await listAdminOrders(ctx);
     expect(all.total).toBe(2);
     expect(all.rows[0]?.id).toBe(b.orderId);
+    // The first item's titles come from a correlated subquery on the order.
+    expect(all.rows[0]?.titleHe).toBe(art.titleHe);
+    expect(all.rows[0]?.titleEn).toBe(art.titleEn);
     const paidOnly = await listAdminOrders(ctx, { status: "PAID" });
     expect(paidOnly.rows.map((r) => r.id)).toEqual([a.orderId]);
     const byEmail = await listAdminOrders(ctx, {
