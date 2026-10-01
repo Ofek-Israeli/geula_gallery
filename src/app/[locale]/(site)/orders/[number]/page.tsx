@@ -11,7 +11,7 @@ import { Price } from "@/components/ui/Price";
 import { buildPreContract } from "@/content/disclosure";
 import { Link } from "@/i18n/navigation";
 import { countryName } from "@/lib/countries";
-import { formatTime } from "@/lib/format";
+import { formatDateTime, formatTime } from "@/lib/format";
 import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
 import { formatMoney } from "@/lib/money";
@@ -73,6 +73,10 @@ export default async function OrderPage({
   );
   const firstSlug = view.items[0]?.slug ?? null;
   const detailsNote = one(sp.details);
+  // Link orders hold for days: a date, not a minutes countdown.
+  const longHold =
+    view.holdUntil !== null &&
+    new Date(view.holdUntil).getTime() - Date.now() > 2 * 60 * 60_000;
 
   // Link orders (spec §5.8): the buyer completes address and consents before paying.
   let linkForm: ReactNode = null;
@@ -177,8 +181,14 @@ export default async function OrderPage({
         >
           {view.holdUntil ? (
             <p className="flex flex-wrap items-center gap-2">
-              {t("holdUntil", { time: formatTime(view.holdUntil, locale) })}
-              <Countdown until={view.holdUntil} className="font-semibold" />
+              {t("holdUntil", {
+                time: longHold
+                  ? formatDateTime(view.holdUntil, locale)
+                  : formatTime(view.holdUntil, locale),
+              })}
+              {longHold ? null : (
+                <Countdown until={view.holdUntil} className="font-semibold" />
+              )}
             </p>
           ) : (
             <p>{t("holdLapsed")}</p>
