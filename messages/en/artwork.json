@@ -37,7 +37,8 @@
     "quote": "on request",
     "unavailable": "not available",
     "details": "Shipping and duties",
-    "dap": "For international orders, import duties, taxes and handling fees at the destination are paid by the buyer (DAP)."
+    "dap": "For international orders, import duties, taxes and handling fees at the destination are paid by the buyer (DAP).",
+    "insured": "insured"
   },
   "trust": {
     "label": "What is included",
@@ -73,6 +74,43 @@
     "inventory": "Inventory number"
   },
   "description": "Description",
-  "credit": "Image: {caption} (CC0)",
-  "demo": "Demo listing"
+  "demo": "Demo listing",
+  "creditLabel": "Image:",
+  "creditLicence": "(CC0)",
+  "gallery": {
+    "label": "Images of the work",
+    "thumbnails": "Choose an image",
+    "enlarge": "(open the enlarged view)",
+    "enlargeOf": "(image {index} of {total}, open the enlarged view)",
+    "show": "Show image {index} of {total}",
+    "counter": "{index} / {total}"
+  },
+  "lightbox": {
+    "label": "Enlarged view",
+    "gallery": "Photo gallery",
+    "carousel": "carousel",
+    "slide": "image",
+    "position": "Image {index} of {total}",
+    "previous": "Previous image",
+    "next": "Next image",
+    "close": "Close",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
+  },
+  "sticky": {
+    "label": "Quick purchase"
+  },
+  "more": {
+    "title": "More information",
+    "returnsTitle": "Cancellation and returns",
+    "returnsBody": "You can cancel within 14 days of receiving the work or the disclosure document, whichever is later, under the Israeli Consumer Protection Law. Refunds are made within 14 days of the cancellation notice. Details, including any cancellation fee, are in the policy.",
+    "returnsLink": "Cancellation and returns policy",
+    "dutiesTitle": "International delivery and duties",
+    "dutiesBody": "For international orders, import duties, taxes and handling fees at the destination are paid by the buyer (DAP), to the carrier or the local authorities.",
+    "dutiesLink": "Shipping and duties",
+    "careTitle": "Packing, certificate and hanging",
+    "careBody": "The work is packed by hand in the studio; nothing touches the paint surface.",
+    "coaBody": "A certificate of authenticity is included.",
+    "readyToHangBody": "The work arrives ready to hang."
+  }
 }

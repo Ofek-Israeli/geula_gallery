@@ -7,11 +7,14 @@ import type { Locale } from "@/lib/locale";
 import { formatMoney } from "@/lib/money";
 import { paths } from "@/lib/routes";
 import { useStatusText } from "./ArtworkStatus";
+import { shownPriceMinor, trustItems, zoneIsInsured } from "./buy-box";
+
+export const BUY_BOX_ID = "buy-box";
 
 /**
- * The live buy box (spec §6.3; minimal M2 version, WS1 adds JSON-LD, the sticky mobile bar and
- * offers). Rendered per request from the DB (never cached):
- * - the ILS price for an available work, otherwise the status in text;
+ * The live buy box (spec §6.3). Rendered per request from the DB (never cached):
+ * - the ILS price for an available work (also while another buyer is checking out), and the
+ *   status in text;
  * - Buy now (→ checkout) when buyable; Ask; sold works offer "similar works" and "commission";
  * - "Delivery in Israel from ₪X · free studio pickup" and per-zone estimates, linking to the
  *   shipping page; the DAP note;
@@ -35,31 +38,30 @@ export function LiveBuyBox({
   const israel = estimates.find((e) => e.zone === "IL");
   const israelPrice = israel?.kind === "price" ? israel : null;
   const ask = paths.artworkRequest(slug, "question");
+  const shownPrice = shownPriceMinor(artwork);
 
   return (
     <section
+      id={BUY_BOX_ID}
       aria-labelledby="buy-box-title"
       className="flex flex-col gap-5 border border-line bg-paper p-5"
+      data-testid="buy-box"
     >
       <h2 id="buy-box-title" className="sr-only">
         {t("buy.label")}
       </h2>
 
       <div className="flex flex-col gap-1">
-        {available && price.ilsMinor !== null && !price.onRequest ? (
-          <p className="text-3xl">
-            <Price
-              amountMinor={price.ilsMinor}
-              currency="ILS"
-              locale={locale}
-            />
+        {shownPrice !== null ? (
+          <p className="text-3xl" data-testid="artwork-price">
+            <Price amountMinor={shownPrice} currency="ILS" locale={locale} />
           </p>
         ) : null}
         {available && (price.onRequest || price.ilsMinor === null) ? (
           <p className="text-xl">{t("buy.priceOnRequest")}</p>
         ) : null}
         <p
-          className={available ? "text-ink-muted" : "text-xl"}
+          className={shownPrice !== null ? "text-ink-muted" : "text-xl"}
           data-testid="artwork-status"
         >
           {state.kind === "sold" ? (
@@ -146,6 +148,9 @@ export function LiveBuyBox({
                       {t("delivery.from", {
                         price: formatMoney(e.fromIlsMinor, "ILS", locale),
                       })}
+                      {zoneIsInsured(e) ? (
+                        <> · {t("delivery.insured")}</>
+                      ) : null}
                       {e.estimate ? (
                         <span className="text-ink-muted"> · {e.estimate}</span>
                       ) : null}
@@ -169,11 +174,14 @@ export function LiveBuyBox({
       <ul
         aria-label={t("trust.label")}
         className="flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-4 text-sm text-ink-muted"
+        data-testid="trust-row"
       >
-        <li>{t("trust.tracked")}</li>
-        {israelPrice?.insured ? <li>· {t("trust.insured")}</li> : null}
-        <li>· {t("trust.cancellation")}</li>
-        {artwork.coaIncluded ? <li>· {t("trust.coa")}</li> : null}
+        {trustItems(estimates, artwork.coaIncluded).map((item, i) => (
+          <li key={item}>
+            {i > 0 ? <span aria-hidden="true">· </span> : null}
+            {t(`trust.${item}`)}
+          </li>
+        ))}
       </ul>
     </section>
   );
