@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Fragment } from "react";
 import { type AppLocale, dirOf, LOCALES } from "@/i18n/routing";
 
 /**
@@ -18,11 +19,15 @@ export async function DemoBanner({ locale }: { locale: AppLocale }) {
       aria-label={texts[0]?.text}
       className="border-b border-hold bg-wall px-4 py-2 text-center text-sm text-ink print:hidden"
     >
+      {/* The separator stays outside the per-language isolates, so it sits between the two
+          sentences in either page direction. */}
       {texts.map(({ locale: l, text }, i) => (
-        <span key={l} lang={l} dir={dirOf(l)}>
-          {i > 0 ? " / " : null}
-          {text}
-        </span>
+        <Fragment key={l}>
+          {i > 0 ? <span aria-hidden="true"> / </span> : null}
+          <span lang={l} dir={dirOf(l)}>
+            {text}
+          </span>
+        </Fragment>
       ))}
     </aside>
   );
