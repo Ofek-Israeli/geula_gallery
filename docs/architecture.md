@@ -796,3 +796,83 @@ the SEND_EMAIL handler with `order-confirmation` / `painter-new-order` / `purcha
 Recheck, the PayPal refund-webhook routing into `syncPostSuccessEvent` (WS5), link orders
 (`createLinkOrder`), offline payments, and the e2e specs `purchase-il`, `webhook`, `order-retry`,
 `race`.
+
+### M2 part 3 (outbox handlers, mock tax documents, admin orders, reconcile, M2 E2E, `contracts-v1`)
+
+**What exists**
+- Tax documents (`taxdocs/mock.ts`, `taxdocs/issue.ts`, handlers `ISSUE_TAX_DOCUMENT` /
+  `ISSUE_CREDIT_NOTE`): the full §4.3 exactly-once protocol, provider-agnostic, so Morning/gateway
+  (WS5) plug into the same runner. `IssueOutcome` gained `failed`.
+- Emails: real templates for `order-confirmation` (first version; WS6 finalizes),
+  `painter-new-order`, `payment-review`, `purchase-not-completed`, `refund-issued`, `receipt`
+  (shared bits in `src/emails/parts.tsx`). `server/email/props.ts` builds every template's props
+  from fresh data (refId table in its header); `SEND_EMAIL` sends once per dedupe key and stamps
+  `disclosure_sent_at` / `disclosure_version` on the first order-confirmation.
+- Documents: `server/documents/data.ts` (order snapshots → `DisclosureInput`, buyer URLs),
+  `server/documents/buyer.ts` (token-checked reads), pages `/[locale]/print/disclosure/[number]`
+  and `/[locale]/print/receipt/[docNumber]` (DEMO stamp in both languages),
+  `components/docs/DocumentSections.tsx`. `buildDisclosure` has a minimal bilingual body
+  (pre-contract sections + order rows + copyright + email summary); WS6 owns the final text.
+- Admin: `/admin/orders` (status filter, search), `/admin/orders/[id]` (summary, buyer, attempts
+  with **Recheck payment**, refunds, tax documents, shipment, emails, alerts, audit timeline),
+  services in `server/orders/admin.ts`, actions in `orders/[id]/actions.ts`, client forms
+  `components/admin/{RecheckButton,ManualTrackingForm}.tsx`. Minimal manual tracking:
+  `shipping/shipments.ts#recordManualTracking`.
+- Cron: `jobs/reconcile.ts` (events → due attempts → refund leases + UNKNOWN/PROVIDER_PENDING
+  refunds → lapsed holds), per-step counters in `cron_runs.stats`.
+- Tests: integration `taxdocs`, `outbox-emails`, `reconcile-job`, `admin-orders`; E2E
+  `purchase-il`, `webhook`, `order-retry`, `race` + `tests/e2e/support/commerce.ts`.
+
+**Decisions and deviations**
+- Mock document numbers are `DEMO-<order suffix>-R<n>` / `-C<n>` (derived from the marker, unique
+  and stable across retries) instead of the spec's `DEMO-000123` example; no counter table needed.
+  The mock's `findByMarker` answers from process memory (a restart = "confirmed absent" →
+  re-issue, harmless because issuing is idempotent per marker).
+- Markers: receipt `<order>/<RECEIPT|INVOICE_RECEIPT>/<attempt seq>`; credit note
+  `<order>/CREDIT_NOTE/<n>` with n = position of the refund among the order's refunds. Kind
+  RECEIPT for patur, INVOICE_RECEIPT for murshe (type codes 400/320/330 like Morning).
+- `tax_documents.attempts` = provider calls while ISSUING, inconclusive searches while UNKNOWN
+  (reset to 0 on entering UNKNOWN). An ISSUING row whose call is > 2 min old is treated as an
+  abandoned call → UNKNOWN. `ProviderNotConfiguredError` → FAILED (+ alert), like a 4xx. A
+  provider without `findByMarker` → NEEDS_MANUAL straight from UNKNOWN.
+- Credit note without a receipt row: reschedule while the receipt job is PENDING/RUNNING, skip
+  when it finished without a document (not eligible), NEEDS_MANUAL when it is DEAD or the receipt
+  ended FAILED/NEEDS_MANUAL.
+- Receipt lines are itemized (works + shipping + insurance) only when the attempt amount equals
+  the order total; otherwise one "payment for order …" line (stale-quote/duplicate payments).
+- Email templates owned by later streams (requests, cancellations, checkout-link, pickup,
+  admin-alert) have **no props builder yet**: their jobs fail loudly (`NotImplementedError`) rather
+  than sending a stub. Each owner adds its builder in `email/props.ts`.
+- `shipment-update` emails use refId `<shipmentId>:<status>` (dedupe
+  `email:shipment-update:<id>:<status>:<to>`); the template itself is still the M1 stub (WS3).
+- Manual tracking (minimal, until WS3's fulfillment screen): PAID + unblocked carrier orders only;
+  AWAITING_FULFILLMENT → PACKED → LABEL_CREATED (→ IN_TRANSIT when "handed over"), no packing
+  checklist or disclosure-printed guard yet; no buyer email for PACKED; a later entry only corrects
+  the tracking details. Duplicate tracking number → `TRACKING_NUMBER_IN_USE`.
+- Admin order services live in `server/orders/admin.ts` (the spec tree names no module for them).
+- Reconcile step 4 does not expire link-order requests yet (no link orders exist; WS2).
+- E2E specs send their own `x-real-ip` (`buyerIp(n)`): the per-IP live-hold cap (3) is a setting,
+  not scaled by `RATE_LIMIT_SCALE`, and parallel specs share localhost. Each spec buys its own demo
+  work (allocation: checkout-minimal `icebound`; purchase-il `movement-no-10`; webhook
+  `still-life-green-flower-vase` + `a-holiday` (released); order-retry `still-life-no-15` +
+  `beach-les-grands-sables` (released); race `at-the-rivers-bend`). Free for later specs:
+  `beach-at-cabasson`, `banks-of-the-durance` (quote only), and `landscape-no-26` / `antibes`
+  (used read-only — do not buy them).
+- `storefront-minimal` no longer expects "Moonrise" in the 4-item recently-sold strip (parallel
+  purchases push it out); it checks the strip size and the sold archive instead.
+
+**Gotchas**
+- A job enqueued by a handler (e.g. the receipt email enqueued when the receipt is issued) is not
+  in the batch that is running: tests and E2E run the outbox (or `GET /api/cron/outbox`) more than
+  once.
+- react-email's plain-text output upper-cases headings; match text case-insensitively.
+- An admin action must return `revalidate: true` in its effects for the page to re-render after a
+  `useActionState` submit.
+- `next start` still logs `⨯ Error: The destination stream closed early.` during E2E (see M2
+  part 1); harmless.
+
+**Not done here**: disclosure PDF attachment (Tier B, WS6; `test.fixme` in `purchase-il`), the
+final order-confirmation/disclosure wording (WS6), admin refund dialogs, retry of FAILED tax
+documents, record payment, manual order (WS4), the fulfillment screen and `shipment-update` /
+`ready-for-pickup` templates (WS3), Morning/gateway adapters (WS5), link orders and
+`checkout-link` (WS2), `admin-alert` emails (WS6).
