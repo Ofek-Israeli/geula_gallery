@@ -1,11 +1,18 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { isLocale, type Locale } from "@/lib/locale";
+import { fromDecimal, isCurrency } from "@/lib/money";
 import { absoluteUrl, localePath, paths } from "@/lib/routes";
 import { raiseAlert } from "@/server/alerts/service";
 import { orderUrlFor } from "@/server/checkout/start";
 import { type Db, db as defaultDb } from "@/server/db/client";
-import { orders, paymentAttempts, paymentEvents } from "@/server/db/schema";
+import {
+  orders,
+  type PaymentEvent,
+  paymentAttempts,
+  paymentEvents,
+  refunds,
+} from "@/server/db/schema";
 import {
   type Effects,
   mergeEffects,
@@ -16,6 +23,7 @@ import { log } from "@/server/log";
 import { checkLimit } from "@/server/security/rate-limit";
 import { verifyHmacToken } from "@/server/security/tokens";
 import { type FinalizeOutcome, finalizeAttempt } from "./finalize";
+import { type PostSuccessEvent, syncPostSuccessEvent } from "./post-success";
 import { buildProvider } from "./registry";
 import { PROVIDER_DB_VALUE, PROVIDER_IDS, type ProviderId } from "./types";
 
@@ -46,6 +54,62 @@ export interface HttpOutcome {
 export interface WebhookDeps {
   db?: Db;
   env?: Env;
+  /** Test seam: replaces `syncPostSuccessEvent` (failure injection). */
+  syncPostSuccess?: typeof syncPostSuccessEvent;
+}
+
+/**
+ * Events that concern a payment we already captured (spec §4.2 PayPal "Events", §5.2 step 4):
+ * routed to `syncPostSuccessEvent`, never to `finalizeAttempt`.
+ */
+export const POST_SUCCESS_EVENT_TYPES = {
+  "PAYMENT.CAPTURE.REFUNDED": "refund",
+  "PAYMENT.CAPTURE.REVERSED": "reversal",
+  "CUSTOMER.DISPUTE.CREATED": "dispute",
+} as const satisfies Record<string, PostSuccessEvent["kind"]>;
+
+export function postSuccessKind(
+  eventType: string | null | undefined,
+): PostSuccessEvent["kind"] | null {
+  if (!eventType) return null;
+  return (
+    (POST_SUCCESS_EVENT_TYPES as Record<string, PostSuccessEvent["kind"]>)[
+      eventType
+    ] ?? null
+  );
+}
+
+/**
+ * The part of a PayPal webhook the adapter keeps in `payload_redacted` for post-success events
+ * (WS5 `parseNotification` contract; no PII): the refund or dispute resource's id, status, amount,
+ * `custom_id` (our refund id), the `up` link to the capture, and the disputed capture ids.
+ */
+export interface PostSuccessPayload {
+  resource?: {
+    id?: unknown;
+    status?: unknown;
+    custom_id?: unknown;
+    amount?: { value?: unknown; currency_code?: unknown };
+    links?: { rel?: unknown; href?: unknown }[];
+    disputed_transactions?: { seller_transaction_id?: unknown }[];
+  };
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.length > 0 ? v.slice(0, 200) : null;
+}
+
+/** Capture id from the refund's `up` link (`…/v2/payments/captures/<id>`) or the dispute. */
+export function captureIdOf(p: PostSuccessPayload): string | null {
+  const r = p.resource;
+  const up = r?.links?.find((l) => l.rel === "up");
+  const href = str(up?.href);
+  const fromLink = href ? /\/captures\/([^/?#]+)/.exec(href)?.[1] : undefined;
+  if (fromLink) return fromLink;
+  return str(r?.disputed_transactions?.[0]?.seller_transaction_id);
 }
 
 function isProviderId(value: string): value is ProviderId {
@@ -124,8 +188,12 @@ export async function handlePaymentWebhook(
 
   return processPaymentEvent(
     eventId,
-    { attemptId: parsed.attemptId, providerRef: parsed.providerRef },
-    { db, env: e },
+    {
+      attemptId: parsed.attemptId,
+      providerRef: parsed.providerRef,
+      refundCustomId: parsed.refundCustomId,
+    },
+    { ...deps, db, env: e },
   );
 }
 
@@ -135,7 +203,11 @@ export async function handlePaymentWebhook(
  */
 export async function processPaymentEvent(
   eventId: string,
-  hint: { attemptId?: string; providerRef?: string } = {},
+  hint: {
+    attemptId?: string;
+    providerRef?: string;
+    refundCustomId?: string;
+  } = {},
   deps: WebhookDeps = {},
 ): Promise<HttpOutcome> {
   const db = deps.db ?? defaultDb;
@@ -145,6 +217,9 @@ export async function processPaymentEvent(
     .where(eq(paymentEvents.id, eventId));
   if (!event) return reply(404, { error: "unknown_event" });
   if (event.processedAt) return reply(200, { ok: true, duplicate: true });
+
+  const kind = postSuccessKind(event.eventType);
+  if (kind) return processPostSuccess(event, kind, hint, { ...deps, db });
 
   const payload = (event.payloadRedacted ?? {}) as { ref?: unknown };
   const providerRef =
@@ -362,5 +437,129 @@ export function buyerOutcome(
       return "canceled";
     default:
       return outcome;
+  }
+}
+
+// ---------------------------------------------------------------- post-success events
+
+/**
+ * A refund, reversal or dispute of a captured payment (PayPal REFUNDED / REVERSED /
+ * CUSTOMER.DISPUTE.CREATED). The attempt is found by our refund id (`custom_id`), the hint, the
+ * capture id, or the provider reference; then `syncPostSuccessEvent` matches our own refund rows
+ * first and records only an unmatched refund as EXTERNAL. Errors answer 500 and keep the event
+ * unprocessed (the provider retries; reconcile replays it).
+ */
+async function processPostSuccess(
+  event: PaymentEvent,
+  kind: PostSuccessEvent["kind"],
+  hint: { attemptId?: string; providerRef?: string; refundCustomId?: string },
+  deps: WebhookDeps & { db: Db },
+): Promise<HttpOutcome> {
+  const db = deps.db;
+  const payload = (event.payloadRedacted ?? {}) as PostSuccessPayload;
+  const r = payload.resource ?? {};
+  const customId = hint.refundCustomId ?? str(r.custom_id);
+  const refundCustomId = customId && UUID_RE.test(customId) ? customId : null;
+  const captureId = captureIdOf(payload);
+
+  let attemptId: string | null = event.attemptId ?? hint.attemptId ?? null;
+  if (!attemptId && refundCustomId) {
+    const [row] = await db
+      .select({ attemptId: refunds.attemptId })
+      .from(refunds)
+      .where(eq(refunds.id, refundCustomId));
+    attemptId = row?.attemptId ?? null;
+  }
+  if (!attemptId && captureId) {
+    const [row] = await db
+      .select({ id: paymentAttempts.id })
+      .from(paymentAttempts)
+      .where(
+        and(
+          eq(paymentAttempts.provider, event.provider),
+          eq(paymentAttempts.captureId, captureId),
+        ),
+      );
+    attemptId = row?.id ?? null;
+  }
+  if (!attemptId && hint.providerRef) {
+    const [row] = await db
+      .select({ id: paymentAttempts.id })
+      .from(paymentAttempts)
+      .where(
+        and(
+          eq(paymentAttempts.provider, event.provider),
+          eq(paymentAttempts.providerRef, hint.providerRef),
+        ),
+      );
+    attemptId = row?.id ?? null;
+  }
+  const mark = (outcome: string, attempt: string | null) =>
+    db
+      .update(paymentEvents)
+      .set({
+        processedAt: new Date(),
+        outcome,
+        attemptId: attempt,
+        lastError: null,
+      })
+      .where(eq(paymentEvents.id, event.id));
+  if (!attemptId) {
+    await raiseAlert(
+      {
+        severity: "CRITICAL",
+        kind: "PAYMENT_EVENT_UNMATCHED",
+        dedupeKey: `event-unmatched:${event.id}`,
+        entity: "payment_event",
+        entityId: event.id,
+        params: { eventType: event.eventType ?? kind },
+      },
+      db,
+    );
+    await mark("unmatched", null);
+    return reply(200, { ok: true, outcome: "unmatched" });
+  }
+
+  try {
+    let sync: PostSuccessEvent;
+    if (kind === "refund") {
+      const currency = str(r.amount?.currency_code);
+      const value = r.amount?.value;
+      if (!currency || !isCurrency(currency) || value === undefined) {
+        throw new Error("refund event without a usable amount");
+      }
+      const providerRefundId = str(r.id);
+      sync = {
+        kind: "refund",
+        attemptId,
+        ...(refundCustomId ? { refundCustomId } : {}),
+        ...(providerRefundId ? { providerRefundId } : {}),
+        amountMinor: fromDecimal(String(value)),
+        currency,
+        completed: str(r.status) === "COMPLETED",
+      };
+    } else {
+      sync = { kind, attemptId };
+    }
+    const run = deps.syncPostSuccess ?? syncPostSuccessEvent;
+    const { result, effects } = await run(sync, { db });
+    await mark(`${kind}:${result.outcome}`, attemptId);
+    return reply(200, { ok: true, outcome: result.outcome }, effects);
+  } catch (error) {
+    const text =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    log.error(
+      "payments.post_success_failed",
+      { eventId: event.id, kind },
+      error,
+    );
+    await db
+      .update(paymentEvents)
+      .set({ lastError: text.slice(0, 1000), attemptId })
+      .where(eq(paymentEvents.id, event.id))
+      .catch(() => {});
+    return reply(500, { error: "processing_failed" });
   }
 }

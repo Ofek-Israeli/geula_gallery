@@ -51,12 +51,28 @@ export function isProviderConfigured(id: ProviderId, e: Env): boolean {
   }
 }
 
+/**
+ * Test seam: integration tests replace an adapter factory (a fixture-backed PayPal, a Cardcom
+ * with `listTransactions`) without credentials. Ignored when `APP_ENV=production`.
+ */
+const testFactories = new Map<ProviderId, ProviderFactory>();
+
+export function setProviderFactoryForTests(
+  id: ProviderId,
+  factory: ProviderFactory | null,
+): void {
+  if (factory) testFactories.set(id, factory);
+  else testFactories.delete(id);
+}
+
 /** Builds an adapter whose credentials exist, or null. */
 export function buildProvider(
   id: ProviderId,
   deps: RegistryDeps = {},
 ): PaymentProvider | null {
   const e = deps.env ?? defaultEnv;
+  const override = e.isProduction ? undefined : testFactories.get(id);
+  if (override) return override({ env: e, fetch: deps.fetch });
   if (!isProviderConfigured(id, e)) return null;
   return FACTORIES[id]({ env: e, fetch: deps.fetch });
 }
