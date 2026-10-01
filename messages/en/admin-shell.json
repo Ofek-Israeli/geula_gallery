@@ -15,13 +15,59 @@
     "settings": "Settings",
     "account": "Account",
     "signOut": "Sign out",
-    "viewSite": "View site"
+    "viewSite": "View site",
+    "badge": "{count} new",
+    "newArtworkShort": "+ Artwork"
   },
   "dashboard": {
     "title": "Dashboard",
     "needsAttention": "Needs attention",
     "openAlerts": "{count, plural, =0 {No open alerts} one {One open alert} other {# open alerts}}",
-    "placeholder": "Tracking cards will be added later."
+    "placeholder": "Tracking cards will be added later.",
+    "allClear": "Nothing needs attention right now.",
+    "more": "and {count} more",
+    "due": "by {date}",
+    "cards": {
+      "refundsDue": "Refunds due soon",
+      "refundProblems": "Refunds that need you",
+      "deferredPayments": "Deferred payments",
+      "labelUnknown": "Shipping labels in an unknown state",
+      "taxDocuments": "Tax documents that need you",
+      "toFulfil": "Orders to pack and ship",
+      "blocked": "Orders with fulfilment blocked",
+      "openRequests": "Open messages",
+      "ratesUncalibrated": "Shipping rates not calibrated in the last 90 days",
+      "staleCron": "Background jobs that have not run recently",
+      "criticalAlerts": "Critical alerts"
+    },
+    "links": {
+      "openRequests": "Go to the inbox",
+      "ratesUncalibrated": "Go to shipping settings",
+      "criticalAlerts": "See all alerts",
+      "staleCron": "See all alerts"
+    },
+    "turnover": {
+      "title": "Turnover this year ({year})",
+      "of": "of the osek patur ceiling {ceiling}",
+      "noCeiling": "No ceiling is set for this year.",
+      "count": "{count, plural, =0 {No sales} one {One sale} other {# sales}}",
+      "hint": "An estimate only: demo sales are excluded. The accountant's figure is the legal one."
+    },
+    "goLive": {
+      "title": "Go-live readiness",
+      "ok": "Ready",
+      "missing": "Missing",
+      "items": {
+        "businessProfile": "Business details completed",
+        "demoModeOff": "Demo mode off",
+        "livePayments": "Live payments enabled",
+        "taxDocuments": "Tax documents connected",
+        "email": "Real email sending",
+        "storage": "Cloud file storage",
+        "twoFactor": "Two-step verification for every user",
+        "ratesCalibrated": "Shipping rates calibrated"
+      }
+    }
   },
   "login": {
     "title": "Admin sign-in",
@@ -64,5 +110,174 @@
     "invalidPassword": "The password is wrong.",
     "invalidCode": "The code is wrong. Please try again.",
     "failed": "Could not turn it on. Please try again."
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "INVALID_INPUT": "Please check the highlighted fields.",
+    "NOT_FOUND": "Not found. It may have been deleted.",
+    "UNEXPECTED": "Something went wrong. Please try again.",
+    "ILLEGAL_TRANSITION": "This is not possible in the current state. Please reload the page.",
+    "NOT_IMPLEMENTED": "This option is still being built and will be enabled soon.",
+    "FORBIDDEN": "You are not allowed to do this.",
+    "FRESH_SESSION": "Please sign in again for this action."
+  },
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "yes": "Yes",
+    "no": "No",
+    "none": "—",
+    "back": "Back",
+    "open": "Open",
+    "search": "Search",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}",
+    "demo": "Demo"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "empty": "No messages to show.",
+    "count": "{count, plural, =0 {No messages} one {One message} other {# messages}}",
+    "filters": "Filter",
+    "filter": {
+      "open": "Open",
+      "quotes": "Quotes",
+      "questions": "Questions",
+      "all": "All"
+    },
+    "kind": {
+      "QUESTION": "Question",
+      "QUOTE": "Quote request",
+      "OFFER": "Offer"
+    },
+    "status": {
+      "NEW": "New",
+      "REPLIED": "Replied",
+      "ACCEPTED": "Accepted",
+      "COUNTERED": "Countered",
+      "QUOTED": "Quoted",
+      "DECLINED": "Declined",
+      "AUTO_DECLINED": "Auto-declined",
+      "CONVERTED": "Paid",
+      "EXPIRED": "Expired",
+      "CLOSED": "Closed"
+    },
+    "back": "All messages",
+    "detailTitle": "{kind} from {name}",
+    "received": "Received {date}",
+    "artwork": "Artwork",
+    "noArtwork": "General message",
+    "listPrice": "List price: {price}",
+    "contact": "Contact details",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "country": "Country",
+    "language": "Language",
+    "message": "Message",
+    "lastReply": "Latest reply ({date})",
+    "order": "Link order: {number} ({status})",
+    "history": "Earlier messages from the same address",
+    "reply": "Reply",
+    "replyHint": "The reply is emailed in the sender's language ({language}).",
+    "replyTemplate": "Template",
+    "replyTemplatePick": "Choose a template…",
+    "replyTemplates": {
+      "available": "Work available",
+      "sold": "Work sold",
+      "quoteSoon": "Quote coming",
+      "moreDetails": "Ask for details"
+    },
+    "send": "Send the reply",
+    "sent": "The reply was sent.",
+    "decline": "Decline the request",
+    "declineHint": "You can add a short message (optional).",
+    "declineConfirm": "Decline the request?",
+    "declined": "The request was declined.",
+    "close": "Close (archive)",
+    "closed": "Closed.",
+    "quote": "Send a quote",
+    "quoteIntro": "Creates one order at a locked price and holds the work. The buyer receives a payment link valid for the chosen time.",
+    "buyerName": "Buyer name",
+    "buyerEmail": "Buyer email",
+    "buyerPhone": "Buyer phone",
+    "destination": "Destination country",
+    "currency": "Currency",
+    "currencyHint": "Delivery in Israel is always in ILS.",
+    "itemPrice": "Artwork price",
+    "shippingMethod": "Shipping method",
+    "methods": {
+      "CARRIER_TABLE": "From the rate table",
+      "QUOTED": "Fixed shipping price (quote)",
+      "LOCAL_PICKUP": "Studio pickup",
+      "ARTIST_DELIVERY": "Delivered by the artist"
+    },
+    "lockedShipping": "Shipping price",
+    "lockedShippingHint": "Required for a fixed shipping price.",
+    "expiresInHours": "Link valid for (hours)",
+    "priceChangeReason": "Reason for the price change",
+    "priceChangeHint": "Required when the price differs from the list price.",
+    "quoteSubmit": "Create the link and send",
+    "quoteConfirm": "Create an order at this price and email the buyer a payment link?",
+    "quoteSent": "The quote was sent.",
+    "errors": {
+      "REPLY_REQUIRED": "Please write a reply.",
+      "NOT_DECLINABLE": "Questions are answered, not declined.",
+      "NOT_QUOTABLE": "Only a new quote request can be quoted.",
+      "IL_REQUIRES_ILS": "An order to Israel must be in ILS.",
+      "PRICE_REASON_REQUIRED": "The price differs from the list price; please give a reason.",
+      "NOT_RESERVABLE": "The artwork cannot be held right now."
+    }
+  },
+  "more": {
+    "title": "More"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "open": "Open alerts",
+    "none": "No open alerts.",
+    "acknowledge": "Mark handled",
+    "acknowledged": "Marked as handled.",
+    "entity": "{entity} {id}",
+    "openOrder": "Open the order",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "dead": "Jobs that failed for good",
+    "deadNone": "No failed jobs.",
+    "deadHint": "A job that failed 8 times stops. Once the cause is fixed you can run it again.",
+    "retry": "Run again",
+    "retried": "The job will run again.",
+    "attempts": "{count} attempts",
+    "lastError": "Last error: {error}"
+  },
+  "account": {
+    "title": "Account",
+    "signedInAs": "Signed in as {email}",
+    "password": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordHint": "At least 12 characters.",
+    "confirmPassword": "Repeat the new password",
+    "mismatch": "The passwords do not match.",
+    "tooShort": "The password must have at least 12 characters.",
+    "changePassword": "Change the password",
+    "changed": "The password was changed. Other sessions were signed out.",
+    "wrongPassword": "The current password is wrong.",
+    "failed": "That did not work. Please try again.",
+    "twoFactor": "Two-step verification",
+    "twoFactorOn": "Two-step verification is on.",
+    "twoFactorOff": "Two-step verification is off.",
+    "twoFactorRequired": "This site requires two-step verification to stay on.",
+    "disable": "Turn off two-step verification",
+    "disabled": "Two-step verification was turned off.",
+    "backupCodes": "New backup codes",
+    "backupHint": "Creating new codes cancels the previous ones.",
+    "generate": "Create backup codes",
+    "generated": "The new backup codes (each works once):"
   }
 }

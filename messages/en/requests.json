@@ -1,1 +1,53 @@
-{}
+{
+  "meta": {
+    "question": "A question about {title}",
+    "quote": "Quote request – {title}",
+    "offer": "Make an offer – {title}"
+  },
+  "title": {
+    "question": "Ask about this work",
+    "quote": "Request a quote",
+    "offer": "Make an offer"
+  },
+  "intro": {
+    "question": "Ask anything about the work: size, colours, hanging, shipping.",
+    "quote": "Shipping for this work is priced individually. We will send a full quote including shipping, with a secure payment link valid for 48 hours.",
+    "offer": "You can propose a price. We will get back to you."
+  },
+  "backToArtwork": "Back to the artwork",
+  "fields": {
+    "name": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "country": "Shipping country",
+    "countryHint": "Used to price the shipping.",
+    "message": "Message",
+    "messageQuoteHint": "For example your city, a preferred date or a shipping question.",
+    "offerAmount": "Offer amount",
+    "currency": "Currency"
+  },
+  "submit": "Send",
+  "submitting": "Sending…",
+  "thanks": {
+    "title": "Thank you! Your message was sent.",
+    "body": "We sent a confirmation to {email}. We will get back to you soon."
+  },
+  "notAvailable": "This kind of request is not available for this work.",
+  "errors": {
+    "SPAM": "The form was not sent. Please try again.",
+    "TOO_FAST": "The form was sent too quickly. Please try again in a moment.",
+    "RATE_LIMITED": "Too many messages were sent. Please try again later.",
+    "INVALID_INPUT": "Please check the highlighted fields.",
+    "NOT_FOUND": "The artwork was not found.",
+    "NOT_REQUESTABLE": "This kind of request is not available for this work.",
+    "OFFER_PENDING": "You already have an open offer for this work.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "privacy": "We use your details only to answer your message (and, for a quote, to price the shipping and send a payment link). You are not legally required to provide them, but we cannot get back to you without them. They are kept by us and sent only through our email provider.",
+  "replyTemplates": {
+    "available": "Hello {name},\nThank you for your message. The work is still available and can be bought directly on its page on the site. I am happy to answer any other question.",
+    "sold": "Hello {name},\nThank you for your interest. This work has already been sold, but the gallery has similar works, and commissions are welcome.",
+    "quoteSoon": "Hello {name},\nThank you for your request. I am checking the shipping cost and will send a full quote with a payment link soon.",
+    "moreDetails": "Hello {name},\nThank you for your message. To price the shipping, could you tell me your city and postal code?"
+  }
+}

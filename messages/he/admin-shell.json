@@ -15,13 +15,59 @@
     "settings": "הגדרות",
     "account": "חשבון",
     "signOut": "יציאה",
-    "viewSite": "צפייה באתר"
+    "viewSite": "צפייה באתר",
+    "badge": "{count} חדשות",
+    "newArtworkShort": "+ יצירה"
   },
   "dashboard": {
     "title": "לוח בקרה",
     "needsAttention": "דורש טיפול",
     "openAlerts": "{count, plural, =0 {אין התראות פתוחות} one {התראה פתוחה אחת} two {שתי התראות פתוחות} other {# התראות פתוחות}}",
-    "placeholder": "כרטיסי המעקב יתווספו בהמשך."
+    "placeholder": "כרטיסי המעקב יתווספו בהמשך.",
+    "allClear": "אין כרגע משהו שדורש טיפול.",
+    "more": "ועוד {count}",
+    "due": "עד {date}",
+    "cards": {
+      "refundsDue": "החזרים שמועדם מתקרב",
+      "refundProblems": "החזרים שדורשים טיפול",
+      "deferredPayments": "תשלומים שנדחו",
+      "labelUnknown": "תוויות משלוח במצב לא ידוע",
+      "taxDocuments": "מסמכים חשבונאיים שדורשים טיפול",
+      "toFulfil": "הזמנות לאריזה ולשליחה",
+      "blocked": "הזמנות שהמשלוח שלהן חסום",
+      "openRequests": "הודעות פתוחות",
+      "ratesUncalibrated": "מחירי המשלוח לא כוילו ב-90 הימים האחרונים",
+      "staleCron": "משימות רקע שלא רצו לאחרונה",
+      "criticalAlerts": "התראות קריטיות"
+    },
+    "links": {
+      "openRequests": "לתיבת ההודעות",
+      "ratesUncalibrated": "להגדרות המשלוח",
+      "criticalAlerts": "לכל ההתראות",
+      "staleCron": "לכל ההתראות"
+    },
+    "turnover": {
+      "title": "מחזור מתחילת השנה ({year})",
+      "of": "מתוך תקרת עוסק פטור {ceiling}",
+      "noCeiling": "אין תקרה מוגדרת לשנה זו.",
+      "count": "{count, plural, =0 {אין מכירות} one {מכירה אחת} other {# מכירות}}",
+      "hint": "הערכה בלבד: לא כולל מכירות הדגמה. הנתון הקובע הוא של רואה החשבון."
+    },
+    "goLive": {
+      "title": "רשימת מוכנות לעלייה לאוויר",
+      "ok": "מוכן",
+      "missing": "חסר",
+      "items": {
+        "businessProfile": "פרטי העסק הושלמו",
+        "demoModeOff": "מצב הדגמה כבוי",
+        "livePayments": "סליקה אמיתית מופעלת",
+        "taxDocuments": "הפקת מסמכים חשבונאיים מחוברת",
+        "email": "שליחת דוא״ל אמיתית",
+        "storage": "אחסון קבצים בענן",
+        "twoFactor": "אימות דו־שלבי לכל המשתמשים",
+        "ratesCalibrated": "מחירי המשלוח כוילו"
+      }
+    }
   },
   "login": {
     "title": "כניסה לניהול",
@@ -64,5 +110,174 @@
     "invalidPassword": "הסיסמה שגויה.",
     "invalidCode": "הקוד שגוי. אפשר לנסות שוב.",
     "failed": "ההפעלה נכשלה. אפשר לנסות שוב."
+  },
+  "errors": {
+    "generic": "משהו השתבש. נא לנסות שוב.",
+    "INVALID_INPUT": "נא לבדוק את השדות המסומנים.",
+    "NOT_FOUND": "לא נמצא. ייתכן שנמחק.",
+    "UNEXPECTED": "משהו השתבש. נא לנסות שוב.",
+    "ILLEGAL_TRANSITION": "הפעולה אינה אפשרית במצב הנוכחי. נא לרענן את העמוד.",
+    "NOT_IMPLEMENTED": "האפשרות הזו עדיין בפיתוח ותופעל בקרוב.",
+    "FORBIDDEN": "אין הרשאה לפעולה זו.",
+    "FRESH_SESSION": "לפעולה הזו צריך להיכנס מחדש."
+  },
+  "common": {
+    "save": "שמירה",
+    "saving": "שומר…",
+    "saved": "נשמר.",
+    "yes": "כן",
+    "no": "לא",
+    "none": "—",
+    "back": "חזרה",
+    "open": "פתיחה",
+    "search": "חיפוש",
+    "prev": "הקודם",
+    "next": "הבא",
+    "page": "עמוד {page} מתוך {pages}",
+    "demo": "הדגמה"
+  },
+  "inbox": {
+    "title": "הודעות",
+    "empty": "אין הודעות להצגה.",
+    "count": "{count, plural, =0 {אין הודעות} one {הודעה אחת} other {# הודעות}}",
+    "filters": "סינון",
+    "filter": {
+      "open": "פתוחות",
+      "quotes": "הצעות מחיר",
+      "questions": "שאלות",
+      "all": "הכול"
+    },
+    "kind": {
+      "QUESTION": "שאלה",
+      "QUOTE": "בקשת הצעת מחיר",
+      "OFFER": "הצעה"
+    },
+    "status": {
+      "NEW": "חדשה",
+      "REPLIED": "נענתה",
+      "ACCEPTED": "התקבלה",
+      "COUNTERED": "הצעה נגדית",
+      "QUOTED": "נשלחה הצעה",
+      "DECLINED": "נדחתה",
+      "AUTO_DECLINED": "נדחתה אוטומטית",
+      "CONVERTED": "שולמה",
+      "EXPIRED": "פג תוקף",
+      "CLOSED": "סגורה"
+    },
+    "back": "כל ההודעות",
+    "detailTitle": "{kind} מאת {name}",
+    "received": "התקבלה {date}",
+    "artwork": "יצירה",
+    "noArtwork": "פנייה כללית",
+    "listPrice": "מחיר מחירון: {price}",
+    "contact": "פרטי קשר",
+    "name": "שם",
+    "email": "דוא״ל",
+    "phone": "טלפון",
+    "country": "ארץ",
+    "language": "שפה",
+    "message": "ההודעה",
+    "lastReply": "התשובה האחרונה ({date})",
+    "order": "הזמנת קישור: {number} ({status})",
+    "history": "פניות קודמות מאותה כתובת",
+    "reply": "תשובה",
+    "replyHint": "התשובה נשלחת בדוא״ל בשפת הפונה ({language}).",
+    "replyTemplate": "תבנית",
+    "replyTemplatePick": "בחירת תבנית…",
+    "replyTemplates": {
+      "available": "היצירה זמינה",
+      "sold": "היצירה נמכרה",
+      "quoteSoon": "הצעה בדרך",
+      "moreDetails": "בקשת פרטים"
+    },
+    "send": "שליחת התשובה",
+    "sent": "התשובה נשלחה.",
+    "decline": "דחיית הבקשה",
+    "declineHint": "אפשר לצרף הודעה קצרה (לא חובה).",
+    "declineConfirm": "לדחות את הבקשה?",
+    "declined": "הבקשה נדחתה.",
+    "close": "סגירה (ארכיון)",
+    "closed": "נסגרה.",
+    "quote": "שליחת הצעת מחיר",
+    "quoteIntro": "יוצר הזמנה אחת במחיר נעול ושומר את היצירה. הקונה מקבל קישור לתשלום שתקף לפי הזמן שנבחר.",
+    "buyerName": "שם הקונה",
+    "buyerEmail": "דוא״ל הקונה",
+    "buyerPhone": "טלפון הקונה",
+    "destination": "ארץ היעד",
+    "currency": "מטבע",
+    "currencyHint": "משלוח בישראל תמיד בשקלים.",
+    "itemPrice": "מחיר היצירה",
+    "shippingMethod": "אופן המשלוח",
+    "methods": {
+      "CARRIER_TABLE": "לפי טבלת המחירים",
+      "QUOTED": "מחיר משלוח קבוע (הצעה)",
+      "LOCAL_PICKUP": "איסוף עצמי",
+      "ARTIST_DELIVERY": "מסירה אישית"
+    },
+    "lockedShipping": "מחיר המשלוח",
+    "lockedShippingHint": "חובה במחיר משלוח קבוע.",
+    "expiresInHours": "תוקף הקישור (שעות)",
+    "priceChangeReason": "סיבה לשינוי המחיר",
+    "priceChangeHint": "חובה אם המחיר שונה ממחיר המחירון.",
+    "quoteSubmit": "יצירת הקישור ושליחה",
+    "quoteConfirm": "ליצור הזמנה במחיר הזה ולשלוח לקונה קישור לתשלום?",
+    "quoteSent": "ההצעה נשלחה.",
+    "errors": {
+      "REPLY_REQUIRED": "נא לכתוב תשובה.",
+      "NOT_DECLINABLE": "על שאלה עונים; אי אפשר לדחות אותה.",
+      "NOT_QUOTABLE": "אפשר לשלוח הצעה רק לבקשה חדשה להצעת מחיר.",
+      "IL_REQUIRES_ILS": "הזמנה לישראל חייבת להיות בשקלים.",
+      "PRICE_REASON_REQUIRED": "המחיר שונה ממחיר המחירון; נא לציין סיבה.",
+      "NOT_RESERVABLE": "היצירה אינה זמינה לשמירה כרגע."
+    }
+  },
+  "more": {
+    "title": "עוד"
+  },
+  "alerts": {
+    "title": "התראות",
+    "open": "התראות פתוחות",
+    "none": "אין התראות פתוחות.",
+    "acknowledge": "סימון כטופל",
+    "acknowledged": "סומן כטופל.",
+    "entity": "{entity} {id}",
+    "openOrder": "להזמנה",
+    "severity": {
+      "INFO": "מידע",
+      "WARNING": "אזהרה",
+      "CRITICAL": "קריטי"
+    },
+    "dead": "משימות שנכשלו סופית",
+    "deadNone": "אין משימות שנכשלו.",
+    "deadHint": "משימה שנכשלה 8 פעמים נעצרת. אחרי תיקון הסיבה אפשר להריץ אותה שוב.",
+    "retry": "הרצה מחדש",
+    "retried": "המשימה תורץ שוב.",
+    "attempts": "{count} ניסיונות",
+    "lastError": "שגיאה אחרונה: {error}"
+  },
+  "account": {
+    "title": "חשבון",
+    "signedInAs": "מחוברת בתור {email}",
+    "password": "שינוי סיסמה",
+    "currentPassword": "סיסמה נוכחית",
+    "newPassword": "סיסמה חדשה",
+    "newPasswordHint": "לפחות 12 תווים.",
+    "confirmPassword": "אימות הסיסמה החדשה",
+    "mismatch": "הסיסמאות אינן תואמות.",
+    "tooShort": "הסיסמה חייבת להכיל לפחות 12 תווים.",
+    "changePassword": "שינוי הסיסמה",
+    "changed": "הסיסמה שונתה. שאר החיבורים נותקו.",
+    "wrongPassword": "הסיסמה הנוכחית שגויה.",
+    "failed": "הפעולה נכשלה. נא לנסות שוב.",
+    "twoFactor": "אימות דו־שלבי",
+    "twoFactorOn": "האימות הדו־שלבי פעיל.",
+    "twoFactorOff": "האימות הדו־שלבי כבוי.",
+    "twoFactorRequired": "באתר הזה חובה להשאיר אימות דו־שלבי פעיל.",
+    "disable": "כיבוי האימות הדו־שלבי",
+    "disabled": "האימות הדו־שלבי כובה.",
+    "backupCodes": "קודי גיבוי חדשים",
+    "backupHint": "יצירת קודים חדשים מבטלת את הקודים הקודמים.",
+    "generate": "יצירת קודי גיבוי",
+    "generated": "קודי הגיבוי החדשים (כל קוד עובד פעם אחת):"
   }
 }
