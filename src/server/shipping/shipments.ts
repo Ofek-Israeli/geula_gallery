@@ -190,7 +190,7 @@ export async function recordManualTracking(
       },
       { db: deps.db, name: "shipment.manual_tracking" },
     );
-    return withEffects({ status }, { outbox: true });
+    return withEffects({ status }, { outbox: true, revalidate: true });
   } catch (error) {
     if (isUniqueViolation(error)) {
       throw new ConflictError(
