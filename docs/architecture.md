@@ -510,3 +510,84 @@ import `@/server/env` are tested with `vi.mock("@/server/env", …)`.
   file. `.next-e2e` entries are pre-added so `test:e2e` leaves the tree clean (the `.next-*`
   exclude keeps them out of `tsc`). Worktrees using `.next-ws<N>` will see the same edit:
   revert it (`git checkout tsconfig.json`) rather than committing it.
+
+**Test harness (step 14)**
+- `vitest.config.ts`: projects `unit`, `contract`, `integration`. Integration: `globalSetup`
+  (`tests/integration/global-setup.ts`) **drops and re-migrates** the local TEST_DATABASE_URL
+  database once per run (refuses non-localhost; tells you to run `db:setup` if it is missing);
+  `setupFiles` (`tests/integration/setup.ts`) replaces the app env keys with `testEnv()` from
+  `tests/helpers/db.ts` (fixed `test-` secrets, mocks, log email, `.data/test-uploads`,
+  provider credentials scrubbed) before any app module loads, and ends the app pool after each
+  file; `fileParallelism: false`.
+- Frozen helpers (§9.3):
+  - `db.ts`: `testDatabaseUrl()`, `testEnv()`/`applyTestEnv()`, `newClient()`, `truncateAll()`
+    (every `public` table, `RESTART IDENTITY CASCADE`), `seedBaseline()` (the `settings` seed
+    module), `resetDatabase()`, **`cleanDatabaseBeforeEach({ seed? })`** (named without `use…`
+    because biome treats `use*` calls as React hooks), `pgErrorCode()`/`pgConstraint()` (read
+    through Drizzle's `DrizzleQueryError.cause`) and `expectPgError(promise, code, constraint?)`;
+  - `race.ts`: `race(n, fn)` (dedicated `pg.Client`s released by a barrier, each with its own
+    Drizzle instance typed as the app `Db`), `createBarrier`, `partition`, `deadlockCount()`
+    (flushes pg stats first), `watchLockWaits()` (samples `pg_stat_activity` lock waits);
+  - `mailbox.ts`: `createMailbox(url)` reads `email_messages` (`list`/`latest`/`waitFor`), for
+    the integration and the E2E database;
+  - `mock-webhook.ts`: body, `x-mock-signature` signing, forged/unsigned variants, `fetch` POST;
+  - `totp.ts`: RFC 6238 (checked against the RFC vectors), base32, `secretFromTotpUri`;
+  - `factories/core.ts`: `uniqueSuffix`, `uniqueBuyer` (`@example.test`, `+972-3-000-0000`),
+    `testOrderNumber`, and schema-level row builders `insertArtwork`, `insertOrder` (+ items),
+    `insertPaymentAttempt`, `insertSale`. Schema modules are imported lazily, so Playwright specs
+    can import `uniqueBuyer()` without loading `server-only` code.
+- `schema-constraints`: second active sale (per artwork and per order item) and second winning
+  attempt (insert and update) → 23505; reservation pair / AVAILABLE-only / sold_at CHECKs;
+  IL ⇒ ILS; demo ⇒ not LIVE; mock ⇒ MOCK mode; total sum; PAID needs an attempt; amount > 0;
+  deleting an order that holds a reservation → **23001** (`ON DELETE RESTRICT` raises
+  `restrict_violation`, not 23503). `harness.test.ts` checks the helpers themselves.
+- `architecture.test.ts` parses sources with the TypeScript compiler API (imports, dynamic
+  imports, `import()` types, `process.env` reads, call names, string literals), so comments that
+  mention a rule do not trip it. Interpretations: UI components may use `next/link`,
+  `next/navigation` hooks etc.; only `next/headers`, `next/cache`, `next/server`,
+  `next/root-params` and `better-auth/next-js` are Next-layer-only (`src/app`, `src/server/next`,
+  `src/i18n`, `proxy.ts`, `instrumentation.ts`); services/lib/emails/content import no `next*`
+  at all. `admin/login/**` pages are exempt from the `requireAdmin` rule (no session yet), and
+  `adminRoute(...)` / `requireAdminForRoute(...)` count as calling `requireAdmin`. The
+  Tailwind rule scans string literals of `.tsx` files and `src/components/**`. Each rule was
+  mutation-checked with a deliberately bad file.
+- `check:secrets` (`scripts/check-secrets.ts`): working tree (`git ls-files -co
+  --exclude-standard`, so ignored `.env.local` is not read) or `--stdin` history patches (added
+  lines only). Values are masked in output. The Cardcom test ApiName is matched by SHA-256 of
+  each lower-cased alphanumeric token (only the hash is stored). PII rules apply to
+  `tests/fixtures/**`, `scripts/seed/**`, `data/**` and any `fixtures/` folder. Deviation:
+  values containing `unused` are allowed in addition to the spec's exceptions, because an M1
+  unit test committed `e2eAdminPassword: "unused-password"` (now `test-unused-password`) and
+  the history scan must be clean. Bare `NAME=value` assignments are checked only in `.env*`,
+  YAML and shell files; in code only quoted literals count; values that look like env-var names
+  (`BLOB_READ_WRITE_TOKEN` in an error message) are ignored. History scan
+  (`git log -p --format= | npm run check:secrets -- --stdin`): clean.
+- Playwright (`playwright.config.ts`): webServer exactly as §10.4 with `/api/health` (new;
+  `SELECT 1`, `{ ok }` only) as the readiness URL; the server env is pinned and every
+  `CARDCOM_/PAYPAL_/MORNING_/DHL_/RESEND_/BLOB_` key inherited from the shell or `.env.local` is
+  blanked. E2E users come from `SEED_E2E_USERS=true` (`e2e-admin@example.test`,
+  `e2e-2fa@example.test`, password `e2e-admin-password`); constants in `tests/e2e/e2e-env.ts`.
+  `globalSetup` signs in through `/api/auth/sign-in/email` (with an `Origin` header) and saves
+  `tests/e2e/.auth/admin.json`; Playwright starts the web server before global setup.
+  `E2E_REUSE_SERVER=1` reuses a running server. The smoke spec lists the pages later milestones
+  add (works, artwork, about, legal, checkout, order) as `test.fixme` with their owner.
+- `.github/dependabot.yml` (weekly npm, grouped; monthly actions) and the AGENTS.md project
+  rules (§9.6) are added.
+
+**M1 acceptance (step 15, 2026-10-01)**
+- `npm run env:init` (kept the existing `.env.local`) → `npm ci` (clean reinstall; removed ~1,300
+  sync-created duplicates in `node_modules`) → `npm run db:setup` → `npm run db:reset -- --seed
+  none --yes`: ok.
+- `npm run lint`, `npm run typecheck`, `npm run check:secrets` (working tree and history): pass.
+- `npm run build`: pass. `npm test`: 25 files / 196 tests. `npm run test:integration`: 4 files /
+  39 tests (including `schema-constraints`; `architecture` is in `npm test`).
+- `curl -sI localhost:3000/` → 307 `location: /he` (`Accept-Language: en-US` → `/en`); `/he` has
+  `<html lang="he" dir="rtl">`, `/en` `lang="en" dir="ltr"`; logged out `/he/admin` → 307 to
+  `/he/admin/login?next=%2Fhe%2Fadmin`; after `npm run admin:create`, sign-in → 200 and
+  `/he/admin` → 200, a wrong password → 401; with `ADMIN_REQUIRE_2FA=true` a fresh user signing in
+  through the login form lands on `/he/admin/enroll-2fa` and stays there (no loop).
+- `npm run test:e2e` (smoke): 23 passed, 12 `fixme` (pages from later milestones), desktop and
+  mobile projects.
+- npm 11 gates install scripts: `npm install-scripts ls` lists esbuild, @swc/core and
+  @parcel/watcher as not approved. Nothing in build or tests needs them (platform binaries come
+  from optional dependencies); approve them only if a tool fails.
