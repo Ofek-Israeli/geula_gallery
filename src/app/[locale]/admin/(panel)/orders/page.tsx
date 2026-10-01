@@ -59,7 +59,12 @@ export default async function AdminOrdersPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl">{t("list.title")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl">{t("list.title")}</h1>
+        <Link href={paths.admin.newOrder()} className={buttonClasses()}>
+          {t("list.newOrder")}
+        </Link>
+      </div>
       <nav aria-label={t("list.status")} className="flex flex-wrap gap-2">
         <Link
           href={paths.admin.orders({ q: q || undefined })}
@@ -140,6 +145,9 @@ export default async function AdminOrdersPage({
                     </Link>
                     {r.isDemo ? (
                       <Badge className="ms-2">{t("list.demo")}</Badge>
+                    ) : null}
+                    {r.source !== "WEB" ? (
+                      <Badge className="ms-2">{t(`source.${r.source}`)}</Badge>
                     ) : null}
                   </td>
                   <td className="py-2">

@@ -2,19 +2,39 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
+import { ActionForm, FormField } from "@/components/admin/forms";
 import { ManualTrackingForm } from "@/components/admin/ManualTrackingForm";
 import { RecheckButton } from "@/components/admin/RecheckButton";
+import {
+  ORDER_STATUS_TONE,
+  REFUND_STATUS_TONE,
+} from "@/components/admin/tones";
 import { Badge } from "@/components/ui/Badge";
+import { Dialog } from "@/components/ui/Dialog";
 import { Price } from "@/components/ui/Price";
 import { Link } from "@/i18n/navigation";
 import { countryName } from "@/lib/countries";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, jerusalemDateKey } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
+import { toDecimalString } from "@/lib/money";
 import { localePath, paths } from "@/lib/routes";
 import { requireAdmin } from "@/server/next/guards";
-import { getAdminOrder } from "@/server/orders/admin";
+import { getAdminOrder, refundableByAttempt } from "@/server/orders/admin";
 import { isNonFinalAttempt } from "@/server/payments/apply";
-import { manualTrackingAction, recheckPaymentAction } from "./actions";
+import {
+  adminRefundAction,
+  cancelUnpaidOrderAction,
+  confirmRefundFailedAction,
+  manualTaxDocumentAction,
+  manualTrackingAction,
+  markRefundDoneAction,
+  recheckPaymentAction,
+  recheckRefundAction,
+  recordPaymentAction,
+  resolveUnknownRefundAction,
+  retryRefundAction,
+  retryTaxDocumentAction,
+} from "./actions";
 
 export async function generateMetadata({
   params,
@@ -73,6 +93,7 @@ export default async function AdminOrderPage({
     order.locale,
     paths.printDisclosure(order.number, detail.buyerToken),
   );
+  const pickup = order.shippingMethod === "LOCAL_PICKUP";
   const address = [
     order.shipName,
     order.shipLine1,
@@ -84,6 +105,13 @@ export default async function AdminOrderPage({
     .filter(Boolean)
     .join(", ");
   const shipment = detail.shipment;
+  const refundable = refundableByAttempt(detail.attempts, detail.refunds);
+  const tc = await getTranslations({ locale, namespace: "admin-shell.common" });
+  const err = "admin-orders.errors";
+  const unpaid = order.status === "AWAITING_PAYMENT";
+  const inFlight = detail.attempts.some(
+    (a) => a.status === "CAPTURING" || a.status === "PAYMENT_REVIEW",
+  );
   const trackingAllowed =
     order.status === "PAID" &&
     !order.fulfillmentBlockedReason &&
@@ -101,25 +129,24 @@ export default async function AdminOrderPage({
           <bdi data-testid="admin-order-number">{order.number}</bdi>
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            tone={
-              order.status === "PAID" || order.status === "COMPLETED"
-                ? "sold"
-                : "neutral"
-            }
-          >
+          <Badge tone={ORDER_STATUS_TONE[order.status]}>
             <span data-testid="admin-order-status">
               {t(`status.${order.status}`)}
             </span>
           </Badge>
           {order.isDemo ? <Badge tone="hold">{t("detail.demo")}</Badge> : null}
           <span className="text-sm text-ink-muted">
+            {t("detail.source", { source: t(`source.${order.source}`) })}
+          </span>
+          <span className="text-sm text-ink-muted">
             {t("detail.created", { date: when(order.createdAt) })}
           </span>
         </div>
         {order.fulfillmentBlockedReason ? (
           <p className="font-medium text-reddot">
-            {t("detail.blocked", { reason: order.fulfillmentBlockedReason })}
+            {t("detail.blocked", {
+              reason: t(`blockedReason.${order.fulfillmentBlockedReason}`),
+            })}
           </p>
         ) : null}
         <p className="flex flex-wrap gap-4 text-sm">
@@ -181,11 +208,22 @@ export default async function AdminOrderPage({
             <bdi dir="ltr">{order.buyerPhone ?? "—"}</bdi>
           </dd>
           <dt className="text-ink-muted">{t("detail.method")}</dt>
-          <dd>{order.shippingMethod}</dd>
-          <dt className="text-ink-muted">{t("detail.address")}</dt>
-          <dd>
-            <bdi>{address || "—"}</bdi>
+          <dd data-testid="admin-order-method">
+            {order.shippingMethod ? t(`method.${order.shippingMethod}`) : "—"}
           </dd>
+          {pickup ? (
+            <>
+              <dt className="text-ink-muted">{t("detail.country")}</dt>
+              <dd>{countryName(order.shipCountry, locale)}</dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-ink-muted">{t("detail.address")}</dt>
+              <dd>
+                <bdi>{address || "—"}</bdi>
+              </dd>
+            </>
+          )}
           <dt className="text-ink-muted">{t("detail.receiptByEmail")}</dt>
           <dd>
             {order.receiptEmailConsent ? t("detail.yes") : t("detail.no")}
@@ -205,11 +243,18 @@ export default async function AdminOrderPage({
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">
-                    {t("detail.attempt", { seq: a.seq, provider: a.provider })}
+                    {t("detail.attempt", {
+                      seq: a.seq,
+                      provider: t(`provider.${a.provider}`),
+                    })}
                   </span>
-                  <Badge>
-                    <span data-testid="attempt-status">{a.status}</span>
-                  </Badge>
+                  <Badge>{t(`attemptStatus.${a.status}`)}</Badge>
+                  <code
+                    className="text-xs text-ink-muted"
+                    data-testid="attempt-status"
+                  >
+                    {a.status}
+                  </code>
                   <span>
                     <Price
                       amountMinor={a.amountMinor}
@@ -249,38 +294,291 @@ export default async function AdminOrderPage({
                     />
                   </>
                 ) : null}
+                {(refundable[a.id] ?? 0) > 0 ? (
+                  <div
+                    className="flex flex-wrap items-center gap-3"
+                    data-testid="refund-dialog"
+                  >
+                    <span className="text-sm">
+                      {t("detail.refundable", { amount: "" })}
+                      <Price
+                        amountMinor={refundable[a.id] ?? 0}
+                        currency={a.currency}
+                        locale={locale}
+                      />
+                    </span>
+                    <Dialog
+                      title={t("refund.title", { seq: a.seq })}
+                      triggerLabel={t("refund.open")}
+                      triggerSize="sm"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <p className="text-sm">{t("refund.intro")}</p>
+                        <p className="text-sm text-ink-muted">
+                          {t("refund.freshHint")}
+                        </p>
+                        <ActionForm
+                          action={adminRefundAction}
+                          locale={locale}
+                          hidden={{ attemptId: a.id }}
+                          submitLabel={t("refund.submit")}
+                          submitVariant="danger"
+                          successText={t("refund.done")}
+                          errorNamespace={err}
+                          testId="refund-form"
+                        >
+                          <FormField
+                            name="amount"
+                            label={t("refund.amount")}
+                            hint={t("detail.refundable", {
+                              amount: toDecimalString(refundable[a.id] ?? 0),
+                            })}
+                            type="number"
+                            defaultValue={toDecimalString(
+                              refundable[a.id] ?? 0,
+                            )}
+                            required
+                          />
+                          <FormField name="note" label={t("refund.note")} />
+                        </ActionForm>
+                      </div>
+                    </Dialog>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
         )}
       </Section>
 
-      <Section title={t("detail.refunds")}>
+      {unpaid ? (
+        <Section title={t("payment.title")} testId="record-payment">
+          <p className="text-sm text-ink-muted">{t("payment.intro")}</p>
+          <ActionForm
+            action={recordPaymentAction}
+            locale={locale}
+            hidden={{ orderId: order.id, currency: order.currency }}
+            submitLabel={t("payment.submit")}
+            successText={t("payment.done")}
+            errorNamespace={err}
+            confirm={{
+              title: t("payment.title"),
+              message: t("payment.confirm"),
+              confirmLabel: t("payment.submit"),
+            }}
+            testId="record-payment-form"
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                name="method"
+                label={t("payment.method")}
+                type="select"
+                defaultValue="transfer"
+                options={(
+                  [
+                    "transfer",
+                    "cash",
+                    "cheque",
+                    "bit",
+                    "card",
+                    "other",
+                  ] as const
+                ).map((m) => ({ value: m, label: t(`payment.methods.${m}`) }))}
+              />
+              <FormField
+                name="amount"
+                label={t("payment.amount")}
+                hint={t("payment.amountHint", {
+                  total: `${toDecimalString(order.totalMinor)} ${order.currency}`,
+                })}
+                type="number"
+                required
+              />
+              <FormField
+                name="reference"
+                label={t("payment.reference")}
+                dir="ltr"
+              />
+              <FormField
+                name="receivedOn"
+                label={t("payment.receivedOn")}
+                type="date"
+                defaultValue={jerusalemDateKey(new Date())}
+                required
+              />
+            </div>
+          </ActionForm>
+          {!inFlight ? (
+            <ActionForm
+              action={cancelUnpaidOrderAction}
+              locale={locale}
+              hidden={{ orderId: order.id }}
+              submitLabel={t("unpaid.cancel")}
+              submitVariant="ghost"
+              successText={t("unpaid.cancelled")}
+              errorNamespace={err}
+              confirm={{
+                title: t("unpaid.cancel"),
+                message: t("unpaid.cancelConfirm"),
+                confirmLabel: t("unpaid.cancel"),
+              }}
+            />
+          ) : null}
+        </Section>
+      ) : null}
+
+      <Section title={t("detail.refunds")} testId="admin-refunds">
         {detail.refunds.length === 0 ? (
           <p>{t("detail.noRefunds")}</p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-4">
             {detail.refunds.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-2">
-                <Badge
-                  tone={
-                    r.status === "SUCCEEDED" || r.status === "MANUAL_DONE"
-                      ? "neutral"
-                      : "danger"
-                  }
-                >
-                  {r.status}
-                </Badge>
-                <span>{r.reason}</span>
-                <Price
-                  amountMinor={r.amountMinor}
-                  currency={r.currency}
-                  locale={locale}
-                />
-                {r.legalDueAt ? (
-                  <span className="text-sm text-ink-muted">
-                    {t("detail.refundDue", { date: when(r.legalDueAt) })}
-                  </span>
+              <li
+                key={r.id}
+                className="flex flex-col gap-2 border-b border-line pbe-3"
+                data-testid="refund-row"
+                data-status={r.status}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={REFUND_STATUS_TONE[r.status]}>
+                    {t(`refundStatus.${r.status}`)}
+                  </Badge>
+                  <span>{t(`refundReason.${r.reason}`)}</span>
+                  <Price
+                    amountMinor={r.amountMinor}
+                    currency={r.currency}
+                    locale={locale}
+                  />
+                  {r.legalDueAt &&
+                  r.status !== "SUCCEEDED" &&
+                  r.status !== "MANUAL_DONE" ? (
+                    <span className="text-sm text-ink-muted">
+                      {t("detail.refundDue", { date: when(r.legalDueAt) })}
+                    </span>
+                  ) : null}
+                </div>
+                {r.manualReference ? (
+                  <p className="text-sm text-ink-muted">
+                    {t("detail.manualReference", { reference: "" })}
+                    <bdi dir="ltr">{r.manualReference}</bdi>
+                  </p>
+                ) : null}
+                {r.error ? (
+                  <p className="text-sm text-reddot">
+                    <bdi dir="ltr">{r.error}</bdi>
+                  </p>
+                ) : null}
+                {r.failureConfirmedAt ? (
+                  <p className="text-sm text-ink-muted">
+                    {t("detail.failureConfirmed")}
+                  </p>
+                ) : null}
+                {r.status === "MANUAL_REQUIRED" ? (
+                  <ActionForm
+                    action={markRefundDoneAction}
+                    locale={locale}
+                    hidden={{ refundId: r.id }}
+                    submitLabel={t("refund.markDoneSubmit")}
+                    submitSize="sm"
+                    successText={t("refund.markedDone")}
+                    errorNamespace={err}
+                    testId="refund-done-form"
+                  >
+                    <FormField
+                      name="reference"
+                      label={t("refund.reference")}
+                      hint={t("refund.markDoneHint")}
+                      dir="ltr"
+                      required
+                    />
+                  </ActionForm>
+                ) : null}
+                {r.status === "FAILED" && !r.failureConfirmedAt ? (
+                  <ActionForm
+                    action={confirmRefundFailedAction}
+                    locale={locale}
+                    hidden={{ refundId: r.id }}
+                    submitLabel={t("refund.confirmFailed")}
+                    submitVariant="secondary"
+                    submitSize="sm"
+                    successText={t("refund.confirmedFailed")}
+                    errorNamespace={err}
+                    confirm={{
+                      title: t("refund.confirmFailed"),
+                      message: t("refund.confirmFailedConfirm"),
+                      confirmLabel: tc("save"),
+                    }}
+                  />
+                ) : null}
+                {r.status === "FAILED" && r.failureConfirmedAt ? (
+                  <ActionForm
+                    action={retryRefundAction}
+                    locale={locale}
+                    hidden={{ refundId: r.id }}
+                    submitLabel={t("refund.retry")}
+                    submitVariant="secondary"
+                    submitSize="sm"
+                    successText={t("refund.retried")}
+                    errorNamespace={err}
+                  />
+                ) : null}
+                {r.status === "UNKNOWN" || r.status === "PROVIDER_PENDING" ? (
+                  <div className="flex flex-col gap-2">
+                    {r.status === "UNKNOWN" ? (
+                      <p className="text-sm">{t("refund.unknownHint")}</p>
+                    ) : null}
+                    <ActionForm
+                      action={recheckRefundAction}
+                      locale={locale}
+                      hidden={{ refundId: r.id }}
+                      submitLabel={t("refund.recheck")}
+                      submitVariant="secondary"
+                      submitSize="sm"
+                      errorNamespace={err}
+                      successText={t("refund.resolved")}
+                    />
+                  </div>
+                ) : null}
+                {r.status === "UNKNOWN" ? (
+                  <div className="flex flex-col gap-2">
+                    <ActionForm
+                      action={resolveUnknownRefundAction}
+                      locale={locale}
+                      hidden={{ refundId: r.id, outcome: "refunded" }}
+                      submitLabel={t("refund.resolveRefunded")}
+                      submitVariant="secondary"
+                      submitSize="sm"
+                      successText={t("refund.resolved")}
+                      errorNamespace={err}
+                      confirm={{
+                        title: t("refund.resolveRefunded"),
+                        message: t("refund.resolveConfirm"),
+                        confirmLabel: tc("save"),
+                      }}
+                    >
+                      <FormField
+                        name="reference"
+                        label={t("refund.reference")}
+                        dir="ltr"
+                        required
+                      />
+                    </ActionForm>
+                    <ActionForm
+                      action={resolveUnknownRefundAction}
+                      locale={locale}
+                      hidden={{ refundId: r.id, outcome: "not_refunded" }}
+                      submitLabel={t("refund.resolveNotRefunded")}
+                      submitVariant="ghost"
+                      submitSize="sm"
+                      successText={t("refund.resolved")}
+                      errorNamespace={err}
+                      confirm={{
+                        title: t("refund.resolveNotRefunded"),
+                        message: t("refund.resolveConfirm"),
+                        confirmLabel: tc("save"),
+                      }}
+                    />
+                  </div>
                 ) : null}
               </li>
             ))}
@@ -295,8 +593,10 @@ export default async function AdminOrderPage({
           <ul className="flex flex-col gap-2">
             {detail.taxDocuments.map((d) => (
               <li key={d.id} className="flex flex-wrap items-center gap-2">
-                <Badge>{d.status}</Badge>
-                <span>{d.kind}</span>
+                <Badge tone={d.status === "ISSUED" ? "neutral" : "danger"}>
+                  {t(`docStatus.${d.status}`)}
+                </Badge>
+                <span>{t(`docKind.${d.kind}`)}</span>
                 <bdi dir="ltr">{d.docNumber ?? d.marker}</bdi>
                 {d.status === "ISSUED" && d.docNumber ? (
                   <a
@@ -314,7 +614,47 @@ export default async function AdminOrderPage({
                   </a>
                 ) : null}
                 {d.error ? (
-                  <span className="text-sm text-reddot">{d.error}</span>
+                  <span className="text-sm text-reddot">
+                    <bdi dir="ltr">{d.error}</bdi>
+                  </span>
+                ) : null}
+                {d.status === "FAILED" ? (
+                  <ActionForm
+                    action={retryTaxDocumentAction}
+                    locale={locale}
+                    hidden={{ taxDocumentId: d.id }}
+                    submitLabel={t("documents.retry")}
+                    submitVariant="secondary"
+                    submitSize="sm"
+                    successText={t("documents.retried")}
+                    errorNamespace={err}
+                    confirm={{
+                      title: t("documents.retry"),
+                      message: t("documents.retryConfirm"),
+                      confirmLabel: t("documents.retry"),
+                    }}
+                    inline
+                  />
+                ) : null}
+                {d.status === "NEEDS_MANUAL" ? (
+                  <ActionForm
+                    action={manualTaxDocumentAction}
+                    locale={locale}
+                    hidden={{ taxDocumentId: d.id }}
+                    submitLabel={t("documents.manualSubmit")}
+                    submitSize="sm"
+                    successText={t("documents.recorded")}
+                    errorNamespace={err}
+                    inline
+                  >
+                    <FormField
+                      name="docNumber"
+                      label={t("documents.docNumber")}
+                      hint={t("documents.manual")}
+                      dir="ltr"
+                      required
+                    />
+                  </ActionForm>
                 ) : null}
               </li>
             ))}
@@ -326,10 +666,14 @@ export default async function AdminOrderPage({
         {shipment ? (
           <>
             <p>
-              <Badge>
-                <span data-testid="shipment-status">{shipment.status}</span>
-              </Badge>{" "}
-              {shipment.method}
+              <Badge>{t(`shipmentStatus.${shipment.status}`)}</Badge>{" "}
+              <code
+                className="text-xs text-ink-muted"
+                data-testid="shipment-status"
+              >
+                {shipment.status}
+              </code>{" "}
+              {t(`method.${shipment.method}`)}
             </p>
             {shipment.trackingNumber ? (
               <p>
@@ -384,7 +728,8 @@ export default async function AdminOrderPage({
             {detail.emails.map((m) => (
               <li key={m.id}>
                 <bdi dir="ltr">{m.template}</bdi> · <bdi>{m.toEmail}</bdi> ·{" "}
-                {m.status} · {when(m.sentAt ?? m.createdAt)}
+                {t(`emailStatus.${m.status}` as "emailStatus.SENT")} ·{" "}
+                {when(m.sentAt ?? m.createdAt)}
               </li>
             ))}
           </ul>
