@@ -1,30 +1,51 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { WorksFilters } from "@/components/artwork/WorksFilters";
 import { WorksGrid } from "@/components/artwork/WorksGrid";
+import {
+  hasFilters,
+  parseWorksParams,
+  priceBounds,
+  worksHref,
+  worksQuery,
+} from "@/components/artwork/works-params";
+import { JsonLd } from "@/components/site/JsonLd";
+import { pageMetadata } from "@/components/site/metadata";
+import { breadcrumbJsonLd } from "@/components/site/structured-data";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
-import { paths } from "@/lib/routes";
-import { listArtworks, listRecentlySold } from "@/server/catalog/queries";
+import { localePath, paths } from "@/lib/routes";
+import {
+  listArtworks,
+  listRecentlySold,
+  listSeries,
+} from "@/server/catalog/queries";
+import { env } from "@/server/env";
 
 /**
- * `/works` (spec §6.2; minimal M2 version, WS1 adds the filters and sorts): available works first
- * (then on hold and not for sale), 24 per page, a "Recently sold" strip (≤ 4), and the sold archive
- * at `?availability=sold`.
+ * `/works` (spec §6.2): URL-synced filters (availability, series, size, orientation, price band)
+ * and sorts (featured, newest, price, size), 24 per page. The default view lists available works
+ * first, then on hold and not for sale, with a "Recently sold" strip (≤ 4);
+ * `?availability=sold` is the archive.
  */
-function first(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
-}
-
 export async function generateMetadata({
   params,
   searchParams,
 }: PageProps<"/[locale]/works">): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
-  const sold = first((await searchParams).availability) === "sold";
+  const p = parseWorksParams(await searchParams);
+  const sold = p.availability === "sold";
   const t = await getTranslations({ locale, namespace: "catalog.works" });
-  return { title: sold ? t("archiveTitle") : t("title") };
+  // Filtered and sorted variants canonicalize to the plain list (or the archive).
+  const path = sold ? paths.works({ availability: "sold" }) : paths.works();
+  return pageMetadata({
+    locale,
+    path,
+    title: sold ? t("archiveTitle") : t("title"),
+    description: sold ? t("archiveIntro") : t("intro"),
+  });
 }
 
 export default async function WorksPage({
@@ -33,47 +54,99 @@ export default async function WorksPage({
 }: PageProps<"/[locale]/works">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const query = await searchParams;
-  const sold = first(query.availability) === "sold";
-  const page = Math.max(1, Number.parseInt(first(query.page) ?? "1", 10) || 1);
-  const t = await getTranslations({ locale, namespace: "catalog.works" });
-  const [works, recentlySold] = await Promise.all([
-    listArtworks(locale, { view: sold ? "sold" : "current", page }),
-    sold ? Promise.resolve([]) : listRecentlySold(locale),
+  const p = parseWorksParams(await searchParams);
+  const sold = p.availability === "sold";
+  const view = sold
+    ? "sold"
+    : p.availability === "available"
+      ? "available"
+      : "current";
+  const filtered = hasFilters(p);
+  const [t, tb, works, series, recentlySold] = await Promise.all([
+    getTranslations({ locale, namespace: "catalog.works" }),
+    getTranslations({ locale, namespace: "artwork.breadcrumbs" }),
+    listArtworks(locale, {
+      view,
+      page: p.page,
+      seriesSlug: p.series,
+      sizeBucket: p.size,
+      orientation: p.orientation,
+      ...priceBounds(p.price),
+      sort: p.sort,
+    }),
+    listSeries(locale),
+    sold || filtered || p.page > 1
+      ? Promise.resolve([])
+      : listRecentlySold(locale),
   ]);
   const pages = Math.max(1, Math.ceil(works.total / works.pageSize));
-  const pageHref = (p: number) =>
-    paths.works({
-      availability: sold ? "sold" : undefined,
-      page: p > 1 ? p : undefined,
-    });
+  const title = sold ? t("archiveTitle") : t("title");
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-8">
+      <JsonLd
+        data={breadcrumbJsonLd(env.APP_URL, [
+          { name: tb("home"), path: localePath(locale, paths.home()) },
+          { name: tb("works"), path: localePath(locale, paths.works()) },
+        ])}
+      />
       <header className="flex flex-col gap-3">
-        <h1 className="text-4xl">{sold ? t("archiveTitle") : t("title")}</h1>
+        <h1 className="text-4xl">{title}</h1>
         <p className="max-w-prose text-ink-muted">
           {sold ? t("archiveIntro") : t("intro")}
         </p>
-        <p className="text-sm text-ink-muted">
-          {t("count", { count: works.total })}
-        </p>
       </header>
 
+      <WorksFilters
+        key={JSON.stringify(worksQuery(p))}
+        action={localePath(locale, paths.works())}
+        params={p}
+        series={series.map((s) => ({ slug: s.slug, name: s.name }))}
+      />
+
+      <p className="text-sm text-ink-muted" data-testid="works-count">
+        {filtered
+          ? t("countFiltered", { count: works.total })
+          : t("count", { count: works.total })}
+      </p>
+
       {works.items.length > 0 ? (
-        <WorksGrid works={works.items} priorityFirst />
+        <WorksGrid works={works.items} priorityFirst label={title} />
       ) : (
-        <p>{t("empty")}</p>
+        <div className="flex flex-col gap-2">
+          <p>{filtered ? t("emptyFiltered") : t("empty")}</p>
+          {filtered ? (
+            <p>
+              <Link href={paths.works(sold ? { availability: "sold" } : {})}>
+                {t("clearFilters")}
+              </Link>
+            </p>
+          ) : null}
+        </div>
       )}
 
       {pages > 1 ? (
         <nav aria-label={t("pagination")} className="flex items-center gap-4">
-          {page > 1 ? (
-            <Link href={pageHref(page - 1)}>{t("previous")}</Link>
+          {p.page > 1 ? (
+            <Link
+              href={worksHref(p, { page: p.page - 1 })}
+              rel="prev"
+              className="inline-flex min-h-11 items-center"
+            >
+              {t("previous")}
+            </Link>
           ) : null}
-          <span className="text-ink-muted">{t("page", { page, pages })}</span>
-          {page < pages ? (
-            <Link href={pageHref(page + 1)}>{t("next")}</Link>
+          <span className="text-ink-muted">
+            {t("page", { page: p.page, pages })}
+          </span>
+          {p.page < pages ? (
+            <Link
+              href={worksHref(p, { page: p.page + 1 })}
+              rel="next"
+              className="inline-flex min-h-11 items-center"
+            >
+              {t("next")}
+            </Link>
           ) : null}
         </nav>
       ) : null}

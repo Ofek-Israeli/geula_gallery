@@ -11,7 +11,10 @@
     "aboutLink": "More about the artist",
     "commissionTitle": "Commissions",
     "commissionBody": "Looking for a work made for you? Get in touch about the idea, the size and the space.",
-    "commissionCta": "Ask about a commission"
+    "commissionCta": "Ask about a commission",
+    "metaDescription": "Original paintings by an Israeli artist, sold directly with delivery in Israel and abroad.",
+    "seriesTitle": "Series",
+    "seriesCount": "{count, plural, one {# work} other {# works}}"
   },
   "works": {
     "title": "Works",
@@ -26,7 +29,10 @@
     "pagination": "Pagination",
     "previous": "Previous",
     "next": "Next",
-    "page": "Page {page} of {pages}"
+    "page": "Page {page} of {pages}",
+    "countFiltered": "{count, plural, =0 {No matching works} one {# matching work} other {# matching works}}",
+    "emptyFiltered": "No works match these filters.",
+    "clearFilters": "Clear the filters"
   },
   "credits": {
     "title": "Credits",
@@ -37,5 +43,76 @@
     "fontsTitle": "Fonts",
     "fonts": "Frank Ruhl Libre and Assistant are licensed under the SIL Open Font License 1.1.",
     "viewListing": "View the demo listing"
+  },
+  "filters": {
+    "label": "Filter and sort",
+    "availability": "Availability",
+    "availabilityCurrent": "Not sold",
+    "availabilityAvailable": "Available only",
+    "availabilitySold": "Sold (archive)",
+    "series": "Series",
+    "size": "Size",
+    "orientation": "Orientation",
+    "price": "Price",
+    "sort": "Sort by",
+    "any": "Any",
+    "apply": "Show results",
+    "clear": "Reset",
+    "sizes": {
+      "S": "Small (under 40 cm)",
+      "M": "Medium (40–80 cm)",
+      "L": "Large (80–120 cm)",
+      "XL": "Extra large (120 cm and over)"
+    },
+    "orientations": {
+      "PORTRAIT": "Portrait",
+      "LANDSCAPE": "Landscape",
+      "SQUARE": "Square",
+      "PANORAMIC": "Panoramic"
+    },
+    "prices": {
+      "under-5000": "Under ₪5,000",
+      "5000-10000": "₪5,000–₪10,000",
+      "10000-20000": "₪10,000–₪20,000",
+      "over-20000": "₪20,000 and over"
+    },
+    "sorts": {
+      "featured": "Featured",
+      "newest": "Newest",
+      "price-asc": "Price: low to high",
+      "price-desc": "Price: high to low",
+      "size-asc": "Size: small to large",
+      "size-desc": "Size: large to small"
+    }
+  },
+  "about": {
+    "title": "About the artist",
+    "metaDescription": "About the artist, the studio and how the work is made.",
+    "jobTitle": "Painter",
+    "intro": "An Israeli painter working in oil and watercolour, mostly landscapes, shorelines and still life.",
+    "body": "Every work on this site is a single original, sent with a certificate of authenticity. Works are packed by hand in the studio and shipped with tracking. Studio pickup is available by appointment.",
+    "studioTitle": "The studio",
+    "studioBody": "The studio is in Israel. Visits and pickups are by appointment only.",
+    "demoNote": "This site is currently a demo: the biography and images are placeholders until the artist adds her own.",
+    "worksLink": "See the works",
+    "contactLink": "Get in touch"
+  },
+  "contact": {
+    "title": "Contact",
+    "metaDescription": "Questions about works, commissions, shipping and studio visits.",
+    "intro": "Write about any work, about delivery or about a commission. Replies usually come within two business days.",
+    "generalTitle": "General questions",
+    "generalBody": "Questions about a specific work, international delivery or a studio visit.",
+    "workQuestion": "To ask about a specific work, use “Ask about this work” on its page.",
+    "commissionTitle": "Commissions",
+    "commissionBody": "Tell us about the idea, the size and the space where the work will hang. We will reply with a proposal and a timeline.",
+    "email": "Email",
+    "phone": "Phone",
+    "whatsapp": "WhatsApp",
+    "subjectGeneral": "Question from the website",
+    "subjectCommission": "Commission enquiry",
+    "writeEmail": "Write an email",
+    "cancelTitle": "Cancelling a purchase",
+    "cancelBody": "To cancel a purchase, use the cancellation form, or phone or email us."
   }
 }
