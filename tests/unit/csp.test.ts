@@ -94,8 +94,9 @@ describe("csp", () => {
         new Map((r.headers as Header[]).map((h) => [h.key, h.value])),
       ]),
     );
+    // `strict-origin` (not `no-referrer`): Server Action POSTs need a real Origin header.
     expect(bySource.get("/:locale/orders/:path*")?.get("Referrer-Policy")).toBe(
-      "no-referrer",
+      "strict-origin",
     );
     expect(bySource.get("/:locale/print/:path*")?.get("Referrer-Policy")).toBe(
       "no-referrer",

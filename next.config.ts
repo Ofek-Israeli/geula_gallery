@@ -80,10 +80,14 @@ function buildConfig(phase: string): NextConfig {
     async headers() {
       return [
         { source: "/:path*", headers: securityHeaders },
-        // Token pages (?k=) must not leak their URL via Referer.
+        // Token pages (?k=) must not leak their URL via Referer. The order page uses
+        // `strict-origin`, not `no-referrer`: it has Server Action forms, and under `no-referrer`
+        // browsers send `Origin: null` on POST (always for a native form submit, i.e. before
+        // hydration or without JS), which Next's CSRF check rejects with a 500. `strict-origin`
+        // still sends only the origin (never the path or `?k=`) as Referer.
         {
           source: "/:locale/orders/:path*",
-          headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+          headers: [{ key: "Referrer-Policy", value: "strict-origin" }],
         },
         {
           source: "/:locale/print/:path*",

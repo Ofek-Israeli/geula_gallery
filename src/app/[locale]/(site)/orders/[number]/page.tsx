@@ -18,14 +18,15 @@ import { checkLimit } from "@/server/security/rate-limit";
 import { payOrderAction, releaseHoldAction } from "./actions";
 
 /**
- * `/[locale]/orders/[number]?k=<token>` (spec §5.1 step 4; noindex, `no-referrer`). AWAITING_PAYMENT:
+ * `/[locale]/orders/[number]?k=<token>` (spec §5.1 step 4; noindex; `strict-origin` rather than
+ * `no-referrer`, see next.config.ts: `no-referrer` makes form POSTs carry `Origin: null`). AWAITING_PAYMENT:
  * countdown, attempt status (5 s meta refresh while a payment is settling, up to 2 min), "Pay" and
  * "Release my hold", both refused while a payment is being confirmed. Other states: review, paid
  * (with a prefilled cancellation link), expired, cancelled. A bad token is rate limited and 404s.
  */
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
-  referrer: "no-referrer",
+  referrer: "strict-origin",
 };
 
 function one(v: string | string[] | undefined): string | undefined {
