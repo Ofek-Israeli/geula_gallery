@@ -1,10 +1,15 @@
 /**
  * Consumer-law deadlines (spec §5.7 step 6, §3.6 COMPLETED rule). Pure functions.
  *
- * FROZEN SIGNATURES (spec §9.3). The bodies are owned by WS6 and intentionally throw until then;
- * every other `src/lib` module is fully implemented in M1. Calendar arithmetic must use the
- * Asia/Jerusalem helpers in `./format` (`addJerusalemDays`, `addJerusalemMonths`), which are
- * DST-safe.
+ * FROZEN SIGNATURES (spec §9.3); bodies by WS6. Calendar arithmetic uses the Asia/Jerusalem helpers
+ * in `./format` (`addJerusalemDays`, `addJerusalemMonths`), which are DST-safe.
+ *
+ * Readings where the spec is open (buyer-favourable, flagged for the lawyer in
+ * docs/painter-onboarding.md):
+ * - the cancellation window ends at the **end** (23:59:59 Jerusalem) of the last calendar day;
+ * - the refund deadline keeps the notice's wall-clock time, 14 Jerusalem calendar days later;
+ * - the fee is rounded to the agorot/cent (half up) and the ₪100 cap is converted to USD with the
+ *   locked rate and rounded **down** to the cent.
  *
  * Rules to implement (spec §5.7):
  * - `windowStart = max(deliveredAt, disclosureSentAt ?? deliveredAt)`; before delivery there is
@@ -14,7 +19,12 @@
  * - Fee: IL regime and CHANGE_OF_MIND → `min(round(5 % × total paid), ₪100)`, converting ₪100 to
  *   USD with the order's locked FX for USD orders; otherwise 0.
  */
-import type { Currency } from "./money";
+import {
+  addJerusalemDays,
+  addJerusalemMonths,
+  endOfJerusalemDay,
+} from "./format";
+import { applyBasisPoints, type Currency } from "./money";
 
 export type EligibleGroup =
   | "NONE"
@@ -51,15 +61,58 @@ export interface CancellationWindow {
   beforeDelivery: boolean;
 }
 
+/** 14 days, or 4 months for an eligible buyer after a conversation (spec §5.7 step 6). */
+export function windowLength(
+  eligibleGroup: EligibleGroup,
+  conversationTookPlace: boolean,
+): CancellationWindow["length"] {
+  return eligibleGroup !== "NONE" && conversationTookPlace
+    ? "4_MONTHS"
+    : "14_DAYS";
+}
+
 export function cancellationWindow(
-  _input: CancellationWindowInput,
+  input: CancellationWindowInput,
 ): CancellationWindow {
-  throw new Error("cancellationWindow is not implemented yet (owner: WS6)");
+  const length = windowLength(input.eligibleGroup, input.conversationTookPlace);
+  if (!input.deliveredAt) {
+    return { start: null, end: null, length, beforeDelivery: true };
+  }
+  const disclosure = input.disclosureSentAt ?? input.deliveredAt;
+  const start =
+    disclosure.getTime() > input.deliveredAt.getTime()
+      ? disclosure
+      : input.deliveredAt;
+  const lastDay =
+    length === "4_MONTHS"
+      ? addJerusalemMonths(start, 4)
+      : addJerusalemDays(start, 14);
+  return {
+    start,
+    end: endOfJerusalemDay(lastDay),
+    length,
+    beforeDelivery: false,
+  };
+}
+
+/**
+ * Whether a notice received at `receivedAt` is within the window. Before delivery it always is
+ * (spec §5.7: a cancellation before delivery is valid).
+ */
+export function isWithinWindow(
+  window: CancellationWindow,
+  receivedAt: Date,
+): boolean {
+  return (
+    window.beforeDelivery ||
+    window.end === null ||
+    receivedAt.getTime() <= window.end.getTime()
+  );
 }
 
 /** `receivedAt` + 14 Jerusalem calendar days (the legal refund deadline). */
-export function refundDueAt(_receivedAt: Date): Date {
-  throw new Error("refundDueAt is not implemented yet (owner: WS6)");
+export function refundDueAt(receivedAt: Date): Date {
+  return addJerusalemDays(receivedAt, 14);
 }
 
 export interface ChangeOfMindFeeInput {
@@ -75,9 +128,31 @@ export interface ChangeOfMindFeeInput {
 }
 
 /** The suggested fee (the admin may only lower it), in the order's currency. */
-export function changeOfMindFee(_input: ChangeOfMindFeeInput): {
+export function changeOfMindFee(input: ChangeOfMindFeeInput): {
   feeMinor: number;
   currency: Currency;
 } {
-  throw new Error("changeOfMindFee is not implemented yet (owner: WS6)");
+  const zero = { feeMinor: 0, currency: input.currency };
+  if (
+    input.policy === "NONE" ||
+    input.regime !== "IL" ||
+    input.reason !== "CHANGE_OF_MIND" ||
+    input.totalPaidMinor <= 0
+  ) {
+    return zero;
+  }
+  const pct = applyBasisPoints(input.totalPaidMinor, CHANGE_OF_MIND_FEE_BP);
+  let cap = CHANGE_OF_MIND_FEE_CAP_ILS_MINOR;
+  if (input.currency === "USD") {
+    const rate = input.ilsPerUsd;
+    if (!rate || !Number.isFinite(rate) || rate <= 0) {
+      throw new RangeError("ilsPerUsd is required for a USD fee");
+    }
+    // ₪100 in USD cents, rounded down (the buyer never pays more than ₪100).
+    cap = Math.floor(
+      (CHANGE_OF_MIND_FEE_CAP_ILS_MINOR * 1_000_000) /
+        Math.round(rate * 1_000_000),
+    );
+  }
+  return { feeMinor: Math.min(pct, cap), currency: input.currency };
 }
