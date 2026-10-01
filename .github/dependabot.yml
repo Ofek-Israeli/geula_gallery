@@ -1,0 +1,33 @@
+# Dependency update PRs (spec §2.3). Versions are pinned exactly (.npmrc save-exact=true);
+# after M1, package.json and the lockfile change only through a dependency-change request
+# (spec §9.1 step 3), so these PRs are reviewed and merged by the integrator.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Jerusalem
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "@types/react", "@types/react-dom"]
+      intl:
+        patterns: ["next-intl", "use-intl"]
+      auth:
+        patterns: ["better-auth", "@better-auth/*", "auth"]
+      drizzle:
+        patterns: ["drizzle-orm", "drizzle-kit"]
+      test-tooling:
+        patterns: ["vitest", "vite", "@vitejs/*", "@playwright/test", "@axe-core/*"]
+      lint-types:
+        patterns: ["@biomejs/biome", "typescript", "@types/*", "tsx"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
