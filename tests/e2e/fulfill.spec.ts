@@ -25,6 +25,7 @@ import {
  * sell a shared demo work.
  */
 const he = messages("he", "shipping");
+const heOrders = messages("he", "admin-orders");
 
 test.use({ storageState: ADMIN_STORAGE_STATE });
 
@@ -174,7 +175,20 @@ test("pickup: collection is blocked until the printed disclosure is confirmed", 
     method: "LOCAL_PICKUP",
     disclosureSent: false,
   });
-  await page.goto(`/he/admin/orders/${o.orderId}/fulfill`);
+  // From the order detail: translated method and status labels, no address for a pickup, and
+  // the link to the fulfillment screen.
+  await page.goto(`/he/admin/orders/${o.orderId}`);
+  await expect(page.getByTestId("admin-order-method")).toHaveText(
+    heOrders.method.LOCAL_PICKUP,
+  );
+  await expect(page.getByTestId("admin-shipment")).toContainText(
+    heOrders.shipmentStatus.AWAITING_FULFILLMENT,
+  );
+  await expect(page.getByText(heOrders.detail.address)).toHaveCount(0);
+  await page.getByTestId("open-fulfillment").click();
+  await expect(page).toHaveURL(
+    new RegExp(`/he/admin/orders/${o.orderId}/fulfill$`),
+  );
   await status(page, "AWAITING_FULFILLMENT");
   await page
     .getByTestId("ready-pickup-form")
