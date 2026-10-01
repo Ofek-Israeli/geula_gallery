@@ -1,5 +1,4 @@
 import "server-only";
-import { notConfigured } from "@/server/payments/providers/stub";
 import type { GatewayDocumentSpec } from "@/server/payments/types";
 import {
   type IssueReceiptInput,
@@ -10,14 +9,34 @@ import {
 
 /**
  * Cardcom gateway mode (spec §4.3 `gateway`): Cardcom issues the document with the charge, from the
- * `Document` block of `LowProfile/Create`. The receipt job copies `gatewayDocument` from the
- * verified payment; PayPal, offline payments and credit notes become NEEDS_MANUAL. Env refuses
- * gateway with `CARDCOM_MODE=test`. M1 typed stub; WS5 implements `buildGatewayDocument`.
+ * `Document` block of `LowProfile/Create` (`cardcom-map.ts#buildCardcomDocument`). The receipt job
+ * copies `gatewayDocument` from the verified payment; PayPal, offline payments and credit notes
+ * become NEEDS_MANUAL. Env refuses gateway with `CARDCOM_MODE=test`.
+ *
+ * `buildGatewayDocument`: `Receipt` for an osek patur, `TaxInvoiceAndReceipt` otherwise; VAT-free
+ * for patur or zero-rated exports; the e-mail only with receipt-by-email consent; the order number
+ * as `ExternalId`.
  */
 export function buildGatewayDocument(
-  _input: IssueReceiptInput & { email?: string; sendByEmail: boolean },
+  input: IssueReceiptInput & { email?: string; sendByEmail: boolean },
 ): GatewayDocumentSpec {
-  return notConfigured("gateway", "buildGatewayDocument");
+  const patur = input.vatMode === "OSEK_PATUR";
+  const sendByEmail = input.sendByEmail && !!input.email;
+  return {
+    documentType: patur ? "Receipt" : "TaxInvoiceAndReceipt",
+    name: input.client.companyName ?? input.client.name,
+    ...(sendByEmail && input.email ? { email: input.email } : {}),
+    sendByEmail,
+    vatFree: patur || input.zeroRatedExport,
+    ...(input.client.taxId ? { taxId: input.client.taxId } : {}),
+    products: input.lines.map((l) => ({
+      description: l.description,
+      unitPriceMinor: l.unitPriceMinor,
+      quantity: 1 as const,
+    })),
+    externalId: input.orderNumber,
+    language: input.language,
+  };
 }
 
 export function createGatewayTaxDocumentProvider(
