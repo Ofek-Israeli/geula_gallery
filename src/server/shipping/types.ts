@@ -232,4 +232,8 @@ export interface CarrierAdapter {
 export interface CarrierFactoryInput {
   env: Env;
   fetch?: FetchLike;
+  /** Overrides the API base (the opt-in DHL check uses the public `api-mock` server). */
+  baseUrl?: string;
+  /** Clock for the mock carrier's timeline (tests). */
+  now?: () => Date;
 }

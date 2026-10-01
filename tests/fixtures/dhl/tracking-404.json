@@ -1,0 +1,6 @@
+{
+  "instance": "/mydhlapi/shipments/1234567890/tracking",
+  "detail": "No shipments found",
+  "title": "Not Found",
+  "status": "404"
+}
