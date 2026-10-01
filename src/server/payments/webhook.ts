@@ -323,7 +323,10 @@ export async function handlePaymentReturn(
       timeout,
     ]);
     if (finalized) {
-      outcome = finalized.result.outcome;
+      outcome = buyerOutcome(
+        finalized.result.outcome,
+        finalized.result.attemptStatus,
+      );
       effects = mergeEffects(effects, finalized.effects);
     }
   } catch (error) {
@@ -335,4 +338,29 @@ export async function handlePaymentReturn(
     location: orderUrlFor(row, locale, { payment: outcome }, e),
     effects,
   };
+}
+
+/**
+ * The order page message for a return: a payment the webhook already finalized is reported by its
+ * final state ("paid"), not as "already processed".
+ */
+export function buyerOutcome(
+  outcome: FinalizeOutcome,
+  attemptStatus: string,
+): FinalizeOutcome {
+  if (outcome !== "already_final") return outcome;
+  switch (attemptStatus) {
+    case "SUCCEEDED":
+      return "paid";
+    case "NEEDS_REFUND":
+      return "needs_refund";
+    case "REFUNDED":
+      return "refunded";
+    case "FAILED":
+      return "failed";
+    case "CANCELED":
+      return "canceled";
+    default:
+      return outcome;
+  }
 }

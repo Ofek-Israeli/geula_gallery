@@ -197,7 +197,7 @@ describe("finalizeAttempt", () => {
       ip: "203.0.113.5",
     });
     expect(back.status).toBe(303);
-    expect(back.location).toContain("payment=already_final");
+    expect(back.location).toContain("payment=paid");
     expect(back.location).toContain("/en/orders/");
     expect(await db.select().from(sales)).toHaveLength(1);
 
