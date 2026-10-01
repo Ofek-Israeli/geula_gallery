@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { pageMetadata } from "@/components/site/metadata";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
@@ -16,7 +17,12 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = await getTranslations({ locale, namespace: "catalog.credits" });
-  return { title: t("title") };
+  return pageMetadata({
+    locale,
+    path: paths.credits(),
+    title: t("title"),
+    description: t("intro"),
+  });
 }
 
 export default async function CreditsPage({
@@ -41,8 +47,12 @@ export default async function CreditsPage({
           <ul className="flex flex-col gap-3">
             {credits.map((c) => (
               <li key={c.slug} className="flex flex-col">
-                <span lang="en" dir="ltr" className="text-start">
-                  {c.caption}
+                {/* English AIC caption: isolated, so it neither reorders nor wraps oddly in
+                    Hebrew text, and announced in English (WCAG 3.1.2). */}
+                <span>
+                  <bdi lang="en" dir="ltr">
+                    {c.caption}
+                  </bdi>
                 </span>
                 <span className="text-sm">
                   <Link href={paths.artwork(c.slug)}>
@@ -54,8 +64,8 @@ export default async function CreditsPage({
           </ul>
           <p className="text-sm text-ink-muted">
             {t("source")} (
-            <a href="https://api.artic.edu/docs/" dir="ltr">
-              api.artic.edu
+            <a href="https://api.artic.edu/docs/">
+              <bdi dir="ltr">api.artic.edu</bdi>
             </a>
             )
           </p>

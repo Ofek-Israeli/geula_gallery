@@ -1,26 +1,62 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ArtworkStatus } from "@/components/artwork/ArtworkStatus";
 import { WorksGrid } from "@/components/artwork/WorksGrid";
+import { JsonLd } from "@/components/site/JsonLd";
+import { pageMetadata } from "@/components/site/metadata";
+import { organizationJsonLd } from "@/components/site/structured-data";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
-import { getFeaturedArtwork, listArtworks } from "@/server/catalog/queries";
+import {
+  getArtworkOgImage,
+  getFeaturedArtwork,
+  getPublicProfile,
+  listArtworks,
+  listSeries,
+} from "@/server/catalog/queries";
+import { env } from "@/server/env";
 
 /**
- * Home (spec §6.2; minimal M2 version, WS1 adds series, Organization JSON-LD and polish): a featured
- * available work as the LCP image (`fetchPriority="high"`, `loading="eager"`), available works, an
- * about snippet and the commissions call to action.
+ * Home (spec §6.2): a featured available work as the LCP image (`fetchPriority="high"`,
+ * `loading="eager"`), available works, the series, an about snippet, the commissions call to
+ * action, and the Organization JSON-LD (`hasMerchantReturnPolicy`, `hasShippingService`).
  */
+export async function generateMetadata({
+  params,
+}: PageProps<"/[locale]">): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const [t, tc, featured] = await Promise.all([
+    getTranslations({ locale, namespace: "catalog.home" }),
+    getTranslations({ locale, namespace: "common.meta" }),
+    getFeaturedArtwork(locale),
+  ]);
+  const og = featured ? await getArtworkOgImage(featured.slug) : null;
+  return pageMetadata({
+    locale,
+    path: paths.home(),
+    title: `${tc("siteName")} · ${t("title")}`,
+    absoluteTitle: true,
+    description: t("metaDescription"),
+    images: og
+      ? [{ url: og, width: 1200, height: 630, alt: featured?.title }]
+      : undefined,
+  });
+}
+
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const t = await getTranslations({ locale, namespace: "catalog.home" });
-  const [featured, works] = await Promise.all([
+  const [t, featured, works, series, profile] = await Promise.all([
+    getTranslations({ locale, namespace: "catalog.home" }),
     getFeaturedArtwork(locale),
-    listArtworks(locale, { pageSize: 7 }),
+    listArtworks(locale, { view: "available", pageSize: 7 }),
+    listSeries(locale),
+    getPublicProfile(locale),
   ]);
   const others = works.items
     .filter((w) => w.id !== featured?.id && w.state.kind === "available")
@@ -28,6 +64,15 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
 
   return (
     <div className="flex flex-col gap-16">
+      <JsonLd
+        data={organizationJsonLd({
+          base: env.APP_URL,
+          locale,
+          name: profile.tradeName,
+          email: profile.email,
+          telephone: profile.phoneIntl,
+        })}
+      />
       <section className="grid items-center gap-8 md:grid-cols-[3fr_2fr]">
         {featured?.image ? (
           <Link
@@ -61,7 +106,11 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                   {featured.title}
                 </Link>
               </p>
-              <ArtworkStatus state={featured.state} price={featured.price} />
+              {/* A block wrapper: the price is an LTR <bdi>, which would align to the
+                  far side as a flex item in Hebrew. */}
+              <p>
+                <ArtworkStatus state={featured.state} price={featured.price} />
+              </p>
             </div>
           ) : null}
           <p>
@@ -82,8 +131,50 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           </h2>
           <WorksGrid works={others} headingLevel={3} />
           <p>
-            <Link href={paths.works()}>{t("allWorks")}</Link>
+            <Link href={paths.works({ availability: "available" })}>
+              {t("allWorks")}
+            </Link>
           </p>
+        </section>
+      ) : null}
+
+      {series.length > 0 ? (
+        <section aria-labelledby="series-title" className="flex flex-col gap-6">
+          <h2 id="series-title" className="text-3xl">
+            {t("seriesTitle")}
+          </h2>
+          <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
+            {series.map((s) => (
+              <li key={s.slug} className="flex flex-col gap-2">
+                {s.cover ? (
+                  <Link
+                    href={paths.works({ series: s.slug })}
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="flex aspect-square items-end justify-center"
+                  >
+                    <Image
+                      src={s.cover.src}
+                      alt=""
+                      width={s.cover.width}
+                      height={s.cover.height}
+                      sizes="(min-width:1024px) 18vw, (min-width:768px) 30vw, 45vw"
+                      quality={75}
+                      placeholder={s.cover.blurDataUrl ? "blur" : "empty"}
+                      blurDataURL={s.cover.blurDataUrl ?? undefined}
+                      className="fade-in max-h-full w-auto object-contain"
+                    />
+                  </Link>
+                ) : null}
+                <h3 className="font-serif text-lg leading-snug">
+                  <Link href={paths.works({ series: s.slug })}>{s.name}</Link>
+                </h3>
+                <p className="text-sm text-ink-muted">
+                  {t("seriesCount", { count: s.count })}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 
