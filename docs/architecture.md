@@ -1200,3 +1200,81 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   purge of DHL raw tracking (`shipment_events.raw`, source POLL).
 - P1 (unchanged): the DHL "Request pickup" button (`requestPickup` / `cancelPickup` exist and are
   contract-tested).
+
+### M3 storefront notes (WS1, branch `ws/storefront`)
+
+**What exists**
+- `/works`: URL-synced filters and sorts (`components/artwork/works-params.ts` parses leniently and
+  serializes canonically: `availability=available|sold`, `series=<slug>`, `size=s|m|l|xl`,
+  `orientation=portrait|landscape|square|panoramic`, `price=under-5000|5000-10000|10000-20000|
+  over-20000`, `sort=newest|price-asc|price-desc|size-asc|size-desc`, `page`). `WorksFilters` is a
+  GET form that works before hydration; hydrated, "Apply" pushes the canonical URL. The form is
+  keyed by the query so "Reset" and the language switch remount it with the right values.
+  Filtered/sorted variants canonicalize to `/works` (the archive to `?availability=sold`).
+- `server/catalog/queries.ts`: `listArtworks(locale, ArtworkListQuery)` (backward compatible),
+  `listSeries`, `listSitemapArtworks`, `getArtworkOgImage`, `getPublicProfile` (trade and artist
+  name, email, phones; never the ID number, legal name or addresses). `getArtworkPage` also
+  returns `seo` (`medium`, `surface`, dates); `{ artwork, shipSpec }` are unchanged for checkout
+  and WS4's request page.
+- Artwork page: `ArtworkGallery` (mobile scroll-snap strip + counter; desktop selected image +
+  thumbnails), `ArtworkLightbox` (lazy via `next/dynamic`, Zoom + Counter, he/en labels, polite
+  live region "תמונה 2 מתוך 5" rendered inside the dialog, focus back to the trigger on `exited`),
+  `StickyBuyBar` (mobile, hidden while the buy box or the footer intersects, `inert` when hidden),
+  `<details>` accordions (returns, duties, packing), JSON-LD, full metadata with the OG image.
+  The English AIC credit is a `lang="en" dir="ltr"` **inline-block** (fixes the M2 open item: a
+  plain `<bdi>` still let a wrapped line swap sides with the Hebrew label).
+- `components/artwork/buy-box.ts` (pure, unit-tested): trust row ("insured" only when the IL
+  estimate is insured), per-zone "insured" marker, price visibility, main call to action.
+- SEO: `components/site/metadata.ts#pageMetadata` (canonical, `he`/`en`/`x-default` alternates,
+  OG, Twitter card) on every WS1 page; `components/site/structured-data.ts` (pure builders) +
+  `JsonLd` (escapes `<`, `>`, `&`, U+2028/9); `src/app/sitemap.ts` (force-dynamic; static pages,
+  legal docs and every published work with images, all with alternates) and `src/app/robots.ts`.
+- Home: series section (links to `/works?series=…`), Organization JSON-LD; `/about`, `/contact`
+  (Person JSON-LD; `?topic=commission` puts the commission section first), `/credits` fixes.
+- Tests: unit `storefront`, integration `storefront-queries`, e2e `storefront`, `a11y` (public
+  pages, he + en, lightbox open), `not-found`; `tests/helpers/factories/storefront.ts`
+  (`withGalleryImages(slug, n)`: DETAIL copies of the MAIN image, idempotent). The smoke spec's
+  about-page `fixme` became a real check.
+
+**Decisions and deviations**
+- The default `/works` view keeps NOT_FOR_SALE works (ranked after on hold), as in M2; the spec
+  says "available + on hold". `?availability=available` shows AVAILABLE only.
+- In the current view, available works stay first under every sort; the sort applies within
+  each status group. Price sorts use the visible price (price-on-request last); size sorts use
+  H × W. Price bands exclude price-on-request and unpriced works.
+- Price is shown for `reserved` works too (another buyer's live checkout hold; spec §3.5 makes
+  them JSON-LD InStock, so the Offer needs the visible price). On hold / sold / NFS show the
+  status only.
+- JSON-LD availability: available/reserved → InStock (with price), ON_HOLD → `Reserved`, SOLD →
+  `SoldOut` (Offer without a price, since none is shown), NFS → no Offer. "Demo while live" =
+  `isDemo && !DEMO_MODE`.
+- Insurance: the domestic courier is never insured by the engine (M2 reading), so the trust row
+  never says "insured" with the seeded settings; the per-zone estimates say "insured" where the
+  zone quote includes it (international zones with DHL insurance). E2E checks that with the seed
+  only: toggling the shared `shipping` setting would race the parallel commerce specs. The
+  toggle itself is unit-tested (`trustItems`).
+- About copy is placeholder text in `messages/*/catalog.json` until the `site_content` editor
+  (P1). A DEMO note is shown under it in demo mode.
+
+**Not done / for M4**
+- **Contact form** (spec §5.8: `buyer_requests` topic GENERAL / COMMISSION with the s.11 notice,
+  honeypot, 5/h/IP and the request emails). The submit service is WS4's
+  `server/requests/service.ts#submitRequest`, which already accepts `kind: "QUESTION"` without an
+  artwork and a `topic`, but WS1 rebases before WS4 in M4, so importing it here would break this
+  branch. M4 wiring after WS4 lands: `src/app/[locale]/(site)/contact/actions.ts` = WS4's
+  `submitRequestAction` without `slug` and with `topic: z.enum(["GENERAL","COMMISSION"])`, plus a
+  form like `RequestForm` and `<PrivacyNotice>` in each contact section. Today the page offers
+  email, phone and WhatsApp links.
+- Tier B "Make an offer" button (offers are WS4 Tier B). P1: site-default OG image, medium and
+  year filters.
+
+**Gotchas**
+- An absolutely positioned descendant (e.g. `sr-only` text) of an off-screen slide in a
+  horizontal scroll container escapes the container's clipping unless the container is
+  positioned. In RTL on mobile emulation that widened the document to 943 px and zoomed the
+  page out. The strip is `relative` (and the grid item `min-w-0`).
+- `waitUntil: "networkidle"` never settles on `next start` pages (open connections); E2E uses
+  `load`. axe on the lightbox must wait for the fade-in to finish (opacity 1), otherwise the
+  counter's contrast is measured mid-animation.
+- yet-another-react-lightbox interpolates `{index}`/`{total}` itself: pass the next-intl message
+  with literal placeholders (`t("position", { index: "{index}", total: "{total}" })`).
