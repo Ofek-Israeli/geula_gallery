@@ -876,3 +876,48 @@ final order-confirmation/disclosure wording (WS6), admin refund dialogs, retry o
 documents, record payment, manual order (WS4), the fulfillment screen and `shipment-update` /
 `ready-for-pickup` templates (WS3), Morning/gateway adapters (WS5), link orders and
 `checkout-link` (WS2), `admin-alert` emails (WS6).
+
+### M2 acceptance review (independent re-run, 2026-10-01)
+
+**Re-run from a clean state**: `npm ci`, `db:reset` (demo), `npm run verify`, the integration suites
+`reserve-race` / `finalize` / `capture-race` / `refunds` (twice), E2E `purchase-il`, `webhook`,
+`order-retry`, `race`, `smoke`, then the full E2E suite twice, a manual walkthrough (he + en, 390 and
+1280 px: browse → buy with the mock provider, including US/USD → Sold → admin order), and SQL
+invariant checks on the E2E database (one live sale per artwork, SOLD ⇔ live sale, PAID orders bound
+to one SUCCEEDED attempt of the exact total, totals = items + shipping + insurance, no hold left on
+SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, no unprocessed events).
+
+**Fixed during the review**
+- The first `order-retry` run failed twice. **Cause:** the order page sent `Referrer-Policy:
+  no-referrer`, so browsers send `Origin: null` on its form POSTs. That always happens for a native
+  submit (before hydration, or without JS), and per the Fetch spec also for `fetch()`; Chromium
+  happens to send the real origin for hydrated `fetch()`. Next's Server Actions CSRF check rejects
+  `Origin: null` with a 500 ("Invalid Server Actions request"). **Fix:** the order page uses
+  `strict-origin` (header in `next.config.ts` and page metadata): Referer carries only the origin,
+  never the path or `?k=`, so the token still cannot leak, and same-origin POSTs keep a real Origin.
+  Deviation from §7's "`no-referrer` on token pages", same intent. **Rule for later streams:** never
+  put Server Action forms on a `no-referrer` page; print pages keep `no-referrer` (no forms).
+- E2E: `ConfirmButton` opens its dialog from a client handler, so a click before hydration does
+  nothing. `support/commerce.ts#clickAndConfirm` retries the click until the dialog is visible
+  (used by `order-retry` and `webhook`).
+- Admin order list: the work column was always "—". Drizzle renders `${orders.id}` inside a
+  single-table **select list** as a bare `"id"`, so the correlated subquery compared
+  `order_items.order_id` with `order_items.id`. The outer column is now written out
+  (`"orders"."id"`) and `admin-orders.test.ts` asserts the titles. **Gotcha:** in WHERE clauses Drizzle
+  qualifies columns (`"orders"."id"`), in select lists it does not. `commerce-state.ts#inFlightHoldSql`
+  (used in select lists) is correct only because `payment_attempts` has no `reserved_by_order_id`
+  column; write outer columns qualified in any new correlated subquery.
+- Demo banner: the " / " separator sat inside the English `dir="ltr"` isolate and rendered at the
+  far end in Hebrew; it now sits between the two isolates.
+- Order page: the cancellation link and "try again" link were not underlined (WCAG 1.4.1).
+- Admin order list: cells had no inline padding (the Hebrew "סה״כ" and "סטטוס" headers touched).
+
+**Open items found (not fixed; owners per §9.2)**
+- Admin order detail shows raw enums (`CARRIER_TABLE`, `LOCAL_PICKUP`, `SUCCEEDED`,
+  `AWAITING_FULFILLMENT`) and, for pickup, shows the country as the "shipping address" (WS4/WS3).
+- USD checkout says "insured up to ₪5,800" (insured value in ILS while the buyer pays USD) (WS2/WS3).
+- Artwork image captions (English AIC credit lines) are not bidi-isolated on Hebrew pages, so a
+  trailing word can wrap onto the far side (WS1: wrap in `<bdi>`/`lang="en"`).
+- The checkout postal-code label has neither "(required)" nor "(optional)" (WS2).
+- The checkout details form needs JS (only the delivery GET form has a no-JS path); fine per §5.1,
+  noted because the order page's forms now work without JS.
