@@ -102,8 +102,6 @@ test.describe("cancellation link on public pages @smoke", () => {
   for (const [page, owner] of [
     ["about", "WS1"],
     ["legal", "WS6"],
-    ["checkout", "M2 checkout"],
-    ["order", "M2 order page"],
   ] as const) {
     test.fixme(`${page} page shows the cancellation link (lands in ${owner})`, () => {});
   }
