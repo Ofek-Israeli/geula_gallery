@@ -1454,3 +1454,55 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
 - The shared scratchpad is used by several worktree agents; name scratch files per stream.
 - A Server Action form whose submit removes itself on success (e.g. relist) re-renders without the
   result message — assert on the resulting state, not on the form's status text.
+
+### M4 cross-stream wiring (after the WS5 → WS2 → WS3 → WS1 → WS4 → WS6 merge)
+
+**Wired**
+- Payments (WS2 ↔ WS5): `paypal-map.ts#parsePaypalEvent` keeps the refund's `up` link and the
+  disputed capture ids in `payload_redacted` (only those fields), which
+  `webhook.ts#PostSuccessPayload` reads; `webhook-replay` now parses with the real function.
+  Gateway tax documents and the live sweep are covered end to end over a Cardcom fixture server in
+  `tests/integration/cardcom-wiring.test.ts` (`launchAttempt` sends the `Document` built by
+  `buildGatewayDocument`; GetLpResult's `DocumentInfo` → `verified_raw.gatewayDocument` → the
+  receipt job copies it; the sweep runs the adapter's real `ListTransactions`).
+- `jobs/daily.ts` runs `runCardcomDailyChecks` (step 3, before the invariant and alert-email
+  steps; stats `cardcomTail` / `cardcomSweep`).
+- Live providers: `checkout/quote.ts#liveProvidersBlocked(db, env)` = `golive.ts#liveBlocked`,
+  read only when a configured provider is LIVE (the blocker queries are skipped otherwise);
+  `startPaymentForOrder` now refuses a LIVE provider while blockers exist, like the page does.
+- Shipping ↔ compliance: delivery sets `orders.delivered_at` and `cancellation_window_ends_at` with
+  the real `deadlines.ts` (the `shipments` test no longer stubs it); `acceptCancellation` calls
+  `cancelShipmentForOrder` (event row, audited, silent) and cancels a booked carrier pickup after
+  commit (WARNING `PICKUP_CANCEL_FAILED` when it cannot). The guard (ACCEPTED never overridable,
+  RECEIVED / `PENDING_CANCELLATION` overridable with an audited reason), the unshipped and export
+  declaration alerts and the 30-day raw tracking purge were already in place; they are now
+  covered by `daily-shipping.test.ts`.
+- Admin (WS4): the order detail links to `/admin/orders/[id]/fulfill`; the dashboard's go-live
+  list is `goLiveBlockers()` (every blocker) plus tax documents / email / storage marked "not a
+  blocker"; a new "Cancellation refunds due soon" card comes from `refundDeadlines()` (a RECEIVED
+  notice has no refund row, so the refunds card missed it).
+- Storefront (WS1): `/contact` has the form (`contact/actions.ts#submitContactAction` →
+  `submitRequest({ kind: 'QUESTION', topic })`, honeypot, form age, `requestIp` limit, s.11
+  notice; `?topic=commission` preselects COMMISSION); the buy box links "Make an offer" when the
+  work accepts offers; a DETAIL promoted to MAIN (no `og_key`) falls back to the MAIN image with
+  its own size (`getArtworkOgImage` now returns `{ url, width, height }`).
+- `pricing.ts#insuredValueForDisplay` delegates to `rates.ts#insuredValueInCurrency` (one USD
+  conversion for the page and the DHL label).
+
+**E2E**
+- `quote` / `offer`: on success the inbox section unmounts (the request leaves NEW), so the specs
+  wait for `request-status` instead of the form message. The offer is reached through the artwork
+  page's link and paid through the emailed link; a new quote test (`e2e-quote-requote` clone) is
+  requoted by switching to studio pickup, then paid. `manual-order` lost its NOT_IMPLEMENTED skips.
+- `smoke` checks the legal and contact pages' cancel link; `purchase-il` asserts the disclosure PDF
+  attachment metadata; `webhook` counts only its own ref / event ids (the global count raced the
+  parallel specs); new `contact.spec.ts`; `fulfill` reaches the fulfillment screen from the order
+  detail. No `test.fixme` / runtime skips remain in `tests/e2e`.
+- Specs that clone fixed `e2e-*` slugs and pay for them assume a fresh `db:reset` per run, so a
+  second run against `E2E_REUSE_SERVER=1` fails on the SOLD clone (as before for the WS2 specs).
+
+**Still open (unchanged by M4)**
+- Live Cardcom: the public test terminal is refused (HTTP 401, ResponseCode 603), so the live
+  contract cannot pass; PayPal, Morning and DHL have no credentials (live checks skip).
+- P1: the DHL "Request pickup" button, `/api/admin/blob-upload`, admin live preview, `/admin/series`,
+  a structured shipper address in `business_profile`.
