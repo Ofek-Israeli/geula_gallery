@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   activeSurcharges,
   classify,
+  euLowValueDutyActive,
+  insuredValueInCurrency,
   insuredValueMinor,
   quoteShipping,
   rolledTubeBox,
@@ -470,5 +472,54 @@ describe("zoneEstimates", () => {
     );
     expect(local.IL).toEqual({ fromIlsMinor: 6000, insured: false });
     expect(local.NORTH_AMERICA).toBe("UNAVAILABLE");
+  });
+});
+
+describe('insured value in the order currency ("insured up to …")', () => {
+  it("is the ILS value for ILS orders and whole dollars (rounded down) for USD orders", () => {
+    const ils = quoteShipping(
+      input({ country: "CA", carrier: "MOCK", declaredValueIlsMinor: 580_000 }),
+    );
+    expect(insuredValueInCurrency(ils)).toBe(580_000);
+    const usd = quoteShipping(
+      input({
+        country: "US",
+        currency: "USD",
+        carrier: "MOCK",
+        declaredValueIlsMinor: 580_000,
+      }),
+    );
+    // ₪5,800 at 3.7 = $1,567.57 → $1,567 (never overstated).
+    expect(usd.insuredValueMinor).toBe(580_000);
+    expect(insuredValueInCurrency(usd)).toBe(156_700);
+    expect(
+      insuredValueInCurrency(quoteShipping(input({ method: "LOCAL_PICKUP" }))),
+    ).toBe(0);
+  });
+});
+
+describe("EU low-value duty notice (temporary EUR 3, 2026-07-01 to 2028-07-01)", () => {
+  const enabled: ShippingSettings = {
+    ...settings,
+    zones: settings.zones.map((z) =>
+      z.id === "EUROPE" ? { ...z, enabled: true } : z,
+    ),
+  };
+  it("is shown only inside the window (inclusive Jerusalem days)", () => {
+    expect(euLowValueDutyActive(new Date("2026-06-30T20:59:00Z"))).toBe(false);
+    expect(euLowValueDutyActive(new Date("2026-06-30T21:00:00Z"))).toBe(true);
+    expect(euLowValueDutyActive(new Date("2028-07-01T12:00:00Z"))).toBe(true);
+    expect(euLowValueDutyActive(new Date("2028-07-02T12:00:00Z"))).toBe(false);
+    const at = (d: string) =>
+      quoteShipping(
+        input({
+          country: "DE",
+          settings: enabled,
+          declaredValueIlsMinor: 50_000,
+          date: new Date(d),
+        }),
+      ).notices;
+    expect(at("2026-10-01T09:00:00Z")).toContain("EU_LOW_VALUE_DUTY");
+    expect(at("2028-08-01T09:00:00Z")).not.toContain("EU_LOW_VALUE_DUTY");
   });
 });

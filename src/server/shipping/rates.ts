@@ -333,7 +333,9 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     settings,
     fx: i.fx,
   });
-  const notices = [...destination.notices];
+  const notices = destination.notices.filter(
+    (n) => n !== "EU_LOW_VALUE_DUTY" || euLowValueDutyActive(i.date),
+  );
   // A local-pickup-only work cannot travel by carrier anywhere; NOT_INTERNATIONAL is reused for it.
   const cannotShip = i.items.some(
     (a) => a.localPickupOnly || (!domestic && !a.shipsInternationally),
@@ -376,6 +378,44 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     breakdown,
     insuranceSupported(settings, method, zone, carrier),
   );
+}
+
+/**
+ * The temporary EUR 3 EU duty on low-value parcels applies from 2026-07-01 to 2028-07-01
+ * (inclusive Jerusalem calendar days). `evaluateDestination` has no date, so `quoteShipping`
+ * drops the notice outside the window.
+ */
+export const EU_LOW_VALUE_DUTY_WINDOW = {
+  startsOn: "2026-07-01",
+  endsOn: "2028-07-01",
+} as const;
+
+export function euLowValueDutyActive(date: Date): boolean {
+  const day = jerusalemDateKey(date);
+  return (
+    EU_LOW_VALUE_DUTY_WINDOW.startsOn <= day &&
+    day <= EU_LOW_VALUE_DUTY_WINDOW.endsOn
+  );
+}
+
+/**
+ * The insured value in the order currency, for "insured up to …" copy. The quote stores it in
+ * ILS minor units; a USD order shows it in USD, rounded **down** to whole dollars (the cover is
+ * never overstated) with the quote's locked rate. 0 when the quote is uninsured.
+ */
+export function insuredValueInCurrency(
+  q: Pick<
+    ShippingQuoteResult,
+    "insured" | "insuredValueMinor" | "currency" | "fxIlsPerUsd"
+  >,
+): number {
+  if (!q.insured || q.insuredValueMinor <= 0) return 0;
+  if (q.currency === "ILS") return q.insuredValueMinor;
+  if (!q.fxIlsPerUsd) return 0;
+  const rateMicro = BigInt(Math.round(q.fxIlsPerUsd * 1_000_000));
+  const dollars =
+    (BigInt(q.insuredValueMinor) * 1_000_000n) / (rateMicro * 100n);
+  return Number(dollars * 100n);
 }
 
 /**
