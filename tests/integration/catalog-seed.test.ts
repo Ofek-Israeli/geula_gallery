@@ -54,7 +54,7 @@ describe("catalog seed", () => {
     }
   });
 
-  it("sets the demo statuses: 3 sold through OFFLINE mock sales, 1 on hold, 1 NFS", async () => {
+  it("sets the demo statuses: 3 sold through the sample orders (ONLINE mock sales), 1 on hold, 1 NFS", async () => {
     const rows = await db
       .select({ slug: artworks.slug, status: artworks.saleStatus })
       .from(artworks);
@@ -72,7 +72,10 @@ describe("catalog seed", () => {
     expect(by("NOT_FOR_SALE")).toEqual(["interior-music-room"]);
     const s = await db.select().from(sales);
     expect(s).toHaveLength(3);
-    expect(s.every((x) => x.channel === "OFFLINE" && x.isMock)).toBe(true);
+    // WS6 replaced the M2 stub: the sold works come from the three sample orders (spec §8.4).
+    expect(
+      s.every((x) => x.channel === "ONLINE" && x.isMock && x.orderId !== null),
+    ).toBe(true);
   });
 
   it("is idempotent", async () => {
