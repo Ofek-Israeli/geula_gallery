@@ -1,1 +1,145 @@
-{}
+{
+  "title": "Checkout",
+  "back": "Back to the work",
+  "demoNotice": "Demo store: payments are simulated and no money is taken.",
+  "summary": {
+    "title": "Your order",
+    "item": "Original painting",
+    "items": "Work",
+    "shipping": "Shipping",
+    "insurance": "Insurance",
+    "total": "Total",
+    "free": "Free",
+    "vatIncluded": "Including VAT of {amount}",
+    "vatExempt": "No VAT is charged (VAT-exempt dealer).",
+    "vatExport": "Zero-rated export: no Israeli VAT."
+  },
+  "delivery": {
+    "title": "Delivery",
+    "country": "Ship to",
+    "update": "Update delivery",
+    "methodLegend": "Delivery method",
+    "method": {
+      "CARRIER_TABLE": "Courier",
+      "LOCAL_PICKUP": "Pickup from the studio",
+      "ARTIST_DELIVERY": "Hand delivery by the artist",
+      "QUOTED": "Quoted shipping"
+    },
+    "free": "free",
+    "tracked": "tracked",
+    "insuredUpTo": "insured up to {amount}",
+    "currency": "Currency",
+    "currencyIls": "Israeli shekels (₪)",
+    "currencyUsd": "US dollars ($)"
+  },
+  "notices": {
+    "DAP_DUTIES": "Import duties, taxes and clearance fees at the destination, if any, are paid by you on delivery (DAP).",
+    "EU_LOW_VALUE_DUTY": "From 1 July 2026 to 1 July 2028 the EU charges a flat EUR 3 customs duty on low-value parcels.",
+    "US_DUTY_FREE_CLEARANCE_FEES": "Original paintings (HS 9701.91) enter the US duty free; the carrier may still charge clearance fees.",
+    "US_FORMAL_ENTRY": "Above USD 2,500 you are the importer of record (formal entry, CBP Form 5106).",
+    "TRANSIT_ESTIMATE": "Transit times are estimates and may change at customs."
+  },
+  "blocked": {
+    "title": "This work cannot be bought online right now",
+    "NOT_AVAILABLE": "This work is no longer available.",
+    "RESERVED": "Another buyer is checking out this work right now. Please try again later.",
+    "NOT_PRICED": "The price of this work is given on request.",
+    "QUOTE_ONLY": "Delivery of this work is quoted on request.",
+    "DEMO_LIVE_PROVIDER": "Demo works cannot be bought while live payments are on.",
+    "NO_PROVIDER": "No payment method is available for this destination and currency.",
+    "DESTINATION_DENIED": "We cannot ship to this destination.",
+    "ZONE_DISABLED": "Online ordering is not available for this destination yet; ask for a quote.",
+    "NOT_INTERNATIONAL": "This work is sold for delivery in Israel only.",
+    "SIZE_QUOTE": "This work needs a quoted shipment to this destination.",
+    "VALUE_CAP": "The value of this work is above the carrier's limit for this destination; ask for a quote.",
+    "GB_LOW_VALUE": "Low-value parcels to the UK cannot be sold online; ask for a quote.",
+    "requestQuote": "Request a quote",
+    "ask": "Ask about this work",
+    "otherCountry": "Choose another destination"
+  },
+  "details": {
+    "title": "Your details",
+    "name": "Full name",
+    "email": "Email",
+    "emailHint": "Your order confirmation and documents are sent here.",
+    "phone": "Phone",
+    "phoneHint": "For the courier. International format is fine (+44…).",
+    "addressTitle": "Delivery address",
+    "latinHint": "For international shipping please write the address in Latin (English) letters.",
+    "line1": "Street and number",
+    "line2": "Apartment, floor (optional)",
+    "city": "City",
+    "region": "State / region (optional)",
+    "postalCode": "Postal code",
+    "companyName": "Company name (optional)",
+    "vatId": "VAT / company ID for the receipt (optional)",
+    "pickupNote": "The studio address and pickup instructions are sent after payment."
+  },
+  "consent": {
+    "legend": "Before you pay",
+    "terms": "I have read and accept the terms of sale and the cancellation and returns policy.",
+    "termsLinks": "Read the {terms} and the {returns}.",
+    "termsLink": "terms of sale",
+    "returnsLink": "cancellation and returns policy",
+    "age": "I am 18 or older.",
+    "dap": "I understand that import duties, taxes and fees at the destination are mine to pay (DAP).",
+    "receiptEmail": "Send my receipt by email.",
+    "required": "Please tick this box to continue."
+  },
+  "provider": {
+    "legend": "Payment method",
+    "mock": "Test payment – no real money",
+    "cardcom": "Card – Cardcom secure page",
+    "paypal": "PayPal (account, or card where PayPal offers it)",
+    "wallets": "also {list}",
+    "wallet": {
+      "bit": "Bit",
+      "apple_pay": "Apple Pay",
+      "google_pay": "Google Pay"
+    },
+    "redirectNote": "You will be taken to the payment provider's secure page."
+  },
+  "privacy": "We use your details only to fulfil this order: payment, delivery and the receipt. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
+  "holdNotice": "When you continue, the work is reserved for you for {minutes} minutes.",
+  "submit": "Continue to payment",
+  "submitting": "Reserving…",
+  "errors": {
+    "price_changed": "The price or delivery cost has changed. Please review the updated total.",
+    "reload": "Show the updated total",
+    "just_reserved": "Sorry – another buyer has just reserved this work.",
+    "too_many_holds": "You already have works reserved. Complete or release them first.",
+    "artwork_hold_budget": "This work has been reserved for you too many times today. Please contact us.",
+    "hold_cooldown": "Your reservation of this work lapsed a moment ago. Please try again in a few minutes.",
+    "provider_unavailable": "This payment method is not available. Please choose another.",
+    "address_required": "Please enter a delivery address.",
+    "duties_ack_required": "Please confirm the duties notice.",
+    "provider_error": "We could not open the payment page. Your reservation is kept; you can try again from your order page.",
+    "openOrder": "Open my order",
+    "generic": "Something went wrong. Please try again.",
+    "fix": "Please fix the highlighted fields."
+  },
+  "returned": {
+    "title": "Return from the payment page",
+    "body": "We could not match this link to an order. If you paid, your confirmation email has a link to your order page.",
+    "works": "Back to the works"
+  },
+  "mockPay": {
+    "title": "MOCK PAYMENT – no real money",
+    "titleHe": "תשלום הדגמה – ללא חיוב",
+    "merchant": "Merchant",
+    "merchantName": "Geula Gallery (demo)",
+    "amount": "Amount",
+    "order": "Order",
+    "flow": "Flow",
+    "state": "State",
+    "pay": "Pay",
+    "approve": "Approve only",
+    "review": "Mark under review",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "payNoReturn": "Pay without returning",
+    "done": "Done. You can close this window; the shop is notified by webhook.",
+    "closed": "This payment is no longer open ({state}).",
+    "continue": "Continue to the shop"
+  }
+}
