@@ -1003,3 +1003,90 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   currently marks them unmatched instead of calling `syncPostSuccessEvent`.
 - WS2: "Bit only for ILS totals ≤ ₪5,000" is a checkout-UI rule on top of `capabilities.wallets`.
 - WS3: `check:dhl` exercises only reachability; DHL label/tracking calls are the carrier adapter's.
+
+### M3 WS2 commerce notes
+
+**What exists**
+- **Link orders** (`checkout/links.ts`, `link-details.ts`, `link-requests.ts`, `items.ts`):
+  `createLinkOrder(input, ctx, deps?)` locks the artwork (reservable with `web=false`, so the
+  admin bypasses `quote_only` / `price_on_request`), takes the buyer advisory locks, inserts the
+  order (`source` = QUOTE / OFFER / MANUAL, `shipping_locked`, consents empty) and its item,
+  reserves for `expiresInHours ?? settings.linkHoursDefault` (1–336 h), expires a taken-over lapsed
+  hold, moves the request (QUOTE → QUOTED; OFFER → ACCEPTED at the asked amount, else COUNTERED;
+  a QUESTION only gets `order_id`), enqueues `checkout-link` and audits `order.link_created`.
+  Rules: IL ⇒ ILS; a price ≠ the list price needs `priceChangeReason` (stored in `admin_notes`
+  and the audit row; OFFER exempt); shipping is either `lockedShippingMinor` (method default
+  QUOTED, `shipping_locked=true`, no insurance) or the table quote of `shippingMethod` / the
+  first ok method (`SHIPPING_QUOTE_REQUIRED` otherwise); `DESTINATION_DENIED` is always refused.
+  Conversation: input flag, or detection, or a linked request (`REQUEST:<id>`, else `ADMIN` for
+  MANUAL / `LINK`).
+- **Order page for link orders**: "Complete your order" (method radios unless locked, address,
+  pre-contract disclosure from `documents/data.ts#loadDisclosureInput`, consents) →
+  `saveLinkDetailsAction` → `completeLinkOrderDetails` (a method change runs `requoteOrder`;
+  `details=saved|requoted`). `startPaymentForOrder` refuses `details_required` for link orders
+  until `orderDetailsComplete`. Holds longer than 2 h show a date instead of a countdown.
+- **Request lifecycle** (`settleLinkRequests`): PAID → CONVERTED (`apply.ts`); expiry, release,
+  takeover (`expireTakenOverOrders`) and LOST_RESERVATION → EXPIRED. This is reconcile step 4's
+  "link requests → EXPIRED".
+- **Offline payments** (`payments/offline.ts`): `recordOfflinePayment(orderId, input, ctx, deps?)`
+  returns `{ attemptId, outcome: "paid" | "needs_refund" }` (additive). Fresh session (30 min,
+  `FRESH_SESSION_REQUIRED`), exact total and currency (`AMOUNT_MISMATCH`), order AWAITING_PAYMENT or
+  EXPIRED and nothing in flight (`ORDER_NOT_PAYABLE` / `PAYMENT_IN_FLIGHT`), reference required
+  except for cash, `receivedAt` not in the future. OFFLINE / MANUAL attempt (`transaction_id` =
+  reference) → `applySuccessfulPayment` in the same transaction; `paid_at = receivedAt`. A payment
+  that can no longer be applied → NEEDS_REFUND with a MANUAL_REQUIRED refund. Methods `bit` and
+  `card` keep their tax-document payment type.
+- **Post-success webhooks** (`webhook.ts`): `PAYMENT.CAPTURE.REFUNDED` / `REVERSED` /
+  `CUSTOMER.DISPUTE.CREATED` go to `syncPostSuccessEvent` (also on reconcile replay). Attempt
+  resolution: event hint → our refund id (`custom_id`) → capture id (refund `up` link or
+  `disputed_transactions[0].seller_transaction_id`) → provider ref; none → CRITICAL
+  `PAYMENT_EVENT_UNMATCHED`, acknowledged. Outcome stored as `<kind>:<outcome>`.
+  **WS5 contract:** the PayPal `parseNotification` must return `eventType = event_type`,
+  `refundCustomId = resource.custom_id` and keep in `payloadRedacted` the subset typed as
+  `PostSuccessPayload` (`resource.{id,status,amount,custom_id,links,disputed_transactions}`).
+- **Cardcom daily checks** (`payments/sweep.ts`): `runCardcomDailyChecks(ctx, deps?)` →
+  `{ cardcomTail, cardcomSweep }` for **WS6's `jobs/daily.ts`** to call. Tail: EXPIRED Cardcom
+  attempts with `tail_until > now()` not polled in the last 20 h → `finalizeAttempt`. Sweep (live
+  mode with `CARDCOM_API_PASSWORD`, or a fixture adapter in tests): `listTransactions` for 3 days,
+  matched by transaction id / ReturnValue / LowProfile id; unapplied → finalize; unmatched →
+  CRITICAL `UNMATCHED_CARDCOM_TRANSACTION` (deduped per transaction).
+- **Gateway tax documents**: in `TAX_DOCUMENTS_MODE=gateway` `launchAttempt` passes
+  `gatewayDocument` (built by `taxdocs/issue.ts#gatewayDocumentFor` → WS5's
+  `buildGatewayDocument`, still a stub that throws, so a gateway-mode Cardcom checkout fails
+  until WS5); `apply.ts` stores `vp.gatewayDocument` in `verified_raw.gatewayDocument`; the
+  receipt job copies it (ISSUED, CARDCOM_GATEWAY) or goes NEEDS_MANUAL (PayPal, offline, none).
+- **Checkout open items fixed**: the insured value is shown in the order currency
+  (`pricing.ts#insuredValueForDisplay`, USD rounded down); optional fields carry "(optional)"
+  (the message strings lost their own suffix). Return route: an attempt the webhook already
+  cancelled with LOST_BEFORE_CAPTURE reports `payment=lost_before_capture`.
+- Registry test seam: `setProviderFactoryForTests(id, factory | null)` (ignored in production).
+- `email/props.ts`: the `checkout-link` builder (refId = order id); template is real.
+
+**Tests**
+- Integration: `link-orders`, `offline`, `webhook-replay`, `expire-job`, `limits` (new);
+  `taxdocs` gained gateway/none cases. The spec's `outbox` scenarios are covered by
+  `outbox-core` + `outbox-emails` + `taxdocs` (credit note waits for an UNKNOWN receipt) — run
+  `npx vitest run --project integration outbox` to select them.
+- Unit: `pricing`.
+- E2E: `international`, `late-payment`, `capture-mode`, `tamper` (+ M2's `order-retry`). They buy
+  **`e2e-*` clones of demo works** (`support/commerce.ts#cloneWork`, published, sort order 9999,
+  never featured): the demo catalog has too few sellable works for parallel specs. Storefront
+  specs that count works must ignore `e2e-` slugs. IPs used: `buyerIp(21–27)`.
+- Factories: `testAdminContext`, `insertBuyerRequest`, `linkOrder`, `completeDetails`, `payOrder`.
+
+**Gotchas**
+- `npm run test:e2e -- --project=desktop-chromium <files>` (with `=`): `--project <name>` makes
+  Playwright read the following file paths as more project names.
+- The mock sends its webhook before redirecting, so the return route usually sees an attempt the
+  webhook already finalized; `buyerOutcome` maps final states (now including the failure reason).
+- Lock order extension: `buyer_requests` rows are locked after `orders` (`settleLinkRequests`,
+  `linkRequest`).
+
+**Not done / for others**
+- Admin UI for link orders, offers, refunds and "Record payment" (WS4 calls `createLinkOrder`,
+  `recordOfflinePayment`, `requestRefund`, `confirmManualRefund`, `confirmRefundFailure`,
+  `retryRefund`). Offers (Tier B) need only the inbox UI: OFFER links work.
+- Calling `runCardcomDailyChecks` from `jobs/daily.ts` (WS6); the real Cardcom
+  `listTransactions` / PayPal adapters and `buildGatewayDocument` (WS5).
+- No E2E for the link-order page yet (it needs WS4's admin screen to create the order); it was
+  checked by hand in he/en at 390 and 1280 px (IL and US links, pay through the mock).
