@@ -1361,3 +1361,96 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   'offer')`), and the contact page can call `submitRequest({ kind: 'QUESTION', topic })`.
 
 **Not done**: `/api/admin/blob-upload` (P1), admin live preview, `/admin/series` (P1).
+
+### M3 compliance notes (WS6, branch `ws/compliance`)
+
+**What exists**
+- `src/lib/deadlines.ts` bodies (+ `windowLength`, `isWithinWindow`). Readings: the cancellation
+  window ends at **23:59:59 Jerusalem** on the last day (buyer-favourable); the refund deadline keeps
+  the notice's wall-clock time 14 Jerusalem days later (milliseconds kept); the fee is
+  `min(round-half-up(5 %), ₪100)` and the ₪100 cap is converted to USD with the order's locked
+  `fx_ils_per_unit`, rounded **down**.
+- `server/cancellations/`: `notice.ts` (one zod schema for the public form, the review round trip
+  and admin-logged notices; the review payload is **AES-256-GCM sealed** with the `cancel-review`
+  HKDF key, AAD-bound, 2 h TTL — the spec says "HMAC-signed"; sealing also keeps the ID out of the
+  page source), `fees.ts` (pure assessment), `service.ts` (intake, matching, decisions, reads),
+  `email-props.ts` (props builders for `cancellation-ack`, `painter-cancellation`,
+  `return-instructions`).
+- Intake never blocks: tx 1 inserts the RECEIVED row (`refund_due_at` = notice + 14 days,
+  `ack_snapshot` with the ID masked, `id_number_enc` bound to `cancellations.id_number:<row id>`,
+  `id_number_last3`) and enqueues the ack (when an email was given) and the painter email; matching
+  runs in tx 2 and only logs on failure. Auto-match = order number + (email, or the NFKC/lower-case
+  normalised name). Matching flags `possible_duplicate`/`duplicate_of_id` against the earliest open
+  notice of the order, sets the regime from the order's country (EU-27 → EU, else IL), re-runs
+  conversation detection against the order's `created_at`, stores window/fee/refund suggestions,
+  and sets `fulfillment_blocked_reason='PENDING_CANCELLATION'` on a PAID, unblocked order.
+  `rejectCancellation` / `closeAsDuplicate` lift the block when no RECEIVED notice is left.
+- Accept: lock artworks → order → paid attempt → (refunds via `requestRefund`) → cancellation.
+  Not shipped (AWAITING_FULFILLMENT, PACKED, LABEL_CREATED, PICKUP_SCHEDULED, READY_FOR_PICKUP, or no
+  shipment row) → shipment CANCELLED + `requestRefund(reason CANCELLATION, legalDueAt =
+  refund_due_at, feeWithheld)`; shipped/delivered/collected → `AWAITING_RETURN` + the
+  `return-instructions` email, refund later via `refundCancellation` (allowed before the return —
+  lawyer question, the UI warns). LABEL_REQUESTED/LABEL_UNKNOWN → `LABEL_PENDING` (resolve first).
+  The fee is clamped to the suggestion (may only be lowered). `refundCancellation` stores
+  `cancellations.refund_id`; WS2's `settleRefund` moves the order to CANCELLED.
+- Close requires the refund settled (or a 0 refund) and the return final; relist / mark damaged
+  voids the order's sales (`void_reason = CANCELLATION:<C-number>`) and moves the work SOLD →
+  AVAILABLE (`sold_at` cleared) or NOT_FOR_SALE. This is the cancellation path only; WS4's generic
+  relist in `catalog/mutations.ts` is separate.
+- Pages: `/[locale]/cancel` (rights, every channel, one Server Action `cancelFlowAction` with steps
+  `review`/`confirm`/`edit` passed **directly** to `useActionState`, so every step is a POST that
+  works without JS; `edit` does not echo the ID back), `/[locale]/legal/[doc]` (TSX drafts in
+  `content/legal/{he,en}`, `toLegalProfile` allowlist without `idNumber`, DRAFT banner, cancel
+  link), admin `cancellations` (list / new / [id]) and `settings/cancellation`, printables
+  `print/admin/studio-notice` and (Tier B) `print/admin/coa/[saleId]`; the disclosure page shows a
+  draft note.
+- Emails: final `order-confirmation` (adds the prefilled cancel link), real `cancellation-ack`,
+  `painter-cancellation`, `return-instructions`, `admin-alert`. `send-email.ts` stamps
+  `cancellations.ack_sent_at` and (Tier B) attaches the disclosure PDF.
+- Tier B done: disclosure PDF (`documents/pdf/{disclosure.tsx,render.ts}`,
+  `documents/disclosure-pdf.ts#ensureDisclosurePdf`: once per order/locale/version, private storage,
+  `generated_documents` with sha256; failure → send without it + WARNING `DISCLOSURE_PDF_FAILED`;
+  values without Hebrew keep LTR order — checked by rasterising a sample), COA print view,
+  `checkInvariants()` in the daily job.
+- `server/invariants.ts`, `server/golive.ts` (`goLiveBlockers`, `liveBlocked`), `jobs/daily.ts`
+  (deadline + operational alerts, COMPLETED transitions, invariant alerts, go-live digest outside
+  demo mode, `admin-alert` emails via `jobs/alert-emails.ts`), `jobs/purge.ts` (spec §7 retention as
+  bulk statements; anonymising bumps `access_version` so old `?k=` links die).
+- `scripts/seed/orders.ts`: the three §8.4 sample orders `GG-SAMP01..03` (fixed numbers →
+  idempotent), with `mock_payments` rows so a refund through the mock provider works, ISSUED mock
+  receipts `DEMO-SAMP0n-R1`, shipments/events, a CONVERTED quote request for order 2, and
+  `C-SAMP01` (RECEIVED 5 days ago, due in 9, matched, order blocked). Sold dates are now 12/8/3 days
+  ago (were 30/10/3 in the stub). Placeholder buyers only.
+- Docs: `docs/deploy.md`, `docs/painter-onboarding.md` (Hebrew first; lawyer and accountant
+  checklists), `docs/testing.md`.
+
+**Edits outside the strict WS6 list (small, for the integrator)**
+- `src/server/email/props.ts`: the four `later("WS6")` entries now point at the WS6 builders (two
+  imports + four lines; the M2 header says owners add their builders there).
+- `tests/integration/catalog-seed.test.ts`: the sold-works assertion now expects the sample orders'
+  ONLINE mock sales instead of the stub's OFFLINE sales.
+- New helper files inside WS6 areas: `src/emails/templates/compliance-parts.tsx`,
+  `src/server/jobs/alert-emails.ts`, `src/server/documents/{coa,disclosure-pdf}.ts`,
+  `src/content/legal/{types.tsx,index.ts}`.
+
+**Open items / not wired (owners)**
+- WS2: `checkoutProviders({ liveBlocked })` should use `golive.ts#liveBlocked()` instead of
+  `!business_profile.completed`; the Cardcom tail poll and the live ListTransactions sweep belong in
+  `jobs/daily.ts` (stats say "not wired").
+- WS3: the fulfillment guard should refuse orders with an ACCEPTED cancellation and honour
+  `PENDING_CANCELLATION` with the override; DELIVERED/COLLECTED must set `orders.delivered_at` and
+  `cancellation_window_ends_at` (the daily COMPLETED step and the window assessment read them).
+- WS4: dashboard cards can use `cancellations/service.ts#refundDeadlines()` and
+  `golive.ts#goLiveBlockers()`; the admin nav already links `/admin/cancellations` and
+  `/admin/settings` (the settings index page is WS4's).
+- The M1 smoke `fixme` "legal page shows the cancellation link (WS6)" and the purchase-il
+  `fixme` for the PDF attachment are covered by `cancellation-il.spec.ts` and
+  `disclosure-pdf.test.ts`; the integrator can drop both `fixme`s (files not owned by WS6).
+- The public flow counts every step (review, confirm) against the 20/h/IP cancellation limit.
+- Legal texts, the studio notice, the COA copyright references (spec: s.37(c), s.45(b)) and every
+  retention period are **drafts** for the lawyer/accountant.
+
+**Gotchas**
+- The shared scratchpad is used by several worktree agents; name scratch files per stream.
+- A Server Action form whose submit removes itself on success (e.g. relist) re-renders without the
+  result message — assert on the resulting state, not on the form's status text.
