@@ -112,7 +112,13 @@ function paymentTypeOf(a: PaymentAttempt): TaxPaymentType {
   if (a.provider === "PAYPAL") return "paypal";
   const m = (a.method ?? "").toLowerCase();
   if (a.provider === "OFFLINE") {
-    return m === "transfer" || m === "cash" || m === "cheque" ? m : "other";
+    return m === "transfer" ||
+      m === "cash" ||
+      m === "cheque" ||
+      m === "bit" ||
+      m === "card"
+      ? m
+      : "other";
   }
   if (m === "bit" || m === "apple_pay" || m === "google_pay") return m;
   return "card";
