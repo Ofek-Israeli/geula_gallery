@@ -7,7 +7,11 @@ import { Link } from "@/i18n/navigation";
 import { formatDate } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
-import { type AttentionCard, getDashboard } from "@/server/admin/dashboard";
+import {
+  type AttentionCard,
+  type AttentionItem,
+  getDashboard,
+} from "@/server/admin/dashboard";
 import { requireAdmin } from "@/server/next/guards";
 
 export async function generateMetadata({
@@ -46,7 +50,12 @@ export default async function AdminDashboardPage({
     locale,
     namespace: "admin-shell.dashboard",
   });
+  const tOrders = await getTranslations({ locale, namespace: "admin-orders" });
   const data = await getDashboard(ctx);
+  const statusLabel = (st: NonNullable<AttentionItem["status"]>) => {
+    const key = `${st.group}.${st.value}` as "refundStatus.UNKNOWN";
+    return tOrders.has(key) ? tOrders(key) : st.value;
+  };
   const active = data.cards.filter((c) => c.count > 0);
   const { turnover } = data;
   const blockers = data.goLive.filter((g) => g.blocker && !g.ok).length;
@@ -102,6 +111,12 @@ export default async function AdminDashboardPage({
                         ) : (
                           <bdi dir="ltr">{item.label}</bdi>
                         )}
+                        {item.status ? (
+                          <span className="text-ink-muted">
+                            {" · "}
+                            {statusLabel(item.status)}
+                          </span>
+                        ) : null}
                         {item.dueAt ? (
                           <span className="text-ink-muted">
                             {" · "}

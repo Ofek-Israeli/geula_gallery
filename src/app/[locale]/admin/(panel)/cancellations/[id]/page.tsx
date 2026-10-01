@@ -71,10 +71,14 @@ export default async function CancellationDetailPage({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const d = await getCancellationDetail(ctx, id);
   if (!d) notFound();
-  const [t, tc] = await Promise.all([
+  const [t, tc, tAll] = await Promise.all([
     getTranslations({ locale, namespace: "cancel.admin" }),
     getTranslations({ locale, namespace: "cancel" }),
+    getTranslations({ locale }),
   ]);
+  /** A translated enum label (`<namespace>.<group>.<value>`), else the raw value. */
+  const label = (key: string, raw: string) =>
+    tAll.has(key as never) ? tAll(key as never) : raw;
   const c = d.cancellation;
   const o = d.order;
   const a = d.assessment;
@@ -222,9 +226,18 @@ export default async function CancellationDetailPage({
               </Link>
             </Row>
             <Row label={t("orderStatus")}>
-              <span data-testid="order-status">{o.status}</span>
+              <span data-testid="order-status" data-status={o.status}>
+                {label(`admin-orders.status.${o.status}`, o.status)}
+              </span>
             </Row>
-            <Row label={t("shipmentStatus")}>{d.shipmentStatus ?? "—"}</Row>
+            <Row label={t("shipmentStatus")}>
+              {d.shipmentStatus
+                ? label(
+                    `admin-orders.shipmentStatus.${d.shipmentStatus}`,
+                    d.shipmentStatus,
+                  )
+                : "—"}
+            </Row>
             <Row label={t("deliveredAt")}>
               {o.deliveredAt
                 ? formatDateTime(o.deliveredAt, locale)
@@ -238,7 +251,12 @@ export default async function CancellationDetailPage({
                 : t("conversationNo")}
             </Row>
             <Row label={t("artworks")}>
-              {d.artworks.map((w) => `${w.title} (${w.saleStatus})`).join(", ")}
+              {d.artworks
+                .map(
+                  (w) =>
+                    `${w.title} (${label(`admin-catalog.status.${w.saleStatus}`, w.saleStatus)})`,
+                )
+                .join(", ")}
             </Row>
             {a ? (
               <>

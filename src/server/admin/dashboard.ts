@@ -51,6 +51,14 @@ export interface AttentionItem {
   /** Cancellation id for a link (cancellation refund deadlines). */
   cancellationId?: string;
   label: string;
+  /**
+   * A status shown after the label, translated by the page from `admin-orders.<group>.<value>`
+   * (never rendered as a raw enum key).
+   */
+  status?: {
+    group: "refundStatus" | "attemptStatus" | "docStatus" | "blockedReason";
+    value: string;
+  };
   /** Due date for deadline items. */
   dueAt?: Date | null;
 }
@@ -200,11 +208,13 @@ export async function getDashboard(
   const refundItems = [
     ...problems.map((p) => ({
       orderId: p.orderId,
-      label: `${p.number} · ${p.status}`,
+      label: p.number,
+      status: { group: "refundStatus" as const, value: p.status },
     })),
     ...needsRefund.map((n) => ({
       orderId: n.orderId,
-      label: `${n.number} · NEEDS_REFUND`,
+      label: n.number,
+      status: { group: "attemptStatus" as const, value: "NEEDS_REFUND" },
     })),
   ];
   cards.push({
@@ -266,7 +276,8 @@ export async function getDashboard(
     count: docs.length,
     items: docs.slice(0, ITEMS).map((d) => ({
       orderId: d.orderId,
-      label: `${d.number} · ${d.status}`,
+      label: d.number,
+      status: { group: "docStatus", value: d.status },
     })),
   });
 
@@ -320,7 +331,10 @@ export async function getDashboard(
     count: blocked.length,
     items: blocked.slice(0, ITEMS).map((b) => ({
       orderId: b.orderId,
-      label: `${b.number} · ${b.reason}`,
+      label: b.number,
+      ...(b.reason
+        ? { status: { group: "blockedReason" as const, value: b.reason } }
+        : {}),
     })),
   });
 
