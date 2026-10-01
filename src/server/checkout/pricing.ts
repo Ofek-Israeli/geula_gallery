@@ -2,7 +2,7 @@ import "server-only";
 import type { Currency } from "@/lib/money";
 import { vatForOrder } from "@/lib/vat";
 import type { CheckoutSettings, ShippingSettings } from "@/server/settings";
-import { quoteShipping } from "@/server/shipping/rates";
+import { insuredValueInCurrency, quoteShipping } from "@/server/shipping/rates";
 import type {
   ArtworkShipSpec,
   CarrierCode,
@@ -168,16 +168,19 @@ export function orderAmounts(i: {
 /**
  * The insured value shown to the buyer, in the order currency (M2 open item: a USD checkout said
  * "insured up to ₪5,800"). The engine caps the insured value in ILS minor units; for USD it is
- * converted with the quote's locked rate and rounded **down** to whole dollars, so the page never
- * promises more cover than the ILS cap.
+ * converted by WS3's `rates.ts#insuredValueInCurrency` (the conversion the DHL label declares:
+ * the quote's locked rate, rounded **down** to whole dollars in exact integer arithmetic), so the
+ * page never promises more cover than the ILS cap or than the label insures.
  */
 export function insuredValueForDisplay(
   quote: Pick<ShippingQuoteResult, "insuredValueMinor" | "fxIlsPerUsd">,
   currency: Currency,
   fallbackIlsPerUsd: number,
 ): number {
-  if (currency === "ILS") return quote.insuredValueMinor;
-  const rate = quote.fxIlsPerUsd ?? fallbackIlsPerUsd;
-  if (!(rate > 0) || quote.insuredValueMinor <= 0) return 0;
-  return Math.floor(quote.insuredValueMinor / 100 / rate) * 100;
+  return insuredValueInCurrency({
+    insured: quote.insuredValueMinor > 0,
+    insuredValueMinor: quote.insuredValueMinor,
+    currency,
+    fxIlsPerUsd: quote.fxIlsPerUsd ?? fallbackIlsPerUsd,
+  });
 }

@@ -5,6 +5,7 @@ import {
   itemPriceMinor,
   orderAmounts,
 } from "@/server/checkout/pricing";
+import { insuredValueInCurrency } from "@/server/shipping/rates";
 
 /** Spec §10.1 `pricing`: IL → ILS; USD rules; the insured value shown in the order currency. */
 const art = {
@@ -63,6 +64,21 @@ describe("pricing", () => {
     );
     expect(insuredValueForDisplay({ insuredValueMinor: 0 }, "USD", 3.7)).toBe(
       0,
+    );
+    // The same conversion the DHL label declares (rates.ts#insuredValueInCurrency).
+    expect(
+      insuredValueForDisplay(
+        { insuredValueMinor: 370_000, fxIlsPerUsd: 3.7 },
+        "USD",
+        3.7,
+      ),
+    ).toBe(
+      insuredValueInCurrency({
+        insured: true,
+        insuredValueMinor: 370_000,
+        currency: "USD",
+        fxIlsPerUsd: 3.7,
+      }),
     );
   });
 });
