@@ -4,6 +4,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { usdToIls } from "@/lib/money";
 import { raiseAlert } from "@/server/alerts/service";
 import { audit } from "@/server/audit";
+import { settleLinkRequests } from "@/server/checkout/link-requests";
 import {
   allSellable,
   expireTakenOverOrders,
@@ -275,6 +276,9 @@ export async function applySuccessfulPayment(
     input.actor,
   );
   await insertShipment(tx, order);
+  if (order.source !== "WEB") {
+    await settleLinkRequests(tx, [order.id], "CONVERTED", input.actor);
+  }
 
   const profile = await getSetting("business_profile", tx);
   if (order.buyerEmail) {
@@ -485,6 +489,7 @@ export async function markNeedsRefund(
       },
       i.actor,
     );
+    await settleLinkRequests(tx, [order.id], "EXPIRED", i.actor);
   }
   await raiseAlert(
     {

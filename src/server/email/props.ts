@@ -33,6 +33,7 @@ import { env as defaultEnv, type Env } from "@/server/env";
  * | payment-review, purchase-not-completed | payment attempt id |
  * | refund-issued | refund id |
  * | receipt | tax document id |
+ * | checkout-link | order id |
  * | shipment-update | `<shipmentId>:<status>` |
  *
  * Templates whose flows land in later streams (requests, cancellations, links, pickup, alerts)
@@ -271,7 +272,25 @@ export const EMAIL_PROPS: Builders = {
   },
 
   "ready-for-pickup": later("WS3"),
-  "checkout-link": later("WS2"),
+  "checkout-link": async (refId, _locale, { db, env }) => {
+    // refId = the link order (spec §5.8). Fresh: the total after any requote, the live hold.
+    const order = await orderById(db, refId);
+    const locale = order.locale;
+    const [first] = await moneyLines(db, order, locale);
+    const ref = orderRef(order, locale, env);
+    return {
+      locale,
+      orderId: order.id,
+      props: {
+        ...ref,
+        artworkTitle: first?.title ?? "",
+        payUrl: ref.orderUrl,
+        expiresAt: (order.expiresAt ?? order.createdAt).toISOString(),
+        totalMinor: order.totalMinor,
+        currency: order.currency,
+      },
+    };
+  },
   "request-ack": later("WS4"),
   "request-reply": later("WS4"),
   "cancellation-ack": later("WS6"),

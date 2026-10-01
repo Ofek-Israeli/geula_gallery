@@ -2,20 +2,30 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import type { ReactNode } from "react";
+import { PreContractDisclosure } from "@/components/checkout/PreContractDisclosure";
 import { buttonClasses } from "@/components/ui/Button";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { Countdown } from "@/components/ui/Countdown";
 import { Price } from "@/components/ui/Price";
+import { buildPreContract } from "@/content/disclosure";
 import { Link } from "@/i18n/navigation";
 import { countryName } from "@/lib/countries";
 import { formatTime } from "@/lib/format";
 import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
+import { formatMoney } from "@/lib/money";
 import { paths } from "@/lib/routes";
 import { getBuyerOrder } from "@/server/checkout/order-view";
+import { loadDisclosureInput } from "@/server/documents/data";
 import { ipHashFrom } from "@/server/security/ip";
 import { checkLimit } from "@/server/security/rate-limit";
-import { payOrderAction, releaseHoldAction } from "./actions";
+import {
+  payOrderAction,
+  releaseHoldAction,
+  saveLinkDetailsAction,
+} from "./actions";
+import { LinkDetailsForm } from "./LinkDetailsForm";
 
 /**
  * `/[locale]/orders/[number]?k=<token>` (spec §5.1 step 4; noindex; `strict-origin` rather than
@@ -62,6 +72,59 @@ export default async function OrderPage({
     </>
   );
   const firstSlug = view.items[0]?.slug ?? null;
+  const detailsNote = one(sp.details);
+
+  // Link orders (spec §5.8): the buyer completes address and consents before paying.
+  let linkForm: ReactNode = null;
+  if (view.canEditDetails) {
+    const tc = await getTranslations({ locale, namespace: "checkout" });
+    const preContract = buildPreContract(
+      await loadDisclosureInput(view.id, locale),
+      locale,
+    );
+    const methods = view.methodChoices.map((m) => {
+      const price =
+        m.priceMinor === 0
+          ? tc("delivery.free")
+          : formatMoney(m.priceMinor, view.currency, locale);
+      const extras = [
+        m.method === "CARRIER_TABLE" ? tc("delivery.tracked") : null,
+        m.insured
+          ? tc("delivery.insuredUpTo", {
+              amount: formatMoney(m.insuredValueMinor, view.currency, locale),
+            })
+          : null,
+        m.estimate,
+      ].filter(Boolean);
+      return {
+        value: m.method,
+        label: `${t(`link.method.${m.method}` as never)} · ${price}`,
+        ...(extras.length ? { description: extras.join(" · ") } : {}),
+      };
+    });
+    linkForm = (
+      <LinkDetailsForm
+        action={saveLinkDetailsAction}
+        locale={locale}
+        number={view.number}
+        k={view.accessToken}
+        country={view.shipCountry}
+        international={view.shipCountry !== "IL"}
+        methods={methods}
+        currentMethod={view.shippingMethod}
+        defaults={{
+          recipient: view.address?.name ?? "",
+          line1: view.address?.line1 ?? "",
+          line2: view.address?.line2 ?? "",
+          city: view.address?.city ?? "",
+          region: view.address?.region ?? "",
+          postalCode: view.address?.postalCode ?? "",
+          receiptEmail: view.receiptEmailConsent,
+        }}
+        disclosure={<PreContractDisclosure doc={preContract} />}
+      />
+    );
+  }
 
   return (
     <div className="flex max-w-3xl flex-col gap-8" data-testid="order-page">
@@ -97,6 +160,15 @@ export default async function OrderPage({
         </p>
       ) : null}
       {one(sp.released) ? <p role="status">{t("released")}</p> : null}
+      {detailsNote === "saved" || detailsNote === "requoted" ? (
+        <p
+          role="status"
+          className="border border-line p-4"
+          data-testid="link-details-result"
+        >
+          {t(`link.${detailsNote}`)}
+        </p>
+      ) : null}
 
       {view.status === "AWAITING_PAYMENT" ? (
         <section
@@ -111,6 +183,25 @@ export default async function OrderPage({
           ) : (
             <p>{t("holdLapsed")}</p>
           )}
+          {view.isLink && view.shippingLocked ? (
+            <p>
+              {t("link.lockedMethod", {
+                method: t(`link.method.${view.shippingMethod}` as never),
+              })}
+            </p>
+          ) : null}
+          {linkForm && !view.detailsComplete ? (
+            <section
+              aria-labelledby="link-title"
+              className="flex flex-col gap-4 border border-line p-5"
+            >
+              <h2 id="link-title" className="text-2xl">
+                {t("link.title")}
+              </h2>
+              <p>{t("link.intro")}</p>
+              {linkForm}
+            </section>
+          ) : null}
           {view.inFlight ? (
             <p role="status">{t("inFlight")}</p>
           ) : settling ? (
@@ -152,6 +243,14 @@ export default async function OrderPage({
                 </button>
               </div>
             </form>
+          ) : null}
+          {linkForm && view.detailsComplete ? (
+            <details className="border border-line p-5">
+              <summary className="cursor-pointer font-medium">
+                {t("link.editTitle")}
+              </summary>
+              <div className="mbs-4">{linkForm}</div>
+            </details>
           ) : null}
           {view.canRelease && view.holdUntil ? (
             <form action={releaseHoldAction}>

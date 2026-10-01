@@ -10,6 +10,7 @@ import {
 import { ConflictError } from "@/server/domain/errors";
 import { IN_FLIGHT_ATTEMPT_STATUSES } from "@/server/domain/state-machines";
 import type { CheckoutSettings } from "@/server/settings/schemas";
+import { settleLinkRequests } from "./link-requests";
 
 /**
  * Reservation rules (spec §3.5; frozen contract). `lockArtworks` is the first step of every
@@ -369,6 +370,8 @@ export async function expireTakenOverOrders(
       .returning({ id: orders.id });
     if (rows[0]) expired.push(rows[0].id);
   }
+  // A link order whose lapsed hold was taken over is dead: its request expires with it.
+  await settleLinkRequests(tx, expired, "EXPIRED", "system");
   return expired;
 }
 

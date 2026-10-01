@@ -116,6 +116,32 @@ export async function requoteOrder(
   return { ...updated, changed: true };
 }
 
+/** Every candidate method's quote for an existing order's works, priced like checkout. */
+export async function shippingChoicesForOrder(
+  orderId: string,
+  i: { country?: string } = {},
+  deps: { db?: DbOrTx; env?: Env; now?: Date } = {},
+): Promise<ShippingQuoteResult[]> {
+  const db = deps.db ?? defaultDb;
+  const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+  if (!order) throw new NotFoundError("order", orderId);
+  const ids = await orderArtworkIds(db, orderId);
+  const items = await db
+    .select()
+    .from(artworks)
+    .where(inArray(artworks.id, ids));
+  const country = i.country ?? order.shipCountry;
+  return shippingOptions({
+    items,
+    country,
+    currency: order.currency,
+    date: deps.now ?? new Date(),
+    shipping: await getSetting("shipping", db),
+    checkout: await getSetting("checkout", db),
+    carrier: carrierFor(country, { env: deps.env ?? defaultEnv }),
+  }).all;
+}
+
 /**
  * The shipping quote of an existing order's works for `method` (and optionally a new
  * destination), priced like checkout. Holds are irrelevant here: the order's own hold is not a
@@ -126,25 +152,12 @@ export async function shippingQuoteForOrder(
   i: { method: ShippingMethod; country?: string },
   deps: { db?: DbOrTx; env?: Env; now?: Date } = {},
 ): Promise<ShippingQuoteResult> {
-  const db = deps.db ?? defaultDb;
-  const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
-  if (!order) throw new NotFoundError("order", orderId);
-  const ids = await orderArtworkIds(db, orderId);
-  const items = await db
-    .select()
-    .from(artworks)
-    .where(inArray(artworks.id, ids));
-  const country = i.country ?? order.shipCountry;
-  const options = shippingOptions({
-    items,
-    country,
-    currency: order.currency,
-    date: deps.now ?? new Date(),
-    shipping: await getSetting("shipping", db),
-    checkout: await getSetting("checkout", db),
-    carrier: carrierFor(country, { env: deps.env ?? defaultEnv }),
-  });
-  const quote = options.all.find((q) => q.method === i.method);
+  const all = await shippingChoicesForOrder(
+    orderId,
+    i.country ? { country: i.country } : {},
+    deps,
+  );
+  const quote = all.find((q) => q.method === i.method);
   if (!quote) {
     throw new ValidationError("METHOD_UNAVAILABLE", "method not offered here");
   }

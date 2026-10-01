@@ -46,5 +46,16 @@
     "demoStamp": "DEMO – not a tax document",
     "body": "Document {doc} for order {number} is ready.",
     "view": "View the receipt"
+  },
+  "checkoutLink": {
+    "subject": "Your link to buy “{title}”",
+    "preview": "Order {number} is reserved for you",
+    "title": "The work is reserved for you",
+    "body": "As agreed, “{title}” is reserved for you under order {number}.",
+    "total": "Total to pay: {amount}",
+    "reserved": "The reservation holds until {date}. After that the work may be offered to other buyers.",
+    "cta": "Complete the order and pay",
+    "steps": "On the order page you add the delivery address, read the purchase terms and your cancellation rights, and pay on the payment provider's secure page.",
+    "contact": "If anything is unclear, just reply to this email."
   }
 }

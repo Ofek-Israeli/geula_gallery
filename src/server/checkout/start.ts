@@ -32,6 +32,8 @@ import { hmacToken, orderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import type { CheckoutSettings } from "@/server/settings/schemas";
 import { detectConversation } from "./conversation";
+import { orderItemValues } from "./items";
+import { orderDetailsComplete } from "./link-details";
 import { itemPriceMinor } from "./pricing";
 import { getCheckoutQuote } from "./quote";
 import {
@@ -516,31 +518,11 @@ async function createHeldOrder(
     })
     .returning();
   if (!order) throw new Error("order insert returned no row");
-  await tx.insert(orderItems).values({
-    orderId: order.id,
-    artworkId: art.id,
-    titleHe: art.titleHe,
-    titleEn: art.titleEn,
-    priceMinor: quote.itemsTotalMinor,
-    currency: quote.currency,
-    declaredValueMinor: art.declaredValueOverrideMinor ?? art.priceIlsMinor,
-    snapshot: {
-      slug: art.slug,
-      inventoryNumber: art.inventoryNumber,
-      heightMm: art.heightMm,
-      widthMm: art.widthMm,
-      depthMm: art.depthMm,
-      medium: art.medium,
-      surface: art.surface,
-      yearCreated: art.yearCreated,
-      mediumDetailHe: art.mediumDetailHe,
-      mediumDetailEn: art.mediumDetailEn,
-      framed: art.framed,
-      signed: art.signed,
-      coaIncluded: art.coaIncluded,
-      isDemo: art.isDemo,
-    },
-  });
+  await tx
+    .insert(orderItems)
+    .values(
+      orderItemValues(order.id, art, quote.itemsTotalMinor, quote.currency),
+    );
 
   // 5. The conditional reserve (row count must equal n), 6. takeover expiry.
   const reserved = await reserveArtworks(tx, {
@@ -609,6 +591,7 @@ async function insertAttempt(
 
 export type PayOrderRefusal =
   | "not_found"
+  | "details_required"
   | "not_payable"
   | "in_flight"
   | "too_many_attempts"
@@ -679,6 +662,10 @@ async function payOrderTx(
   if (!current) throw new PayRefused("not_found");
   if (current.status !== "AWAITING_PAYMENT") {
     throw new PayRefused("not_payable");
+  }
+  // A link order pays only once the buyer completed the address and consents (spec §5.1 step 4).
+  if (current.source !== "WEB" && !orderDetailsComplete(current)) {
+    throw new PayRefused("details_required");
   }
   if ((await ordersWithAttemptInFlight(tx, [current.id])).size > 0) {
     throw new PayRefused("in_flight");

@@ -86,6 +86,36 @@
     "provider_unavailable": "This payment method is not available.",
     "provider_error": "We could not open the payment page. Please try again.",
     "generic": "Something went wrong. Please try again.",
-    "rate_limited": "Too many attempts. Please try again in a few minutes."
+    "rate_limited": "Too many attempts. Please try again in a few minutes.",
+    "details_required": "Please complete the delivery details first."
+  },
+  "link": {
+    "title": "Complete your order",
+    "intro": "The painter reserved this work for you at the price below. Add the delivery details, read the purchase terms and accept them; the payment button appears once the details are saved.",
+    "editTitle": "Change the delivery details",
+    "recipient": "Recipient name",
+    "pickupHint": "Not needed if you collect the work from the studio.",
+    "submit": "Save and continue to payment",
+    "saved": "Your details were saved. You can pay now.",
+    "requoted": "Your details were saved. The total changed with the delivery method – please check it before paying.",
+    "lockedMethod": "Delivery: {method} (agreed with the painter).",
+    "method": {
+      "CARRIER_TABLE": "Courier",
+      "LOCAL_PICKUP": "Pickup from the studio",
+      "ARTIST_DELIVERY": "Delivered by the artist",
+      "QUOTED": "Delivery as agreed"
+    },
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "not_found": "This order was not found.",
+      "not_link": "This order does not need more details.",
+      "not_payable": "This order can no longer be paid.",
+      "in_flight": "A payment is being confirmed. Please wait.",
+      "method_locked": "The delivery method was agreed with the painter and cannot be changed here.",
+      "method_unavailable": "This delivery method is not available for this work. Please choose another.",
+      "address_required": "Please enter the delivery address.",
+      "latin_only": "Please write the address in Latin (English) letters.",
+      "duties_ack_required": "Please confirm the import duties notice."
+    }
   }
 }

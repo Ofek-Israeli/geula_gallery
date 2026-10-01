@@ -7,6 +7,7 @@ import { withTx } from "@/server/db/tx";
 import { type ServiceResult, withEffects } from "@/server/domain/effects";
 import { ConflictError, NotFoundError } from "@/server/domain/errors";
 import { transition } from "@/server/domain/transition";
+import { settleLinkRequests } from "./link-requests";
 import {
   lockArtworks,
   lockOrder,
@@ -57,6 +58,7 @@ export async function releaseReservation(
         input.actor,
         { action: "order.hold_released" },
       );
+      await settleLinkRequests(tx, [order.id], "EXPIRED", input.actor);
       return true;
     },
     { db: deps.db, name: "checkout.release" },
@@ -117,6 +119,8 @@ export async function expireStaleOrders(
           "system",
           { action: "order.hold_expired" },
         );
+        // Link requests → EXPIRED with their order (spec §5.11 reconcile step 4).
+        await settleLinkRequests(tx, [order.id], "EXPIRED", "system");
         return true;
       },
       { db, name: "checkout.expire" },

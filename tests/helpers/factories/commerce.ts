@@ -179,3 +179,135 @@ export async function execSql(text: string, params: unknown[] = []) {
   const { pool } = await import("@/server/db/client");
   return pool.query(text, params);
 }
+
+// ---------------------------------------------------------------- admin and link orders (M3)
+
+type AdminContext = import("@/server/domain/admin").AdminContext;
+type LinkInput = import("@/server/checkout/links").CreateLinkOrderInput;
+type RequestInsert = Schema["buyerRequests"]["$inferInsert"];
+
+/** A fresh admin context (the guard's output) for service calls in tests. */
+export function testAdminContext(
+  overrides: Partial<Record<keyof AdminContext, unknown>> = {},
+): AdminContext {
+  return {
+    userId: "u-admin",
+    email: "painter@example.test",
+    name: "Painter",
+    sessionId: "s-test",
+    sessionCreatedAt: new Date(),
+    twoFactorEnabled: true,
+    locale: "he",
+    ipHash: null,
+    actor: "admin:u-admin",
+    ...overrides,
+  } as unknown as AdminContext;
+}
+
+/** An inbox request (QUOTE by default) about `artworkId`. */
+export async function insertBuyerRequest(
+  db: DbOrTx,
+  overrides: Partial<RequestInsert> = {},
+) {
+  const { buyerRequests } = await import("@/server/db/schema");
+  const buyer = uniqueBuyer("req");
+  const [row] = await db
+    .insert(buyerRequests)
+    .values({
+      kind: "QUOTE",
+      name: buyer.name,
+      email: buyer.email,
+      locale: "en",
+      message: "Could you quote delivery?",
+      ...overrides,
+    })
+    .returning();
+  if (!row) throw new Error("insertBuyerRequest: no row");
+  return row;
+}
+
+/** `createLinkOrder` (MANUAL, IL, ILS at the list price, pickup) with overrides. */
+export async function linkOrder(
+  art: ArtworkRow,
+  overrides: Partial<LinkInput> = {},
+  ctx: AdminContext = testAdminContext(),
+) {
+  const { createLinkOrder } = await import("@/server/checkout/links");
+  const buyer = uniqueBuyer("link");
+  const currency = overrides.currency ?? "ILS";
+  const { result } = await createLinkOrder(
+    {
+      kind: "MANUAL",
+      artworkId: art.id,
+      buyer: { name: buyer.name, email: buyer.email, phone: "+97230000000" },
+      country: "IL",
+      currency,
+      itemPriceMinor:
+        (currency === "ILS" ? art.priceIlsMinor : art.priceUsdMinor) ?? 100_000,
+      shippingMethod: "LOCAL_PICKUP",
+      conversationTookPlace: true,
+      locale: "en",
+      ...overrides,
+    },
+    ctx,
+  );
+  return result;
+}
+
+/** The buyer completes a link order's details (pickup by default; an address otherwise). */
+export async function completeDetails(
+  orderId: string,
+  opts: {
+    method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY" | "QUOTED";
+    country?: string;
+    duties?: boolean;
+  } = {},
+) {
+  const { completeLinkOrderDetails } = await import(
+    "@/server/checkout/link-details"
+  );
+  const { LEGAL_VERSIONS } = await import("@/content/legal/versions");
+  const country = opts.country ?? "IL";
+  const { result } = await completeLinkOrderDetails({
+    orderId,
+    ...(opts.method ? { method: opts.method } : {}),
+    shipTo:
+      opts.method === "LOCAL_PICKUP"
+        ? null
+        : {
+            name: "Test Buyer",
+            line1: "1 Test Street",
+            city: country === "IL" ? "Tel Aviv" : "Springfield",
+            postalCode: "12345",
+            country,
+            phone: "+97230000000",
+          },
+    buyer: {},
+    consents: {
+      termsVersion: LEGAL_VERSIONS.terms,
+      returnsVersion: LEGAL_VERSIONS.returns,
+      privacyVersion: LEGAL_VERSIONS.privacy,
+      ageConfirmed: true,
+      ...((opts.duties ?? country !== "IL")
+        ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
+        : {}),
+      receiptEmailConsent: true,
+    },
+    actor: "buyer:test",
+    ipHash: null,
+  });
+  return result;
+}
+
+/** "Pay" on the order page with the mock provider; returns the new attempt and its mock ref. */
+export async function payOrder(orderId: string, opts: { db?: Db } = {}) {
+  const { startPaymentForOrder } = await import("@/server/checkout/start");
+  const { result } = await startPaymentForOrder(
+    { orderId, providerId: "mock", locale: "en", ipHash: null },
+    { db: opts.db },
+  );
+  if (result.kind !== "redirect") return { result, attempt: null };
+  const { latestAttempt } = await attemptHelpers();
+  const attempt = await latestAttempt(orderId);
+  return { result, attempt };
+}

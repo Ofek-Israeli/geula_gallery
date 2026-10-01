@@ -19,7 +19,10 @@ import { checkoutProviders } from "@/server/payments/registry";
 import type { ProviderId } from "@/server/payments/types";
 import { verifyOrderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
+import { orderDetailsComplete } from "./link-details";
+import { insuredValueForDisplay } from "./pricing";
 import { liveProvidersBlocked } from "./quote";
+import { shippingChoicesForOrder } from "./requote";
 
 /**
  * The buyer's order page data (spec §5.1 step 4): readable only with the `?k=` access token
@@ -56,6 +59,32 @@ export interface BuyerOrderView {
   canPay: boolean;
   canRelease: boolean;
   providers: ProviderId[];
+  /** A QUOTE / OFFER / MANUAL link order (spec §5.8). */
+  isLink: boolean;
+  /** Address and consents are on the order (always true for WEB orders). */
+  detailsComplete: boolean;
+  /** An open link order: the buyer may (re)enter the delivery details. */
+  canEditDetails: boolean;
+  /** The painter fixed the shipping amount: the method cannot change. */
+  shippingLocked: boolean;
+  /** Methods the buyer may pick on an open, unlocked link order (prices in the order currency). */
+  methodChoices: {
+    method: string;
+    priceMinor: number;
+    insured: boolean;
+    insuredValueMinor: number;
+    estimate: string | null;
+  }[];
+  /** The saved delivery address (the buyer's own input; token-protected page). */
+  address: {
+    name: string;
+    line1: string;
+    line2: string;
+    city: string;
+    region: string;
+    postalCode: string;
+  } | null;
+  receiptEmailConsent: boolean;
 }
 
 export async function getBuyerOrder(
@@ -127,6 +156,25 @@ export async function getBuyerOrder(
         ).map((p) => p.id)
       : [];
   const awaiting = order.status === "AWAITING_PAYMENT";
+  const isLink = order.source !== "WEB";
+  const detailsComplete = !isLink || orderDetailsComplete(order);
+  const canEditDetails = isLink && awaiting && !inFlight;
+  const methodChoices =
+    canEditDetails && !order.shippingLocked
+      ? (await shippingChoicesForOrder(order.id, {}, { db, env: deps.env }))
+          .filter((q) => q.mode === "ok")
+          .map((q) => ({
+            method: q.method,
+            priceMinor: q.shippingMinor + q.insuranceMinor,
+            insured: q.insured,
+            insuredValueMinor: insuredValueForDisplay(
+              q,
+              order.currency,
+              checkout.fx.ilsPerUsd,
+            ),
+            estimate: q.estimate?.[locale] ?? null,
+          }))
+      : [];
   return {
     id: order.id,
     number: order.number,
@@ -159,10 +207,27 @@ export async function getBuyerOrder(
     canPay:
       awaiting &&
       !inFlight &&
+      detailsComplete &&
       providers.length > 0 &&
       attempts.length < checkout.maxAttemptsPerOrder,
     canRelease: awaiting && !inFlight,
     providers,
+    isLink,
+    detailsComplete,
+    canEditDetails,
+    shippingLocked: order.shippingLocked,
+    methodChoices,
+    address: order.shipLine1
+      ? {
+          name: order.shipName ?? "",
+          line1: order.shipLine1,
+          line2: order.shipLine2 ?? "",
+          city: order.shipCity ?? "",
+          region: order.shipRegion ?? "",
+          postalCode: order.shipPostalCode ?? "",
+        }
+      : null,
+    receiptEmailConsent: order.receiptEmailConsent ?? false,
   };
 }
 
