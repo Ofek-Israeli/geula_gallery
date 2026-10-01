@@ -1,16 +1,24 @@
 import "server-only";
-import { notImplemented } from "@/server/domain/errors";
+import { executeRefund } from "@/server/payments/refunds";
 import type { JobHandler } from "../types";
 
 /**
- * `REFUND_PAYMENT` handler (spec §5.4). M1 stub: the processor treats the thrown error like any failure
- * (backoff, DEAD after 8 attempts). Owner: WS2 (M2: refunds.ts).
- *
- * Calls `payments/refunds.ts#executeRefund(refundId)`: claim REQUESTED → IN_FLIGHT, call the provider
- * outside the transaction, record the result (spec §5.7 step 8).
- * Must be idempotent: a job can run more than once (lease expiry, retries).
+ * `REFUND_PAYMENT` handler (spec §5.4): `executeRefund(refundId)` claims REQUESTED → IN_FLIGHT,
+ * calls the provider outside any transaction and records the result (spec §5.7 step 8).
+ * Idempotent: a re-run finds the row past REQUESTED and never calls the provider again. A row
+ * another worker holds IN_FLIGHT (live lease) is rescheduled; an expired lease becomes UNKNOWN for
+ * the reconcile job.
  */
 export const refundPaymentHandler: JobHandler<"REFUND_PAYMENT"> = async (
-  _payload,
-  _ctx,
-) => notImplemented("outbox handler REFUND_PAYMENT", "WS2 (M2: refunds.ts)");
+  payload,
+) => {
+  const { result } = await executeRefund(payload.refundId);
+  if (result.status === "IN_FLIGHT") {
+    return {
+      kind: "reschedule",
+      delayMs: 3 * 60_000,
+      reason: "refund in flight in another worker",
+    };
+  }
+  return { kind: "done" };
+};
