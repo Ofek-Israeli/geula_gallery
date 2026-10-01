@@ -102,3 +102,29 @@ export interface MoneyDTO {
   amountMinor: number;
   currency: Currency;
 }
+
+/**
+ * "Delivery from" per shipping zone for the artwork page (spec §6.3 LiveBuyBox), computed by
+ * `shipping/rates.ts#zoneEstimates`. `insured` is true only when that zone's quote includes
+ * insurance (the UI may say "insured" only then).
+ */
+export type ZoneEstimateDTO =
+  | {
+      zone: "IL" | "EUROPE" | "NORTH_AMERICA" | "REST_OF_WORLD";
+      kind: "price";
+      fromIlsMinor: number;
+      insured: boolean;
+      estimate: string | null;
+    }
+  | {
+      zone: "IL" | "EUROPE" | "NORTH_AMERICA" | "REST_OF_WORLD";
+      kind: "quote" | "unavailable";
+      estimate: string | null;
+    };
+
+/** One demo credit on `/credits` (spec §6.2): the AIC caption plus a link to the work. */
+export interface CreditDTO {
+  slug: string;
+  title: string;
+  caption: string;
+}
