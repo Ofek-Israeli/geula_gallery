@@ -16,7 +16,7 @@ import {
  * delivery → mock payment → order page "Paid" → the work shows "Sold" → order confirmation (with
  * the inline disclosure summary), painter notification and receipt emails → the mock receipt
  * (stamped DEMO) and the disclosure document → the admin sees the order, its receipt, and records
- * manual tracking. The disclosure PDF attachment is Tier B (WS6): `test.fixme` below.
+ * manual tracking. The confirmation carries the disclosure PDF attachment (Tier B, WS6).
  */
 const SLUG = "movement-no-10";
 const heOrders = messages("he", "orders");
@@ -82,6 +82,16 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
   expect(confirmation.html).toContain('dir="rtl"');
   expect(confirmation.html).toContain(`/he/print/disclosure/${number}?k=`);
   expect(confirmation.text).toContain("מסמך הגילוי");
+  // Tier B (WS6): the disclosure PDF is attached (metadata only is stored).
+  const attached = (confirmation.attachments ?? []) as {
+    filename: string;
+    contentType: string;
+    bytes: number;
+  }[];
+  expect(attached).toHaveLength(1);
+  expect(attached[0]?.contentType).toBe("application/pdf");
+  expect(attached[0]?.filename).toMatch(/\.pdf$/);
+  expect(attached[0]?.bytes).toBeGreaterThan(1_000);
   const painter = await waitForMail(request, {
     template: "painter-new-order",
     orderId,
@@ -159,8 +169,6 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
     await admin.close();
   }
 });
-
-test.fixme("order-confirmation carries the disclosure PDF attachment (Tier B, lands in WS6)", () => {});
 
 async function waitForMail(
   request: APIRequestContext,

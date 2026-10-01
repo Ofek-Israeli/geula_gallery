@@ -3,9 +3,8 @@ import { ADMIN_STORAGE_STATE } from "./e2e-env";
 
 /**
  * Smoke (spec §10.4): locale redirects, `html[dir][lang]`, demo banner, X-Robots-Tag, the
- * cancellation link on every public page, and the admin guard. Pages that later milestones
- * build are listed with `test.fixme` and the milestone that adds them; whoever lands the page
- * removes the `fixme`.
+ * cancellation link on every public page (home, works, artwork, about, legal, contact, checkout;
+ * the order page in purchase-il), and the admin guard.
  */
 
 test.describe("locale routing @smoke", () => {
@@ -84,6 +83,8 @@ test.describe("cancellation link on public pages @smoke", () => {
     ["works", "/works"],
     ["artwork", "/works/landscape-no-26"],
     ["about", "/about"],
+    ["legal", "/legal/terms"],
+    ["contact", "/contact"],
     // Checkout footer (spec §1.2). The order page's link is checked in purchase-il, which needs
     // a real order and its token.
     ["checkout", "/checkout/landscape-no-26"],
@@ -101,10 +102,6 @@ test.describe("cancellation link on public pages @smoke", () => {
         await expect(link).toHaveAttribute("href", `/${locale}/cancel`);
       });
     }
-  }
-
-  for (const [page, owner] of [["legal", "WS6"]] as const) {
-    test.fixme(`${page} page shows the cancellation link (lands in ${owner})`, () => {});
   }
 });
 

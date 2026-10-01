@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
 import { buildMockWebhook } from "../helpers/mock-webhook";
@@ -48,24 +49,32 @@ test("forged, unsigned and stale webhooks get 401 and write nothing", async ({
   request,
   baseURL,
 }) => {
+  // Scoped to this test's own ref and event ids: other specs write payment events in parallel.
+  const nonce = randomBytes(16).toString("hex");
+  const ref = `mock_${nonce}`;
+  const eventIds = ["forged", "unsigned", "stale"].map(
+    (v) => `e2e-${v}-${nonce}`,
+  );
   const count = async () =>
     Number(
       (
         await e2eQuery<{ n: string }>(
-          "SELECT count(*) AS n FROM payment_events",
+          `SELECT count(*) AS n FROM payment_events
+            WHERE event_key = ANY($1) OR payload_redacted->>'ref' = $2`,
+          [eventIds, ref],
         )
       )[0]?.n ?? 0,
     );
-  const before = await count();
-  const ref = `mock_${"0".repeat(32)}`;
-  for (const variant of [
+  const variants = [
     { signWith: "e2e-not-the-secret" },
     { unsigned: true },
     { timestamp: Math.floor(Date.now() / 1000) - 3600 },
-  ]) {
+  ];
+  for (const [i, variant] of variants.entries()) {
     const req = buildMockWebhook({
       baseUrl: baseURL ?? "",
       ref,
+      eventId: eventIds[i],
       secret: E2E_SECRETS.MOCK_WEBHOOK_SECRET,
       ...variant,
     });
@@ -75,7 +84,7 @@ test("forged, unsigned and stale webhooks get 401 and write nothing", async ({
     });
     expect(res.status(), JSON.stringify(variant)).toBe(401);
   }
-  expect(await count()).toBe(before);
+  expect(await count()).toBe(0);
 });
 
 test("a valid webhook for an unpaid payment leaves the order unpaid", async ({

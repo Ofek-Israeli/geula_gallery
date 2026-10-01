@@ -7,15 +7,24 @@ import {
   HE,
   submitWithConfirm,
 } from "./support/admin";
-import { buyerIp, e2eQuery, mailbox, runCron } from "./support/commerce";
+import {
+  buyerIp,
+  e2eQuery,
+  mailbox,
+  messages,
+  runCron,
+} from "./support/commerce";
 
 /**
  * Spec §10.4 `offer` (Tier B, spec §5.8): an offer below the painter's threshold is auto-declined
- * with an emailed reply; an acceptable offer reaches the inbox and the admin accepts it → a link
- * order at the offered price (WS2 `createLinkOrder`; the spec skips from there until M4).
+ * with an emailed reply; an acceptable offer reaches the inbox (from the artwork page's "Make an
+ * offer" link) and the admin accepts it → a link order at the offered price (WS2
+ * `createLinkOrder`) → the buyer completes the details and pays through the emailed link.
  */
 const c = HE.catalog;
 const inbox = HE.shell.inbox;
+const en = messages("en", "orders");
+const ec = messages("en", "checkout");
 
 test.use({ extraHTTPHeaders: buyerIp(43) });
 
@@ -68,6 +77,11 @@ test("auto-decline below the threshold; accept an offer → link order", async (
       })
       .toBe(true);
 
+    // The artwork page now links "Make an offer" (WS1 buy box).
+    await page.goto(`/en/works/${a.slug}`);
+    await page.getByTestId("make-offer").click();
+    await expect(page).toHaveURL(/\/request\?kind=offer$/);
+
     // USD 100 is far below ₪2,000: auto-declined, the buyer gets a reply, the painter nothing.
     const low = uniqueBuyer("offer-low");
     await makeOffer(page, a.slug, low.email, "100");
@@ -99,19 +113,15 @@ test("auto-decline below the threshold; accept an offer → link order", async (
     const accept = ap.getByTestId("accept-offer-form");
     await field(accept, inbox.lockedShipping).fill("90");
     await submitWithConfirm(accept, inbox.accept, inbox.accept);
+    // On success the answer section unmounts (the request is no longer NEW): wait for the new
+    // status, or an error inside the still-mounted form.
+    const status = ap.getByTestId("request-status");
     await expect(
-      accept.getByTestId("form-success").or(accept.getByTestId("form-error")),
+      accept
+        .getByTestId("form-error")
+        .or(status.filter({ hasText: inbox.status.ACCEPTED })),
     ).toBeVisible();
-    if (
-      (await accept.getByTestId("form-error").getAttribute("data-code")) ===
-      "NOT_IMPLEMENTED"
-    ) {
-      test.skip(
-        true,
-        "createLinkOrder (WS2) is not integrated in this worktree yet",
-      );
-    }
-    await expect(accept.getByTestId("form-success")).toBeVisible();
+    await expect(status).toHaveText(inbox.status.ACCEPTED);
     const [row] = await e2eQuery<{ status: string; order_id: string | null }>(
       "SELECT status, order_id FROM buyer_requests WHERE lower(email) = $1",
       [buyer.email.toLowerCase()],
@@ -129,9 +139,55 @@ test("auto-decline below the threshold; accept an offer → link order", async (
       currency: "USD",
       source: "OFFER",
     });
+
+    // The buyer pays through the emailed link (WS2 link-order page): the shipping is locked,
+    // so only the address and the consents are asked for.
+    for (let i = 0; i < 2; i++) await runCron(request, "outbox");
+    const link = await mailbox.waitFor({
+      template: "checkout-link",
+      to: buyer.email,
+    });
+    const payUrl = /href="(http[^"]+\/orders\/GG-[^"]+)"/.exec(
+      link[0]?.html ?? "",
+    )?.[1];
+    expect(payUrl).toBeTruthy();
+    await page.goto((payUrl ?? "").replaceAll("&amp;", "&"));
+    const details = page.getByTestId("link-details-form");
+    await expect(details.getByRole("radio")).toHaveCount(0);
+    await details
+      .getByLabel(new RegExp(`^${en.link.recipient}`))
+      .fill("Olive Offer");
+    await details
+      .getByLabel(new RegExp(`^${ec.details.line1}`))
+      .fill("1 Main Street");
+    await details.getByLabel(new RegExp(`^${ec.details.city}`)).fill("Boston");
+    await details.getByLabel(new RegExp(`^${ec.details.region}`)).fill("MA");
+    await details
+      .getByLabel(new RegExp(`^${ec.details.postalCode}`))
+      .fill("02101");
+    await details.getByLabel(ec.consent.terms).check();
+    await details.getByLabel(ec.consent.age).check();
+    await details.getByLabel(ec.consent.dap).check();
+    await details.getByTestId("link-details-submit").click();
+    await expect(page.getByTestId("link-details-result")).toHaveText(
+      en.link.saved,
+    );
+    await page.getByTestId("pay-now").click();
+    await expect(page).toHaveURL(/\/en\/mock-pay\/mock_[0-9a-f]{32}/);
+    await page.getByTestId("mock-pay").click();
+    await expect(page).toHaveURL(/payment=paid/);
+    await expect(page.getByTestId("order-status")).toHaveText(en.status.PAID);
+    const [paid] = await e2eQuery<{ status: string; shipping_minor: number }>(
+      "SELECT status, shipping_minor FROM orders WHERE id = $1",
+      [row?.order_id],
+    );
+    expect(paid).toEqual({ status: "PAID", shipping_minor: 9_000 });
+    const [req] = await e2eQuery<{ status: string }>(
+      "SELECT status FROM buyer_requests WHERE lower(email) = $1",
+      [buyer.email.toLowerCase()],
+    );
+    expect(req?.status).toBe("CONVERTED");
   } finally {
     await admin.close();
   }
 });
-
-test.fixme("accepted offer: pay through the emailed link (WS2 link-order page)", () => {});

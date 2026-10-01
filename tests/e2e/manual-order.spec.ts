@@ -14,8 +14,7 @@ import { e2eQuery, mailbox, runCron } from "./support/commerce";
  * who wrote by phone, records the exact bank transfer → the order is PAID and the buyer receives
  * the order confirmation with the disclosure summary.
  *
- * The order is created by `createLinkOrder(kind MANUAL)` and paid by `recordOfflinePayment`, both
- * WS2 bodies: until M4 integration the admin form answers NOT_IMPLEMENTED and the spec skips.
+ * The order is created by `createLinkOrder(kind MANUAL)` and paid by `recordOfflinePayment` (WS2).
  */
 const o = HE.orders;
 
@@ -42,17 +41,7 @@ test("manual order → record the exact transfer → PAID + disclosure email", a
     await field(form, o.new.shippingMethod).selectOption("LOCAL_PICKUP");
     await submitWithConfirm(form, o.new.submit, o.new.submit);
 
-    const error = form.getByTestId("form-error");
-    await expect(ap.getByTestId("admin-order").or(error)).toBeVisible();
-    if (
-      (await error.count()) > 0 &&
-      (await error.getAttribute("data-code")) === "NOT_IMPLEMENTED"
-    ) {
-      test.skip(
-        true,
-        "createLinkOrder (WS2) is not integrated in this worktree yet",
-      );
-    }
+    await expect(ap.getByTestId("admin-order")).toBeVisible();
     await expect(ap.getByTestId("admin-order-status")).toHaveText(
       o.status.AWAITING_PAYMENT,
     );
@@ -66,17 +55,8 @@ test("manual order → record the exact transfer → PAID + disclosure email", a
     await submitWithConfirm(pay, o.payment.submit, o.payment.submit);
     await expect(pay.getByTestId("form-error")).toHaveAttribute(
       "data-code",
-      /AMOUNT_MISMATCH|NOT_IMPLEMENTED/,
+      "AMOUNT_MISMATCH",
     );
-    if (
-      (await pay.getByTestId("form-error").getAttribute("data-code")) ===
-      "NOT_IMPLEMENTED"
-    ) {
-      test.skip(
-        true,
-        "recordOfflinePayment (WS2) is not integrated in this worktree yet",
-      );
-    }
     await field(pay, o.payment.amount).fill("1800");
     await submitWithConfirm(pay, o.payment.submit, o.payment.submit);
     await expect(ap.getByTestId("admin-order-status")).toHaveText(
