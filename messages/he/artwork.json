@@ -1,1 +1,78 @@
-{}
+{
+  "breadcrumbs": {
+    "home": "דף הבית",
+    "works": "יצירות"
+  },
+  "status": {
+    "available": "זמינה",
+    "reserved": "שמורה – מוחזקת עבור קונה אחר עד {time}",
+    "onHold": "בהמתנה",
+    "reservedOffline": "שמורה",
+    "sold": "נמכרה",
+    "notForSale": "לא למכירה"
+  },
+  "buy": {
+    "label": "רכישה",
+    "buyNow": "לרכישה",
+    "ask": "שאלה על היצירה",
+    "askSimilar": "שאלה על יצירות דומות",
+    "commission": "בקשה להזמנת יצירה",
+    "requestQuote": "בקשת הצעת מחיר",
+    "quoteOnly": "ליצירה זו המשלוח והמחיר הסופי ניתנים בהצעת מחיר.",
+    "priceOnRequest": "מחיר לפי בקשה",
+    "usdAbroad": "קונים בחו״ל יכולים לשלם בדולרים בקופה."
+  },
+  "delivery": {
+    "title": "משלוח",
+    "israelFrom": "משלוח בישראל החל מ־{price}",
+    "freePickup": "איסוף חינם מהסטודיו",
+    "zonesLabel": "משלוח לפי אזור",
+    "zone": {
+      "IL": "ישראל",
+      "EUROPE": "אירופה",
+      "NORTH_AMERICA": "צפון אמריקה",
+      "REST_OF_WORLD": "שאר העולם"
+    },
+    "from": "החל מ־{price}",
+    "quote": "בהצעת מחיר",
+    "unavailable": "לא זמין",
+    "details": "משלוחים ומכס",
+    "dap": "במשלוחים לחו״ל המכס, המסים ודמי הטיפול ביעד חלים על הקונה (DAP)."
+  },
+  "trust": {
+    "label": "מה כלול",
+    "tracked": "משלוח עם מעקב",
+    "insured": "מבוטח",
+    "cancellation": "ביטול עסקה תוך 14 יום",
+    "coa": "תעודת מקוריות"
+  },
+  "facts": {
+    "title": "פרטי היצירה",
+    "medium": "טכניקה",
+    "dimensions": "מידות (גובה × רוחב × עומק)",
+    "year": "שנה",
+    "series": "סדרה",
+    "frame": "מסגרת",
+    "framed": "ממוסגרת",
+    "unframed": "ללא מסגרת",
+    "readyToHang": "מוכנה לתלייה",
+    "yes": "כן",
+    "no": "לא",
+    "coa": "תעודת מקוריות",
+    "coaIncluded": "כלולה",
+    "packaging": "אריזה",
+    "packagingType": {
+      "ROLLED_TUBE": "גלילה בשפופרת",
+      "FLAT_BOX": "קופסה שטוחה",
+      "STRETCHED_BOX": "קופסה לבד מתוח",
+      "FRAMED_BOX": "קופסה ליצירה ממוסגרת",
+      "CRATE": "ארגז עץ"
+    },
+    "dispatch": "יוצאת למשלוח תוך {days, plural, one {יום עסקים אחד} two {יומיים} other {# ימי עסקים}}",
+    "dispatchLabel": "זמן הכנה למשלוח",
+    "inventory": "מספר מלאי"
+  },
+  "description": "תיאור",
+  "credit": "תמונה: {caption} (CC0)",
+  "demo": "רישום הדגמה"
+}

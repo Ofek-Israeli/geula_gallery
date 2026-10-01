@@ -80,9 +80,26 @@ test.describe("cancellation link on public pages @smoke", () => {
     });
   }
 
+  for (const [name, path] of [
+    ["works", "/works"],
+    ["artwork", "/works/landscape-no-26"],
+  ] as const) {
+    for (const locale of ["he", "en"] as const) {
+      test(`${name} page (${locale}) links to /${locale}/cancel`, async ({
+        page,
+      }) => {
+        const res = await page.goto(`/${locale}${path}`);
+        expect(res?.status()).toBe(200);
+        const link = page
+          .getByRole("link", { name: cancelName[locale] })
+          .first();
+        await expect(link).toBeVisible();
+        await expect(link).toHaveAttribute("href", `/${locale}/cancel`);
+      });
+    }
+  }
+
   for (const [page, owner] of [
-    ["works", "M2 minimal storefront"],
-    ["artwork", "M2 minimal storefront"],
     ["about", "WS1"],
     ["legal", "WS6"],
     ["checkout", "M2 checkout"],

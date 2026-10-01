@@ -1,1 +1,78 @@
-{}
+{
+  "breadcrumbs": {
+    "home": "Home",
+    "works": "Works"
+  },
+  "status": {
+    "available": "Available",
+    "reserved": "Reserved – on hold for another buyer until {time}",
+    "onHold": "On hold",
+    "reservedOffline": "Reserved",
+    "sold": "Sold",
+    "notForSale": "Not for sale"
+  },
+  "buy": {
+    "label": "Purchase",
+    "buyNow": "Buy now",
+    "ask": "Ask about this work",
+    "askSimilar": "Ask about similar works",
+    "commission": "Request a commission",
+    "requestQuote": "Request a quote",
+    "quoteOnly": "Delivery and the final price for this work are quoted on request.",
+    "priceOnRequest": "Price on request",
+    "usdAbroad": "Buyers shipping abroad can pay in US dollars at checkout."
+  },
+  "delivery": {
+    "title": "Delivery",
+    "israelFrom": "Delivery in Israel from {price}",
+    "freePickup": "free studio pickup",
+    "zonesLabel": "Delivery by region",
+    "zone": {
+      "IL": "Israel",
+      "EUROPE": "Europe",
+      "NORTH_AMERICA": "North America",
+      "REST_OF_WORLD": "Rest of the world"
+    },
+    "from": "from {price}",
+    "quote": "on request",
+    "unavailable": "not available",
+    "details": "Shipping and duties",
+    "dap": "For international orders, import duties, taxes and handling fees at the destination are paid by the buyer (DAP)."
+  },
+  "trust": {
+    "label": "What is included",
+    "tracked": "Tracked delivery",
+    "insured": "Insured",
+    "cancellation": "14-day cancellation",
+    "coa": "Certificate of authenticity"
+  },
+  "facts": {
+    "title": "About the work",
+    "medium": "Medium",
+    "dimensions": "Dimensions (H × W × D)",
+    "year": "Year",
+    "series": "Series",
+    "frame": "Frame",
+    "framed": "Framed",
+    "unframed": "Unframed",
+    "readyToHang": "Ready to hang",
+    "yes": "Yes",
+    "no": "No",
+    "coa": "Certificate of authenticity",
+    "coaIncluded": "Included",
+    "packaging": "Packaging",
+    "packagingType": {
+      "ROLLED_TUBE": "Rolled in a tube",
+      "FLAT_BOX": "Flat box",
+      "STRETCHED_BOX": "Box for a stretched canvas",
+      "FRAMED_BOX": "Box for a framed work",
+      "CRATE": "Wooden crate"
+    },
+    "dispatch": "Ships within {days, plural, one {# business day} other {# business days}}",
+    "dispatchLabel": "Dispatch",
+    "inventory": "Inventory number"
+  },
+  "description": "Description",
+  "credit": "Image: {caption} (CC0)",
+  "demo": "Demo listing"
+}

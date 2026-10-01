@@ -1,1 +1,41 @@
-{}
+{
+  "home": {
+    "title": "Original paintings",
+    "intro": "Every work here is a one-of-a-kind original. Buy directly on the site, with delivery in Israel and abroad.",
+    "featuredLabel": "Featured work",
+    "viewWork": "View the work",
+    "availableTitle": "Available works",
+    "allWorks": "All works",
+    "aboutTitle": "About the artist",
+    "aboutBody": "An Israeli painter working in oil and watercolour. Every work ships with a certificate of authenticity.",
+    "aboutLink": "More about the artist",
+    "commissionTitle": "Commissions",
+    "commissionBody": "Looking for a work made for you? Get in touch about the idea, the size and the space.",
+    "commissionCta": "Ask about a commission"
+  },
+  "works": {
+    "title": "Works",
+    "archiveTitle": "Archive: sold works",
+    "intro": "Available works are shown first. Every work is a one-of-a-kind original.",
+    "archiveIntro": "Works that have found a home. You can ask about similar works or request a commission.",
+    "count": "{count, plural, one {# work} other {# works}}",
+    "recentlySold": "Recently sold",
+    "viewArchive": "View the archive of sold works",
+    "backToCurrent": "Back to available works",
+    "empty": "No works to show right now.",
+    "pagination": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}"
+  },
+  "credits": {
+    "title": "Credits",
+    "intro": "This site is currently a demo. The images are public-domain paintings from the collection of the Art Institute of Chicago, used as placeholders until the artist's own works are added.",
+    "imagesTitle": "Demo images",
+    "cc0": "The images and their data are released by the Art Institute of Chicago under CC0 1.0 (no rights reserved). Hebrew titles, alt texts and descriptions were written for this site.",
+    "source": "Source: the Art Institute of Chicago public API",
+    "fontsTitle": "Fonts",
+    "fonts": "Frank Ruhl Libre and Assistant are licensed under the SIL Open Font License 1.1.",
+    "viewListing": "View the demo listing"
+  }
+}
