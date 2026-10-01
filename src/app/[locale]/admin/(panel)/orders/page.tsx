@@ -106,7 +106,7 @@ export default async function AdminOrdersPage({
       ) : (
         <div className="overflow-x-auto">
           <table
-            className="w-full min-w-[40rem] border-collapse text-sm"
+            className="w-full min-w-[40rem] border-collapse text-sm [&_td:not(:last-child)]:pe-4 [&_th:not(:last-child)]:pe-4"
             data-testid="orders-table"
           >
             <thead>
