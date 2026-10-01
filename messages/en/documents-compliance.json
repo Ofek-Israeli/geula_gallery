@@ -1,1 +1,42 @@
-{}
+{
+  "disclosure": {
+    "meta": "Order {number} · {date} · version {version}",
+    "printNote": "Keep this document. A printed copy is included with the work."
+  },
+  "receipt": {
+    "kind": {
+      "RECEIPT": "Receipt",
+      "INVOICE_RECEIPT": "Tax invoice-receipt",
+      "CREDIT_NOTE": "Credit note"
+    },
+    "meta": "Order {number} · issued {date}",
+    "credits": "Credits document {doc}",
+    "providerCopy": "Open the document issued by the bookkeeping provider",
+    "seller": "Seller",
+    "buyer": "Buyer",
+    "patur": "VAT-exempt dealer no.",
+    "murshe": "Licensed dealer no.",
+    "description": "Description",
+    "amount": "Amount",
+    "total": "Total",
+    "line": {
+      "shipping": "Shipping",
+      "insurance": "Shipping insurance",
+      "order": "Payment for order {number}",
+      "refund": "Refund"
+    },
+    "payment": "Paid by {method} · reference {reference}",
+    "last4": "card ending {last4}",
+    "method": {
+      "card": "card",
+      "paypal": "PayPal",
+      "bit": "Bit",
+      "apple_pay": "Apple Pay",
+      "google_pay": "Google Pay",
+      "transfer": "bank transfer",
+      "cash": "cash",
+      "cheque": "cheque",
+      "other": "other"
+    }
+  }
+}

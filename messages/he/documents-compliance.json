@@ -1,1 +1,42 @@
-{}
+{
+  "disclosure": {
+    "meta": "הזמנה {number} · {date} · גרסה {version}",
+    "printNote": "מומלץ לשמור מסמך זה. עותק מודפס מצורף ליצירה."
+  },
+  "receipt": {
+    "kind": {
+      "RECEIPT": "קבלה",
+      "INVOICE_RECEIPT": "חשבונית מס-קבלה",
+      "CREDIT_NOTE": "חשבונית זיכוי"
+    },
+    "meta": "הזמנה {number} · הופק ב-{date}",
+    "credits": "מזכה את מסמך {doc}",
+    "providerCopy": "לפתיחת המסמך שהופק בתוכנת הנהלת החשבונות",
+    "seller": "העוסק",
+    "buyer": "הלקוח",
+    "patur": "עוסק פטור מס׳",
+    "murshe": "עוסק מורשה מס׳",
+    "description": "תיאור",
+    "amount": "סכום",
+    "total": "סה״כ",
+    "line": {
+      "shipping": "משלוח",
+      "insurance": "ביטוח משלוח",
+      "order": "תשלום עבור הזמנה {number}",
+      "refund": "החזר"
+    },
+    "payment": "שולם ב{method} · אסמכתא {reference}",
+    "last4": "כרטיס המסתיים ב-{last4}",
+    "method": {
+      "card": "כרטיס אשראי",
+      "paypal": "PayPal",
+      "bit": "Bit",
+      "apple_pay": "Apple Pay",
+      "google_pay": "Google Pay",
+      "transfer": "העברה בנקאית",
+      "cash": "מזומן",
+      "cheque": "המחאה",
+      "other": "אחר"
+    }
+  }
+}
