@@ -13,11 +13,10 @@ type OutboxProcessor = (opts: { limit: number }) => Promise<unknown>;
 
 /**
  * Loads the outbox processor lazily, so this module does not pull the email/PDF renderers into
- * every route. M1 step 11 creates `@/server/outbox/process` and replaces this body with
- * `(await import("@/server/outbox/process")).processOutbox`.
+ * every route that merely applies effects.
  */
-async function loadOutboxProcessor(): Promise<OutboxProcessor | null> {
-  return null;
+async function loadOutboxProcessor(): Promise<OutboxProcessor> {
+  return (await import("@/server/outbox/process")).processOutbox;
 }
 
 /**
@@ -33,7 +32,7 @@ export function applyEffects(effects: Effects | undefined): void {
     after(async () => {
       try {
         const processOutbox = await loadOutboxProcessor();
-        await processOutbox?.({ limit: AFTER_RESPONSE_OUTBOX_LIMIT });
+        await processOutbox({ limit: AFTER_RESPONSE_OUTBOX_LIMIT });
       } catch (error) {
         // The cron outbox job retries; never fail the response.
         log.error("effects.outbox_after_failed", {}, error);
