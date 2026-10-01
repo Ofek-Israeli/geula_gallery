@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
 import {
   buyerIp,
+  clickAndConfirm,
   continueToMockPay,
   fillCheckout,
   messages,
@@ -70,10 +71,7 @@ test("release my reservation → the work is available again (Hebrew)", async ({
   await page.getByTestId("mock-cancel").click();
   await expect(page).toHaveURL(/\/he\/orders\/GG-[0-9A-Z]{6}\?k=/);
 
-  await page.getByRole("button", { name: heOrders.release }).click();
-  await page
-    .getByRole("button", { name: heCommon.form.confirm, exact: true })
-    .click();
+  await clickAndConfirm(page, heOrders.release, heCommon.form.confirm);
   await expect(page.getByText(heOrders.released)).toBeVisible();
   await expect(page.getByTestId("order-status")).toHaveText(
     heOrders.status.EXPIRED,

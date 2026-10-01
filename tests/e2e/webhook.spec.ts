@@ -4,6 +4,7 @@ import { buildMockWebhook } from "../helpers/mock-webhook";
 import { E2E_SECRETS } from "./e2e-env";
 import {
   buyerIp,
+  clickAndConfirm,
   continueToMockPay,
   e2eQuery,
   fillCheckout,
@@ -108,8 +109,7 @@ test("a valid webhook for an unpaid payment leaves the order unpaid", async ({
   await expect(page.getByTestId("order-status")).toHaveText(
     enOrders.status.AWAITING_PAYMENT,
   );
-  await page.getByRole("button", { name: enOrders.release }).click();
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await clickAndConfirm(page, enOrders.release, "Confirm");
   await expect(page.getByText(enOrders.released)).toBeVisible();
   await page.goto(`/en/works/${slug}`);
   await expect(page.getByTestId("artwork-status")).toHaveText(

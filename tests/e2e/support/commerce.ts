@@ -113,6 +113,23 @@ export async function continueToMockPay(page: Page): Promise<string> {
   return ref;
 }
 
+/**
+ * Opens a `ConfirmButton` dialog and confirms it. The dialog opens from a client handler, so a
+ * click that lands before hydration does nothing: retry the click until the dialog is visible.
+ */
+export async function clickAndConfirm(
+  page: Page,
+  buttonName: string,
+  confirmName: string,
+): Promise<void> {
+  const confirm = page.getByRole("button", { name: confirmName, exact: true });
+  await expect(async () => {
+    await page.getByRole("button", { name: buttonName }).click();
+    await expect(confirm).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await confirm.click();
+}
+
 export async function orderStatusByRef(
   ref: string,
 ): Promise<string | undefined> {
