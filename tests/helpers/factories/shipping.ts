@@ -143,3 +143,94 @@ export function sampleShipmentRequest(
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------- DB arrangers (integration)
+
+type AdminContext = import("@/server/domain/admin").AdminContext;
+type ArtworkInsert = typeof import("@/server/db/schema").artworks.$inferInsert;
+
+/** An `AdminContext` for service calls in integration tests. */
+export function testAdminContext(userId = "u-ship"): AdminContext {
+  return {
+    userId,
+    email: `${userId}@example.test`,
+    name: "Shipping Admin",
+    sessionId: `s-${userId}`,
+    sessionCreatedAt: new Date(),
+    twoFactorEnabled: true,
+    locale: "he",
+    ipHash: null,
+    actor: `admin:${userId}`,
+  } as unknown as AdminContext;
+}
+
+export interface PaidOrderOptions {
+  country?: string;
+  method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY";
+  currency?: "ILS" | "USD";
+  artwork?: Partial<ArtworkInsert>;
+}
+
+/**
+ * A PAID order with its shipment row, through the real services: checkout → mock "pay" →
+ * `finalizeAttempt`. Defaults: Israel, courier (CARRIER_TABLE), ILS.
+ */
+export async function paidShipmentOrder(opts: PaidOrderOptions = {}) {
+  const [{ db }, schema, { eq }, commerce, { finalizeAttempt }] =
+    await Promise.all([
+      import("@/server/db/client"),
+      import("@/server/db/schema"),
+      import("drizzle-orm"),
+      import("./commerce"),
+      import("@/server/payments/finalize"),
+    ]);
+  const country = opts.country ?? "IL";
+  const art = await commerce.buyableArtwork(db, opts.artwork);
+  const h = await commerce.heldOrder(art.slug, {
+    country,
+    method: opts.method ?? "CARRIER_TABLE",
+    currency: opts.currency ?? (country === "IL" ? "ILS" : "USD"),
+  });
+  await commerce.clickMockPay(h.ref, "pay");
+  const { result } = await finalizeAttempt(h.attemptId, { trigger: "return" });
+  if (result.outcome !== "paid") {
+    throw new Error(`paidShipmentOrder: finalize → ${result.outcome}`);
+  }
+  const [shipment] = await db
+    .select()
+    .from(schema.shipments)
+    .where(eq(schema.shipments.orderId, h.orderId));
+  if (!shipment) throw new Error("paidShipmentOrder: no shipment row");
+  return {
+    orderId: h.orderId,
+    shipmentId: shipment.id,
+    artwork: art,
+    ref: h.ref,
+  };
+}
+
+/** A storage key shaped like a `purpose=packing` upload (no file needed by the services). */
+export function packingPhotoKey(n = 1): string {
+  const hex = n.toString(16).padStart(12, "0");
+  return `packing/2026/10/00000000-0000-4000-8000-${hex}.jpg`;
+}
+
+/** The packed parcel of a small work and every checklist item ticked. */
+export function fullPacking(photoKeys: string[] = [packingPhotoKey()]) {
+  return {
+    checklist: [
+      "noContactWithPaint",
+      "cornerProtectors",
+      "rigidSpacer",
+      "tubeAtLeast10in",
+      "rolledPaintOutward",
+      "crateIspmExempt",
+      "workCured",
+      "coaSigned",
+      "disclosureInserted",
+      "receiptPrinted",
+    ],
+    packages: [{ lengthMm: 920, widthMm: 720, heightMm: 110, weightG: 4500 }],
+    photoKeys,
+  };
+}
