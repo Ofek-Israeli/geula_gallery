@@ -68,8 +68,9 @@ export interface StatusChange {
 }
 
 /**
- * The cancellation window that starts at delivery (spec §5.7 step 6). `deadlines.ts` is WS6's;
- * until its body lands it throws, and the window is left for the daily job to fill.
+ * The cancellation window that starts at delivery (spec §5.7 step 6), from WS6's `deadlines.ts`
+ * (eligible group NONE; an eligible buyer's longer window is assessed on the notice). Delivery
+ * bookkeeping must never fail a status change, so an error leaves the column null (logged).
  */
 export function windowEndAfterDelivery(
   order: Pick<Order, "disclosureSentAt" | "conversationTookPlace">,

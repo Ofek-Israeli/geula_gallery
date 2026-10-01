@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { cleanDatabaseBeforeEach } from "../helpers/db";
 import { execSql } from "../helpers/factories/commerce";
 import {
@@ -12,20 +12,10 @@ import {
 /**
  * Spec §10.3 `shipments`: manual transitions; the label claim and LABEL_UNKNOWN; the export
  * declaration; the RECEIVED-cancellation block and its override; pickup collection needs the
- * disclosure. `deadlines.ts` belongs to WS6, so its window is stubbed here (14 days).
+ * disclosure. Delivery sets the order's cancellation window with WS6's real `deadlines.ts`.
  */
-vi.mock("@/lib/deadlines", () => ({
-  cancellationWindow: (i: { deliveredAt: Date | null }) => ({
-    start: i.deliveredAt,
-    end: i.deliveredAt
-      ? new Date(i.deliveredAt.getTime() + 14 * 86_400_000)
-      : null,
-    length: "14_DAYS",
-    beforeDelivery: i.deliveredAt === null,
-  }),
-}));
-
 const { db } = await import("@/server/db/client");
+const { cancellationWindow } = await import("@/lib/deadlines");
 const {
   adminAlerts,
   auditLog,
@@ -163,9 +153,20 @@ describe("manual carrier path (IL courier)", () => {
     ).toBeGreaterThanOrEqual(30 * 86_400_000 - 3_600_000);
     const order = await orderOf(o.orderId);
     expect(order.deliveredAt?.toISOString()).toBe(deliveredAt.toISOString());
-    expect(order.cancellationWindowEndsAt?.getTime()).toBe(
-      deliveredAt.getTime() + 14 * 86_400_000,
+    expect(order.cancellationWindowEndsAt?.toISOString()).toBe(
+      cancellationWindow({
+        deliveredAt,
+        disclosureSentAt: order.disclosureSentAt,
+        eligibleGroup: "NONE",
+        conversationTookPlace: order.conversationTookPlace ?? false,
+      }).end?.toISOString(),
     );
+    // 14 Jerusalem days, to the end of the last day.
+    const extra =
+      (order.cancellationWindowEndsAt?.getTime() ?? 0) -
+      (deliveredAt.getTime() + 14 * 86_400_000);
+    expect(extra).toBeGreaterThanOrEqual(-3_600_000);
+    expect(extra).toBeLessThan(86_400_000 + 3_600_000);
 
     const events = await eventsOf(s.id);
     expect(events.map((e) => e.status)).toEqual([

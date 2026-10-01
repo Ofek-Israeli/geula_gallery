@@ -313,6 +313,15 @@ describe("admin decision", () => {
       .from(schema.shipments)
       .where(eq(schema.shipments.orderId, o.id));
     expect(ship?.status).toBe("CANCELLED");
+    // Through WS3's `cancelShipmentForOrder`: a SYSTEM event row, no buyer email.
+    const events = await db
+      .select()
+      .from(schema.shipmentEvents)
+      .where(eq(schema.shipmentEvents.shipmentId, ship?.id ?? ""));
+    expect(events.map((e) => [e.status, e.source])).toContainEqual([
+      "CANCELLED",
+      "SYSTEM",
+    ]);
     const [refund] = await db
       .select()
       .from(schema.refunds)

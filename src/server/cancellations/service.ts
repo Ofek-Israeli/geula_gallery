@@ -6,6 +6,7 @@ import { refundDueAt as legalRefundDueAt } from "@/lib/deadlines";
 import { formatDateTime } from "@/lib/format";
 import { identityLast3 } from "@/lib/il-id";
 import type { Locale } from "@/lib/locale";
+import { raiseAlert } from "@/server/alerts/service";
 import { audit } from "@/server/audit";
 import { detectConversation } from "@/server/checkout/conversation";
 import { lockArtworks } from "@/server/checkout/reservations";
@@ -39,6 +40,8 @@ import { countedRefundsMinor, requestRefund } from "@/server/payments/refunds";
 import { encryptAesGcm } from "@/server/security/crypto";
 import { piiKey } from "@/server/security/keys";
 import { getSetting } from "@/server/settings";
+import { carrierAdapter } from "@/server/shipping/registry";
+import { cancelShipmentForOrder } from "@/server/shipping/shipments";
 import { assessCancellation, clampFee } from "./fees";
 import {
   type CancellationNotice,
@@ -74,14 +77,6 @@ export type CancellationRow = Cancellation;
 /** Statuses of a notice that still needs the painter's action ("open"). */
 export const OPEN_CANCELLATION_STATUSES = ["RECEIVED", "ACCEPTED"] as const;
 
-/** Shipment states that can still be cancelled (nothing has left the studio). */
-const NOT_SHIPPED: readonly ShipmentStatus[] = [
-  "AWAITING_FULFILLMENT",
-  "PACKED",
-  "LABEL_CREATED",
-  "PICKUP_SCHEDULED",
-  "READY_FOR_PICKUP",
-];
 /** A label call whose outcome is unknown: resolve it on the fulfillment screen first. */
 const LABEL_PENDING: readonly ShipmentStatus[] = [
   "LABEL_REQUESTED",
@@ -588,19 +583,9 @@ export async function acceptCancellation(
           "resolve the pending label request first",
         );
       }
-      const notShipped = !shipment || NOT_SHIPPED.includes(shipment.status);
-      if (shipment && notShipped) {
-        await transition(
-          tx,
-          "shipment",
-          shipment.id,
-          [shipment.status],
-          "CANCELLED",
-          {},
-          ctx.actor,
-          { ipHash: ctx.ipHash },
-        );
-      }
+      // WS3's hook: a parcel that has not left → CANCELLED (event row, audited, silent).
+      const shipped = await cancelShipmentForOrder(tx, order.id, ctx.actor);
+      const notShipped = !shipped.shipped;
 
       let refundId: string | null = null;
       if (notShipped && refundAmountMinor > 0) {
@@ -655,11 +640,53 @@ export async function acceptCancellation(
         returnRequired: !notShipped,
         feeMinor,
         refundAmountMinor,
+        pickup: shipped.pickupConfirmation
+          ? { orderId: order.id, confirmation: shipped.pickupConfirmation }
+          : null,
       };
     },
     { db, name: "cancellation.accept" },
   );
-  return withEffects(result, { outbox: true, revalidate: true });
+  const { pickup, ...out } = result;
+  if (pickup) await cancelBookedPickup(pickup, db);
+  return withEffects(out, { outbox: true, revalidate: true });
+}
+
+/**
+ * A carrier pickup booked for a parcel that will no longer ship: cancelled after commit (never
+ * inside the transaction). A failure leaves a WARNING alert for the painter to cancel it by hand.
+ */
+async function cancelBookedPickup(
+  p: { orderId: string; confirmation: string },
+  db: DbOrTx,
+): Promise<void> {
+  const [s] = await db
+    .select({ carrier: shipments.carrier })
+    .from(shipments)
+    .where(eq(shipments.orderId, p.orderId));
+  try {
+    const adapter = s?.carrier ? carrierAdapter(s.carrier) : null;
+    if (!adapter?.cancelPickup)
+      throw new Error("carrier cannot cancel pickups");
+    await adapter.cancelPickup(p.confirmation);
+  } catch (error) {
+    log.warn(
+      "cancellation.pickup_cancel_failed",
+      { orderId: p.orderId },
+      error,
+    );
+    await raiseAlert(
+      {
+        severity: "WARNING",
+        kind: "PICKUP_CANCEL_FAILED",
+        dedupeKey: `pickup-cancel:${p.orderId}:${p.confirmation}`,
+        entity: "order",
+        entityId: p.orderId,
+        params: { confirmation: p.confirmation },
+      },
+      db,
+    );
+  }
 }
 
 /** Requests the cancellation refund later (shipped works: after or before the return). */
