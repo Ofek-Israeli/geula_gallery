@@ -33,6 +33,9 @@ const { setProviderFactoryForTests } = await import(
   "@/server/payments/registry"
 );
 const { runCronJob } = await import("@/server/jobs");
+const { parsePaypalEvent } = await import(
+  "@/server/payments/providers/paypal-map"
+);
 const { mockProviderHooks, resetMockProviderHooks } = await import(
   "@/server/payments/providers/mock"
 );
@@ -62,8 +65,8 @@ function mockSend(ref: string, opts: { forged?: boolean; id?: string } = {}) {
 }
 
 /**
- * A fixture PayPal adapter for the webhook path only: authenticates a test header, parses the
- * event like the WS5 adapter will (event id, event_type, refund custom_id, redacted resource).
+ * A fixture PayPal adapter for the webhook path only: authenticates a test header (the verify
+ * postback needs PayPal) and parses events with the real adapter's `parsePaypalEvent`.
  */
 function fakePaypal(): Provider {
   const fail = (): never => {
@@ -85,31 +88,8 @@ function fakePaypal(): Provider {
     merchantRef: () => "TESTMERCHANT",
     authenticateNotification: async (n) =>
       n.headers.get("x-test-paypal") === "verified",
-    parseNotification: (n) => {
-      const body = JSON.parse(n.rawBody) as {
-        id: string;
-        event_type: string;
-        resource: Record<string, unknown>;
-      };
-      const r = body.resource;
-      return {
-        eventKey: body.id,
-        eventType: body.event_type,
-        ...(typeof r.custom_id === "string"
-          ? { refundCustomId: r.custom_id }
-          : {}),
-        payloadRedacted: {
-          resource: {
-            id: r.id,
-            status: r.status,
-            custom_id: r.custom_id,
-            amount: r.amount,
-            links: r.links,
-            disputed_transactions: r.disputed_transactions,
-          },
-        },
-      };
-    },
+    // The real WS5 parser: post-success routing depends on its redacted payload.
+    parseNotification: (n) => parsePaypalEvent(n.rawBody),
     createCheckout: fail,
     fetchPayment: fail,
     refund: fail,
@@ -159,6 +139,7 @@ function refundEvent(
   return {
     id,
     event_type: "PAYMENT.CAPTURE.REFUNDED",
+    resource_type: "refund",
     resource: {
       id: o.refundId,
       status: o.status ?? "COMPLETED",
@@ -311,6 +292,7 @@ describe("post-success events (PayPal)", () => {
     const body = {
       id: "WH-REV-1",
       event_type: "PAYMENT.CAPTURE.REVERSED",
+      resource_type: "refund",
       resource: {
         id: "PPRF-REV",
         status: "COMPLETED",
@@ -365,6 +347,7 @@ describe("post-success events (PayPal)", () => {
         rawBody: JSON.stringify({
           id: "WH-DSP-1",
           event_type: "CUSTOMER.DISPUTE.CREATED",
+          resource_type: "dispute",
           resource: {
             id: "PP-D-1",
             status: "OPEN",

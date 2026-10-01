@@ -433,7 +433,38 @@ export function parsePaypalEvent(rawBody: string): PaypalEventHints {
         custom_id: resource.custom_id,
         invoice_id: resource.invoice_id,
         ...(providerRef ? { order_id: providerRef } : {}),
+        ...postSuccessRefs(resource),
       },
     },
+  };
+}
+
+/**
+ * The capture references `webhook.ts#PostSuccessPayload` reads for refund / reversal / dispute
+ * events: the refund's `up` link (to the capture) and the disputed capture ids. Nothing else of
+ * those arrays is kept (no PII).
+ */
+function postSuccessRefs(resource: Record<string, unknown>): {
+  links?: { rel: string; href: string }[];
+  disputed_transactions?: { seller_transaction_id: string }[];
+} {
+  const links = (Array.isArray(resource.links) ? resource.links : [])
+    .map(asRecord)
+    .filter(
+      (l): l is { rel: string; href: string } =>
+        l.rel === "up" && typeof l.href === "string",
+    )
+    .map((l) => ({ rel: l.rel, href: l.href }));
+  const disputed = (
+    Array.isArray(resource.disputed_transactions)
+      ? resource.disputed_transactions
+      : []
+  )
+    .map((t) => asRecord(t).seller_transaction_id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0)
+    .map((id) => ({ seller_transaction_id: id }));
+  return {
+    ...(links.length > 0 ? { links } : {}),
+    ...(disputed.length > 0 ? { disputed_transactions: disputed } : {}),
   };
 }

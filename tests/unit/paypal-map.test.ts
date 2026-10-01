@@ -144,6 +144,70 @@ describe("webhook events and verify body", () => {
     );
   });
 
+  it("post-success events keep the capture link and the disputed capture ids only", () => {
+    const refund = parsePaypalEvent(
+      JSON.stringify({
+        id: "WH-4",
+        event_type: "PAYMENT.CAPTURE.REFUNDED",
+        resource_type: "refund",
+        resource: {
+          id: "R2",
+          status: "COMPLETED",
+          custom_id: "refund-2",
+          amount: usd("10.00"),
+          links: [
+            {
+              rel: "self",
+              href: "https://api-m.paypal.com/v2/payments/refunds/R2",
+            },
+            {
+              rel: "up",
+              href: "https://api-m.paypal.com/v2/payments/captures/C9",
+            },
+          ],
+        },
+      }),
+    );
+    expect(refund.payloadRedacted).toMatchObject({
+      event_type: "PAYMENT.CAPTURE.REFUNDED",
+      resource: {
+        id: "R2",
+        status: "COMPLETED",
+        custom_id: "refund-2",
+        amount: usd("10.00"),
+        links: [
+          {
+            rel: "up",
+            href: "https://api-m.paypal.com/v2/payments/captures/C9",
+          },
+        ],
+      },
+    });
+    const dispute = parsePaypalEvent(
+      JSON.stringify({
+        id: "WH-5",
+        event_type: "CUSTOMER.DISPUTE.CREATED",
+        resource_type: "dispute",
+        resource: {
+          id: "PP-D-9",
+          status: "OPEN",
+          disputed_transactions: [
+            {
+              seller_transaction_id: "C9",
+              buyer: { name: "Buyer Example" },
+            },
+          ],
+        },
+      }),
+    );
+    expect(dispute.eventType).toBe("CUSTOMER.DISPUTE.CREATED");
+    expect(dispute.attemptId).toBeUndefined();
+    expect(dispute.payloadRedacted).toMatchObject({
+      resource: { disputed_transactions: [{ seller_transaction_id: "C9" }] },
+    });
+    expect(JSON.stringify(dispute.payloadRedacted)).not.toContain("Buyer");
+  });
+
   it("order events give the order id and attempt id", () => {
     expect(
       parsePaypalEvent(
