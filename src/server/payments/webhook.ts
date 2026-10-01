@@ -398,9 +398,18 @@ export async function handlePaymentReturn(
       timeout,
     ]);
     if (finalized) {
+      // The webhook often finalizes first: report the final state, including why it ended.
+      const [final] =
+        finalized.result.outcome === "already_final"
+          ? await db
+              .select({ failureReason: paymentAttempts.failureReason })
+              .from(paymentAttempts)
+              .where(eq(paymentAttempts.id, a))
+          : [];
       outcome = buyerOutcome(
         finalized.result.outcome,
         finalized.result.attemptStatus,
+        final?.failureReason ?? null,
       );
       effects = mergeEffects(effects, finalized.effects);
     }
@@ -422,6 +431,7 @@ export async function handlePaymentReturn(
 export function buyerOutcome(
   outcome: FinalizeOutcome,
   attemptStatus: string,
+  failureReason: string | null = null,
 ): FinalizeOutcome {
   if (outcome !== "already_final") return outcome;
   switch (attemptStatus) {
@@ -434,7 +444,10 @@ export function buyerOutcome(
     case "FAILED":
       return "failed";
     case "CANCELED":
-      return "canceled";
+      // A capture claim that found the work gone (spec §5.2): "you were not charged".
+      return failureReason === "LOST_BEFORE_CAPTURE"
+        ? "lost_before_capture"
+        : "canceled";
     default:
       return outcome;
   }
