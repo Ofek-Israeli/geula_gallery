@@ -499,3 +499,36 @@ export async function sendMockWebhook(row: MockPayment): Promise<void> {
     signal: AbortSignal.timeout(3000),
   });
 }
+
+/** What the hosted mock page shows: the payment and its order number (no buyer PII). */
+export async function mockPaymentView(ref: string): Promise<{
+  ref: string;
+  state: MockPaymentState;
+  flow: MockFlow;
+  amountMinor: number;
+  currency: MockPayment["currency"];
+  orderNumber: string | null;
+} | null> {
+  const row = await loadByRef(ref);
+  if (!row) return null;
+  const db = await appDb();
+  const result = await db.execute<{ number: string }>(
+    sql`SELECT o.number FROM payment_attempts pa JOIN orders o ON o.id = pa.order_id WHERE pa.id = ${row.attemptId}`,
+  );
+  return {
+    ref: row.ref,
+    state: row.state,
+    flow: row.flow,
+    amountMinor: row.amountMinor,
+    currency: row.currency,
+    orderNumber: result.rows[0]?.number ?? null,
+  };
+}
+
+/** The mock is usable outside production, and in a demo deployment (demo items only). */
+export function mockProviderAllowed(env: {
+  isProduction: boolean;
+  DEMO_MODE: boolean;
+}): boolean {
+  return !env.isProduction || env.DEMO_MODE;
+}
