@@ -1,10 +1,14 @@
 import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
+import { raiseAlert } from "@/server/alerts/service";
 import { db } from "@/server/db/client";
 import { cancellations, orders } from "@/server/db/schema";
+import { ensureDisclosurePdf } from "@/server/documents/disclosure-pdf";
 import { buildEmail } from "@/server/email/props";
 import { sendEmail } from "@/server/email/send";
+import type { EmailAttachment } from "@/server/email/types";
+import { log } from "@/server/log";
 import type { JobHandler } from "../types";
 
 /**
@@ -30,8 +34,36 @@ export const sendEmailHandler: JobHandler<"SEND_EMAIL"> = async (
     payload.refId,
     payload.locale,
   );
+  let attachments: EmailAttachment[] | undefined;
+  if (payload.template === "order-confirmation" && built.orderId) {
+    try {
+      const pdf = await ensureDisclosurePdf(built.orderId, built.locale);
+      attachments = [
+        {
+          filename: pdf.filename,
+          contentType: "application/pdf",
+          content: pdf.content,
+        },
+      ];
+    } catch (error) {
+      // Tier B: never block the confirmation (and the HTML disclosure) on the PDF.
+      log.warn(
+        "documents.disclosure_pdf_failed",
+        { orderId: built.orderId },
+        error,
+      );
+      await raiseAlert({
+        severity: "WARNING",
+        kind: "DISCLOSURE_PDF_FAILED",
+        dedupeKey: `disclosure-pdf:${built.orderId}`,
+        entity: "order",
+        entityId: built.orderId,
+      });
+    }
+  }
   await sendEmail({
     dedupeKey: ctx.dedupeKey,
+    ...(attachments ? { attachments } : {}),
     template: payload.template,
     to: payload.to,
     locale: built.locale,
