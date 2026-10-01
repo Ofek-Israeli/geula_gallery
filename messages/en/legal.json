@@ -1,1 +1,13 @@
-{}
+{
+  "draftBanner": "Draft – this wording has not yet been approved by a lawyer and may change.",
+  "version": "Version {version} · updated {date}",
+  "related": "More documents",
+  "cancel": "Cancel a purchase",
+  "descriptions": {
+    "terms": "Terms for buying original works on this site.",
+    "returns": "The right to cancel, fees, refunds and returning works.",
+    "shipping": "Delivery in Israel and abroad, insurance, duties and taxes.",
+    "privacy": "What we collect, why, who receives it and how long we keep it.",
+    "accessibility": "This site's accessibility statement and how to contact us."
+  }
+}
