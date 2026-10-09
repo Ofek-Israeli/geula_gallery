@@ -3,8 +3,9 @@ import { Link } from "@/i18n/navigation";
 import { cx } from "@/lib/cx";
 
 /**
- * "ביטול עסקה / Cancel a purchase" (spec §1.2 Tier A): in the header and footer of every public
- * page and in the checkout footer. Prefills the order number when one is known.
+ * "ביטול עסקה / Cancel a purchase" (spec §1.2 Tier A): in the footer of every public page and in
+ * the checkout footer (no longer in the header, at the painter's request). Prefills the order
+ * number when one is known.
  */
 export function CancelPurchaseLink({
   orderNumber,

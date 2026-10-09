@@ -2000,3 +2000,14 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - no shipping refund on a partial cancellation;
   - one ₪100 cap per order;
   - the fee base is the works plus any shipping refunded.
+
+### The cancellation link leaves the header
+
+- At the painter's request, `SiteHeader` no longer renders `CancelPurchaseLink`. This is a
+  deliberate deviation from spec §1.2 and §5.7 step 1, which put it in the header and the footer.
+- The link remains:
+  - in the footer of every public page, and in the checkout footer;
+  - on the contact and legal pages;
+  - in every buyer email and in documents.
+- The smoke specs already find it anywhere on the page.
+- Whether a footer link is prominent enough is a question for the lawyer (painter-onboarding §4).

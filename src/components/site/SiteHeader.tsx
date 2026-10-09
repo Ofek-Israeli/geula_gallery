@@ -1,6 +1,5 @@
 import { useTranslations } from "next-intl";
 import { Suspense } from "react";
-import { CancelPurchaseLink } from "@/components/ui/CancelPurchaseLink";
 import { Link } from "@/i18n/navigation";
 import { LanguageSwitch } from "./LanguageSwitch";
 
@@ -8,9 +7,9 @@ const linkClass =
   "inline-flex min-h-11 items-center no-underline hover:underline";
 
 /**
- * Public header. `variant="minimal"` is the checkout chrome (no navigation), which still carries
- * the cancellation link (spec §1.2). The cart link appears once the cart holds a work
- * (`cartCount`, read by the layout).
+ * Public header. `variant="minimal"` is the checkout chrome (no navigation). The cart link appears
+ * once the cart holds a work (`cartCount`, read by the layout). The cancellation link is in the
+ * footer of every page (the painter asked to drop it from the header).
  */
 export function SiteHeader({
   variant = "full",
@@ -62,9 +61,6 @@ export function SiteHeader({
                 ) : null}
               </>
             ) : null}
-            <li>
-              <CancelPurchaseLink className="min-h-11" />
-            </li>
             <li>
               <Suspense fallback={null}>
                 <LanguageSwitch className={linkClass} />

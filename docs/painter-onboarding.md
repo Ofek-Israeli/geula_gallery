@@ -92,6 +92,8 @@
     רק בביטול שלא משאיר אף יצירה פעילה – בביטול חלקי היצירות האחרות עדיין נשלחות; (2) דמי הביטול
     הם 5% מהסכום שמוחזר בפועל (היצירות, ובביטול האחרון גם המשלוח), ותקרת ‎100 ₪ אחת להזמנה כולה
     – הפרשנות המיטיבה עם הקונה; (3) האם אפשר לחייב את הקונה במשלוח מחדש אם החבילה כבר נארזה.
+- **קישור "ביטול עסקה"**: לבקשת האמנית הוא הוסר מהכותרת העליונה ונשאר בתחתית כל עמוד (וגם בקופה,
+  בכל מייל לקונה ובמסמכים). האם קישור בתחתית העמוד עומד בדרישה להציג אותו באופן בולט באתר?
 - **עגלת קניות**: עוגייה הכרחית אחת (`gg_cart`, מזהי היצירות בלבד, 30 יום) – נוסח שורת הפרטיות;
   יצירות בעגלה אינן שמורות לקונה עד "המשך לתשלום".
 - **מחירים**: הצגת מחיר במטבע חוץ (סעיף 17ז(א)(1)); פרטי הסוחר לפי Visa; ניסוח "מבוטח".
@@ -269,6 +271,9 @@
        cancellation. There is one ₪100 cap for the whole order, which is the reading most
        favourable to the buyer.
     3. Whether the buyer may be charged for repacking when the parcel was already packed.
+- **The "Cancel a purchase" link:** at the painter's request it was removed from the header. It
+  stays in the footer of every page, in the checkout, in every buyer email and in documents. Does
+  a footer link meet the requirement to show it prominently on the site?
 - **Shopping cart:**
   - The privacy text for its one strictly necessary cookie (`gg_cart`: artwork ids only, 30
     days).

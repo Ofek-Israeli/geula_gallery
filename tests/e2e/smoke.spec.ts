@@ -72,7 +72,7 @@ test.describe("cancellation link on public pages @smoke", () => {
     test(`home (${locale}) links to /${locale}/cancel`, async ({ page }) => {
       await page.goto(`/${locale}`);
       const links = page.getByRole("link", { name: cancelName[locale] });
-      // Header and footer (spec §1.2).
+      // The footer (spec §1.2; the header no longer carries it).
       await expect(links.first()).toBeVisible();
       expect(await links.count()).toBeGreaterThanOrEqual(1);
       await expect(links.first()).toHaveAttribute("href", `/${locale}/cancel`);
