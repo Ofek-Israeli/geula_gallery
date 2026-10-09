@@ -3,12 +3,18 @@ import {
   withDescription,
   withGalleryImages,
 } from "../helpers/factories/storefront";
+import { messages as appMessages } from "./support/commerce";
+
+/** The `catalog` namespace of the app's messages. */
+const messages = (locale: "he" | "en") =>
+  appMessages(locale, "catalog") as Record<string, unknown>;
 
 /**
  * WS1 storefront (spec §10.4 `storefront`): URL filters and sorts, Sold as text, the recently sold
  * strip (≤ 4), JSON-LD availability, the keyboard lightbox (mirrored arrows in Hebrew, Esc, focus
- * return, live region), "insured" only where a quote includes insurance, about and contact, and
- * the mobile gallery strip and sticky buy bar.
+ * return, live region), "insured" only where a quote includes insurance, the home page (the quote
+ * over "By the Lake", the bio as its h1), about and contact, and the mobile gallery strip and
+ * sticky buy bar.
  *
  * Works used read-only: `the-path` (given 3 images here), `underground-city`, the seeded sold and
  * held works. Purchase specs run in parallel and sell other works, so assertions never depend on
@@ -310,6 +316,50 @@ test.describe("artwork page", () => {
     await page.goto("/en/works/reflection-in-yellow");
     await expect(page.getByTestId("buy-box")).not.toContainText(/insured/i);
   });
+});
+
+test.describe("home: the quote over By the Lake, then the bio", () => {
+  for (const locale of ["he", "en"] as const) {
+    test(`home and about show the bio; the hero quote links its painting (${locale})`, async ({
+      page,
+    }) => {
+      const bio = messages(locale).bio as Record<string, string>;
+      const home = messages(locale).home as { quote: { text: string } };
+      await page.goto(`/${locale}`);
+      const hero = page.getByTestId("home-hero");
+      await expect(hero.locator("figure blockquote")).toHaveText(
+        home.quote.text,
+      );
+      await expect(hero.locator("img")).toHaveAttribute(
+        "fetchpriority",
+        "high",
+      );
+      await expect(page.getByTestId("home-hero-caption")).toHaveAttribute(
+        "href",
+        `/${locale}/works/by-the-lake`,
+      );
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        bio.title as string,
+      );
+      await expect(page.getByTestId("artist-bio")).toContainText(
+        bio.p6 as string,
+      );
+      // No sideways scroll from the full-bleed band.
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+
+      await page.goto(`/${locale}/about`);
+      await expect(
+        page.getByRole("heading", { level: 2, name: bio.title }),
+      ).toBeVisible();
+      await expect(page.getByTestId("artist-bio")).toContainText(
+        bio.p1 as string,
+      );
+    });
+  }
 });
 
 test.describe("about and contact", () => {

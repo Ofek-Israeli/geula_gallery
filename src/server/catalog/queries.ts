@@ -365,6 +365,18 @@ export async function getFeaturedArtwork(
   return row ? cardDto(row, locale, new Date()) : null;
 }
 
+/** One published work as a card, whatever its sale status (the home hero names a fixed work). */
+export async function getArtworkCard(
+  locale: Locale,
+  slug: string,
+  db: DbOrTx = defaultDb,
+): Promise<ArtworkCardDTO | null> {
+  const [row] = await cardQuery(db)
+    .where(and(eq(artworks.isPublished, true), eq(artworks.slug, slug)))
+    .limit(1);
+  return row ? cardDto(row, locale, new Date()) : null;
+}
+
 const detailColumns = {
   ...cardColumns,
   inventoryNumber: artworks.inventoryNumber,

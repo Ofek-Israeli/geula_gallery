@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { ArtistBio } from "@/components/site/ArtistBio";
 import { JsonLd } from "@/components/site/JsonLd";
 import { pageMetadata } from "@/components/site/metadata";
 import { personJsonLd } from "@/components/site/structured-data";
@@ -12,8 +13,9 @@ import { getPublicProfile } from "@/server/catalog/queries";
 import { env } from "@/server/env";
 
 /**
- * `/about` (spec §6.2): the artist, the studio, links to the works and contact, and the Person
- * JSON-LD. The biography is placeholder copy until the `site_content` editor (P1) exists.
+ * `/about` (spec §6.2): the artist's biography (`ArtistBio`, shared with the home page), the
+ * studio, links to the works and contact, and the Person JSON-LD. The biography lives in messages
+ * until the `site_content` editor (P1) exists.
  */
 export async function generateMetadata({
   params,
@@ -48,11 +50,8 @@ export default async function AboutPage({
           jobTitle: t("jobTitle"),
         })}
       />
-      <header className="flex flex-col gap-3">
-        <h1 className="text-4xl">{t("title")}</h1>
-        <p className="max-w-prose text-lg">{t("intro")}</p>
-      </header>
-      <p className="max-w-prose">{t("body")}</p>
+      <h1 className="text-4xl">{t("title")}</h1>
+      <ArtistBio headingLevel={2} />
       {env.DEMO_MODE ? (
         <p className="max-w-prose border-s-2 border-hold ps-4 text-sm text-ink-muted">
           {t("demoNote")}

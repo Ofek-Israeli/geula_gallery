@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArtworkStatus } from "@/components/artwork/ArtworkStatus";
 import { WorksGrid } from "@/components/artwork/WorksGrid";
+import { ArtistBio } from "@/components/site/ArtistBio";
 import { JsonLd } from "@/components/site/JsonLd";
 import { pageMetadata } from "@/components/site/metadata";
+import { QuoteHero } from "@/components/site/QuoteHero";
 import { organizationJsonLd } from "@/components/site/structured-data";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/lib/locale";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
 import {
+  getArtworkCard,
   getArtworkOgImage,
   getFeaturedArtwork,
   getPublicProfile,
@@ -21,43 +24,55 @@ import {
 import { env } from "@/server/env";
 
 /**
- * Home (spec §6.2): a featured available work as the LCP image (`fetchPriority="high"`,
- * `loading="eager"`), available works, the series, an about snippet, the commissions call to
- * action, and the Organization JSON-LD (`hasMerchantReturnPolicy`, `hasShippingService`).
+ * Home: a quote about colour over "By the Lake" (the LCP image, `fetchPriority="high"`), the
+ * artist's biography as the page's `<h1>`, available works, the series, the commissions call to
+ * action, and the Organization JSON-LD (`hasMerchantReturnPolicy`, `hasShippingService`). The
+ * painter chose the opening (after alonyaffe.co.il) in place of spec §6.2's featured split.
  */
+
+/** The painting behind the home page's quote. */
+const HOME_HERO_SLUG = "by-the-lake";
+
+/** The hero work, else the featured available one (a catalog without it still opens). */
+async function heroWork(locale: Locale) {
+  return (
+    (await getArtworkCard(locale, HOME_HERO_SLUG)) ??
+    (await getFeaturedArtwork(locale))
+  );
+}
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]">): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
-  const [t, tc, featured] = await Promise.all([
+  const [t, tc, hero] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.home" }),
     getTranslations({ locale, namespace: "common.meta" }),
-    getFeaturedArtwork(locale),
+    heroWork(locale),
   ]);
-  const og = featured ? await getArtworkOgImage(featured.slug) : null;
+  const og = hero ? await getArtworkOgImage(hero.slug) : null;
   return pageMetadata({
     locale,
     path: paths.home(),
     title: `${tc("siteName")} · ${t("title")}`,
     absoluteTitle: true,
     description: t("metaDescription"),
-    images: og ? [{ ...og, alt: featured?.title }] : undefined,
+    images: og ? [{ ...og, alt: hero?.title }] : undefined,
   });
 }
 
 export default async function HomePage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const [t, featured, works, series, profile] = await Promise.all([
+  const [t, hero, works, series, profile] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.home" }),
-    getFeaturedArtwork(locale),
+    heroWork(locale),
     listArtworks(locale, { view: "available", pageSize: 7 }),
     listSeries(locale),
     getPublicProfile(locale),
   ]);
   const others = works.items
-    .filter((w) => w.id !== featured?.id && w.state.kind === "available")
+    .filter((w) => w.id !== hero?.id && w.state.kind === "available")
     .slice(0, 6);
 
   return (
@@ -71,53 +86,16 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           telephone: profile.phoneIntl,
         })}
       />
-      <section className="grid items-center gap-8 md:grid-cols-[3fr_2fr]">
-        {featured?.image ? (
-          <Link
-            href={paths.artwork(featured.slug)}
-            tabIndex={-1}
-            aria-hidden="true"
-          >
-            <Image
-              src={featured.image.src}
-              alt={featured.image.alt}
-              width={featured.image.width}
-              height={featured.image.height}
-              sizes="(min-width:768px) 60vw, 100vw"
-              quality={90}
-              loading="eager"
-              fetchPriority="high"
-              placeholder={featured.image.blurDataUrl ? "blur" : "empty"}
-              blurDataURL={featured.image.blurDataUrl ?? undefined}
-              className="h-auto max-h-[75vh] w-full object-contain"
-            />
+      <QuoteHero work={hero} />
+
+      <div className="flex flex-col items-center gap-8">
+        <ArtistBio headingLevel={1} centred />
+        <p>
+          <Link href={paths.works()} className={buttonClasses("primary")}>
+            {t("allWorks")}
           </Link>
-        ) : null}
-        <div className="flex flex-col gap-4">
-          <h1 className="text-5xl">{t("title")}</h1>
-          <p className="max-w-prose text-lg text-ink-muted">{t("intro")}</p>
-          {featured ? (
-            <div className="flex flex-col gap-1 border-s-2 border-line ps-4">
-              <p className="text-sm text-ink-muted">{t("featuredLabel")}</p>
-              <p className="font-serif text-xl">
-                <Link href={paths.artwork(featured.slug)}>
-                  {featured.title}
-                </Link>
-              </p>
-              {/* A block wrapper: the price is an LTR <bdi>, which would align to the
-                  far side as a flex item in Hebrew. */}
-              <p>
-                <ArtworkStatus state={featured.state} price={featured.price} />
-              </p>
-            </div>
-          ) : null}
-          <p>
-            <Link href={paths.works()} className={buttonClasses("secondary")}>
-              {t("allWorks")}
-            </Link>
-          </p>
-        </div>
-      </section>
+        </p>
+      </div>
 
       {others.length > 0 ? (
         <section
@@ -179,26 +157,22 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </section>
       ) : null}
 
-      <section className="grid gap-8 border-t border-line pt-10 md:grid-cols-2">
-        <div className="flex flex-col gap-3">
-          <h2 className="text-2xl">{t("aboutTitle")}</h2>
-          <p className="max-w-prose text-ink-muted">{t("aboutBody")}</p>
-          <p>
-            <Link href={paths.about()}>{t("aboutLink")}</Link>
-          </p>
-        </div>
-        <div className="flex flex-col gap-3">
-          <h2 className="text-2xl">{t("commissionTitle")}</h2>
-          <p className="max-w-prose text-ink-muted">{t("commissionBody")}</p>
-          <p>
-            <Link
-              href={paths.contact("commission")}
-              className={buttonClasses("secondary")}
-            >
-              {t("commissionCta")}
-            </Link>
-          </p>
-        </div>
+      <section
+        aria-labelledby="commission-title"
+        className="flex flex-col gap-3 border-t border-line pt-10"
+      >
+        <h2 id="commission-title" className="text-2xl">
+          {t("commissionTitle")}
+        </h2>
+        <p className="max-w-prose text-ink-muted">{t("commissionBody")}</p>
+        <p>
+          <Link
+            href={paths.contact("commission")}
+            className={buttonClasses("secondary")}
+          >
+            {t("commissionCta")}
+          </Link>
+        </p>
       </section>
     </div>
   );

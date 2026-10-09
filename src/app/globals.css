@@ -45,6 +45,9 @@
 
   body {
     min-height: 100dvh;
+    /* Full-bleed bands (the home hero) span 100vw; a classic scrollbar must not add a sideways
+       scroll. `clip` creates no scroll container, so sticky elements keep working. */
+    overflow-x: clip;
     font-size: var(--text-body);
     line-height: 1.6;
     background-color: var(--color-paper);

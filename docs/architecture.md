@@ -2011,3 +2011,21 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - in every buyer email and in documents.
 - The smoke specs already find it anywhere on the page.
 - Whether a footer link is prominent enough is a question for the lawyer (painter-onboarding §4).
+
+### Home page: a quote over "By the Lake", then the bio
+
+- **Opening band.** The painter chose to open the home page like alonyaffe.co.il, in place of
+  spec §6.2's featured split:
+  - `QuoteHero` is a full-bleed band (`mx-[calc(50%-50vw)]`; `body` has `overflow-x: clip`).
+  - The background is a fixed work, `HOME_HERO_SLUG = "by-the-lake"`, read with
+    `getArtworkCard(locale, slug)`; when it is missing, the featured available work is used.
+  - The image is the LCP: `fetchPriority="high"` and `alt=""`, with an `ink/65` overlay.
+  - The quote is Kandinsky's "Colour is a power which directly influences the soul." Its quote
+    marks are in the messages: straight in Hebrew, curly in English.
+  - A caption links to the painting.
+- **Bio.** `ArtistBio` holds the painter's biography in `catalog.bio`: the Hebrew is verbatim,
+  and the English is a translation.
+  - On the home page it is the `<h1>`; on `/about` it is an `<h2>` under "About the artist".
+  - It lives in messages until a `site_content` editor exists.
+- **Removed:** the old title, the intro, the "Featured work" box and the about snippet. The works
+  grid, the series and the commissions box are unchanged.
