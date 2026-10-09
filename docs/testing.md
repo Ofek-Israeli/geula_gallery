@@ -10,7 +10,7 @@
 | `npm test` | Vitest `unit` and `contract` projects (no database) |
 | `npm run test:unit` / `npm run test:contract` | one Vitest project |
 | `npm run test:integration` | Vitest `integration` project on a real local Postgres (`TEST_DATABASE_URL`, dropped and re-migrated on every run, files run one at a time, tables truncated before each test) |
-| `npm run test:e2e [-- <specs or playwright args>]` | Playwright: resets `E2E_DATABASE_URL` with the demo seed, builds into `.next-e2e`, serves on `E2E_PORT` (3100) |
+| `npm run test:e2e [-- <specs or playwright args>]` | Playwright: resets `E2E_DATABASE_URL` with the fixtures seed (the 16 test works), builds into `.next-e2e`, serves on `E2E_PORT` (3100) |
 | `npm run verify` | lint + typecheck + check:secrets + test + test:integration |
 | `npm run verify:all` | verify + build + test:e2e |
 
@@ -81,7 +81,7 @@ Set the `*_CONTRACT` flags in the **shell**, not in `.env.local`. Fixtures are w
 
 | Area | Files |
 |---|---|
-| Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `aic-dimensions`, `phone`, `il-id`, `countries`, `ids`, `validation` |
+| Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `phone`, `il-id`, `countries`, `ids`, `validation` |
 | Deadlines and fee | `deadlines` |
 | Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` |
 | Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines`, `payments-registry` |
@@ -118,7 +118,7 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `daily-job`, `invariants`, `purge` | COMPLETED transitions, refund-deadline alerts, `admin-alert` emails; every invariant catches a broken row; retention |
 | `disclosure-pdf` | the bilingual disclosure PDF is generated once and attached |
 | `admin-catalog`, `admin-orders`, `admin-money` | artwork CRUD and publish checklist; Recheck payment and manual tracking; admin refunds, documents, dashboard cards |
-| `storefront-queries`, `catalog-seed` | filters, sitemap and SEO reads; the demo seed |
+| `storefront-queries`, `catalog-seed` | filters, sitemap and SEO reads; the catalog seed (fixtures) |
 | `limits`, `transition`, `harness` | production rate limits and anti-hoarding caps; `transition()` and `withTx` retries; the test harness itself |
 
 ### E2E (`tests/e2e`, Playwright)
@@ -155,7 +155,6 @@ These are good follow-ups.
 |---|---|
 | Deadlines and fee | `tests/unit/deadlines.test.ts`: 14 days from the later of delivery and disclosure; cancellation before delivery; 4 months only with eligibility **and** a conversation; refund due = notice + 14 days; DST; ₪1,500 → ₪75 and ₪20,000 → ₪100; EU and defect → 0; USD at the locked rate |
 | Legal texts | `tests/unit/legal-content.test.ts`: the s.14C(a) elements in the pre-contract disclosure; forbidden phrases absent; the seller ID number never in legal pages or the footer |
-| AIC dimensions | `tests/unit/aic-dimensions.test.ts` |
 | Cancellations | `tests/integration/cancellations.test.ts`: auto-match; double submissions and web-then-phone notices both stored; duplicates; the window, including 4 months; a conversation detected from a buyer request; COMPLETED order → CANCELLED; fee; EU; due date from the notice; relist; sealed review payload; masked acknowledgement emails |
 | Invariants and go-live | `tests/integration/invariants.test.ts`: the demo seed with the three sample orders is consistent; every check catches a broken row |
 | Retention | `tests/integration/purge.test.ts` |

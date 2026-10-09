@@ -69,8 +69,9 @@ npm ci && npm run env:init && npm run db:setup && npm run db:reset && npm run de
   (`geula_dev`, `geula_test`, `geula_e2e`), mock providers, the log email driver and local
   storage. It never overwrites an existing file; `-- --force` regenerates it.
 - `db:setup` creates the three local databases. It refuses any host other than localhost.
-- `db:reset` drops, migrates and seeds `geula_dev` with the demo catalog: 16 works, 3 sample
-  orders, a placeholder business profile and the painter's account.
+- `db:reset` drops, migrates and seeds `geula_dev` with the painter's catalog (about 150 works
+  with placeholder prices), 3 sample orders, a placeholder business profile and the painter's
+  account. `--seed fixtures` seeds only the 16 works the test suites use, which is much faster.
 - Open <http://localhost:3000>. It redirects to `/he` or `/en` based on your browser language.
 
 **Admin login:** go to <http://localhost:3000/he/admin>. The email is `ADMIN_EMAIL`
@@ -107,13 +108,12 @@ need no cron at all.
 | `verify:all` | verify + build + test:e2e |
 | `db:setup` | creates the local databases |
 | `db:migrate` | applies `drizzle/*.sql`, using `DATABASE_URL_UNPOOLED` |
-| `db:reset -- [--db <name>] [--seed demo\|none] --yes` | drops, migrates and seeds a database |
+| `db:reset -- [--db <name>] [--seed demo\|fixtures\|none] --yes` | drops, migrates and seeds a database (`fixtures`: only the 16 test works) |
 | `db:seed` | runs the idempotent seed modules |
 | `db:generate` | generates a migration from the schema (integrator only) |
 | `admin:create` | creates the painter's account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` |
 | `env:init` | writes `.env.local` |
 | `cron -- <job> [--watch]` | calls a cron job over HTTP |
-| `demo:fetch-images` | re-downloads the AIC demo images (the output is already committed) |
 | `gen:api-types` | regenerates the provider types from `openapi/` (for DHL, from the current MyDHL spec) |
 | `check:cardcom`, `check:paypal`, `check:morning`, `check:dhl` | opt-in live sandbox checks; each exits 0 and skips cleanly without credentials |
 
@@ -198,12 +198,22 @@ and implementation notes.
 
 ## Demo content and credits
 
-The demo catalog uses **16 public-domain (CC0) paintings from the
-[Art Institute of Chicago](https://www.artic.edu/open-access)**, downloaded through the AIC API.
-The artists are Marsden Hartley, Félix Vallotton, Paula Modersohn-Becker, Lilla Cabot Perry,
-Henri Edmond Cross, Paul Sérusier, Arthur Wesley Dow, John Henry Twachtman, George Inness, Paul
-Camille Guigou, Edward Henry Potthast, Maurice Prendergast and Vilhelm Hammershøi. Each work's
-title, date and credit line are in `data/demo-manifest.json` and on the site's `/credits` page.
+The catalog is the painter's own work: about 150 acrylic and oil paintings on canvas, described
+in `data/catalog/manifest.json` with their images in `data/catalog/images/`.
+
+- **Images.** Each image was edited from the painter's RAW photos (Nikon NEF). The photo was
+  corrected for lens distortion and perspective, cropped to the canvas and levelled with locked
+  colour channels (no saturation boost, no retouching). It was then converted to sRGB and saved
+  at 2000 px on the long side. Framed works have a second, framed view. The RAW files and the
+  4000 px masters are kept outside the repository.
+- **Data.** Titles, sizes and media come from the photo filenames. The Hebrew titles, the alt
+  texts and the series were written for this site, and the painter should review them.
+- **Prices.** The prices are size-based placeholders, and every work is still a demo listing
+  (`is_demo`), so live payments refuse them until the painter sets real prices.
+- **Sizes.** Works whose photo had no size carry a placeholder size and a "TODO" description.
+- **Test fixtures.** The 16 works marked `fixture` keep the commerce roles the tests rely on:
+  statuses, sample orders and shipping flags.
+
 In demo mode the prices, sales and business details are fictitious, and a banner on every page
 says so.
 

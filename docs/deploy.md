@@ -61,7 +61,7 @@ or **(lawyer)**.
   `BLOB_PRIVATE_READ_WRITE_TOKEN` (private store), and `NEXT_PUBLIC_BLOB_HOST`, the public
   store's host (for example `abc123.public.blob.vercel-storage.com`). `next/image` and the CSP
   use it. `NEXT_PUBLIC_*` values are inlined at build time, so redeploy after changing it.
-- The demo seed supports only the local driver. Production starts from an empty catalog, and the
+- The catalog seed supports only the local driver. Production starts from an empty catalog, and the
   painter uploads her works in the admin.
 - Admin uploads go through `POST /api/admin/uploads`, which is limited to 4.5 MB per request on
   Vercel. See §11.
@@ -125,7 +125,7 @@ Rules enforced when `APP_ENV=production`:
 | `STORAGE_DRIVER`, `BLOB_READ_WRITE_TOKEN`, `BLOB_PRIVATE_READ_WRITE_TOKEN`, `NEXT_PUBLIC_BLOB_HOST` | separate preview stores | production stores |
 | `CARDCOM_LATE_WATCH_HOURS`, `CARDCOM_TAIL_DAYS` | defaults (72, 30) | defaults |
 | `MOCK_PAYMENT_FLOW`, `MOCK_CARRIER_DELIVERY_SECONDS` | defaults | unused |
-| `TEST_DATABASE_URL`, `E2E_DATABASE_URL`, `E2E_PORT`, `SEED_E2E_USERS`, `NEXT_DIST_DIR`, `LOCAL_STORAGE_DIR`, `ADMIN_PASSWORD`, `AIC_USER_AGENT`, `DHL_OPENAPI_URL`, `*_CONTRACT`, `RECORD_FIXTURES` | unset | unset (local development and test only) |
+| `TEST_DATABASE_URL`, `E2E_DATABASE_URL`, `E2E_PORT`, `SEED_E2E_USERS`, `NEXT_DIST_DIR`, `LOCAL_STORAGE_DIR`, `ADMIN_PASSWORD`, `DHL_OPENAPI_URL`, `*_CONTRACT`, `RECORD_FIXTURES` | unset | unset (local development and test only) |
 
 Scope secrets per environment in Vercel. Never share a production secret with Preview.
 

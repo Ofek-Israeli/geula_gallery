@@ -19,7 +19,8 @@
 - ביטוח משלוחים (DHL או צד שלישי) ואישור הכיסוי בכתב.
 - כיול תעריפי המשלוח; פתיחת אירופה ובריטניה.
 - מדיניות דמי ביטול (עד המקסימום שהחוק מתיר, או בלי דמי ביטול) – הגדרות ← ביטול עסקה.
-- מתי להחליף את תמונות ההדגמה ביצירות שלך.
+- בדיקת הקטלוג: שמות היצירות (בעברית ובאנגלית), הסדרות, המידות (ובמיוחד יצירות שמסומנות "TODO"
+  במידות זמניות), הצבעים בתמונות מול המקור, ומחירים אמיתיים במקום מחירי ממלא המקום.
 
 ## 2. שאלות לספקים
 
@@ -90,7 +91,7 @@
   לבריטניה; רשימת המדינות החסומות (עיראק? תימן?); הצגת מספר הזהות והכתובת העסקית; ספקי עיבוד
   והעברה לארה״ב; תקופות השמירה.
 - **זכויות**: זכויות יוצרים וזכות מוסרית (תעודת מקוריות: סעיפים 37(ג) ו-45(ב) – לבדיקה); הסכמה
-  לנתוני מעקב DHL; שימוש בתמונות ההדגמה של מכון האמנות של שיקגו (CC0).
+  לנתוני מעקב DHL.
 
 ## 5. סיור בהגדרות
 - **הגדרות ← פרטי העסק ומע״מ**: שם, כתובות, טלפונים, מספר עוסק, מצב מע״מ. עד שמסמנים "הפרטים
@@ -163,7 +164,9 @@
 - Shipping insurance (DHL or a third party) and written confirmation of the coverage.
 - Shipping rate calibration; opening Europe and the UK.
 - The cancellation fee policy (up to the legal maximum, or no fee): Settings → Cancellations.
-- When to replace the demo images with your own works.
+- Review the catalog: the titles (Hebrew and English), the series, the sizes (especially works
+  marked "TODO" with a placeholder size), the colours of the photos against the originals, and
+  real prices in place of the placeholders.
 
 ## 2. Questions for the providers
 
@@ -249,7 +252,7 @@
   low-value consignments; the list of blocked countries (Iraq? Yemen?); showing the ID number
   and the business address; processors and transfers to the US; retention periods.
 - **Rights:** copyright and moral rights (certificate of authenticity: s.37(c) and s.45(b), to be
-  checked); consent for DHL tracking data; use of the Art Institute of Chicago demo images (CC0).
+  checked); consent for DHL tracking data.
 
 ## 5. Settings walkthrough
 - **Settings → Business details and VAT:** name, addresses, phones, business number, VAT mode.

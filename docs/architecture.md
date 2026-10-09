@@ -1861,3 +1861,36 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   is consistent, but history was not rewritten, so `main` must receive one squashed commit.
 - The local Postgres runs with `max_connections = 200` (`ALTER SYSTEM`, spec §8.1). This is
   noted in the README.
+
+### Painter catalog (replaces the AIC demo catalog)
+
+- **Data.**
+  - `data/demo-images/` and `data/demo-manifest.json` are gone, together with the AIC pipeline:
+    `fetch-demo-images.ts`, `demo-curation.ts`, `parse-aic-dimensions.ts`,
+    `procedural-painting.ts`, the `demo:fetch-images` script and `AIC_USER_AGENT`.
+  - The seed now reads `data/catalog/manifest.json` (`scripts/lib/catalog-manifest.ts`), which
+    describes the painter's own works, and loads their images from `data/catalog/images/`.
+- **Images.**
+  - They were edited outside the repository from Nikon NEF RAW files, as follows:
+    - Decoded with macOS's RAW engine, keeping the camera white balance.
+    - Corrected for radial lens distortion, calibrated per focal length on the canvas edges.
+    - Each canvas was found automatically, then every corner was checked or placed by hand.
+    - Perspective-warped to the stated size, in a single resampling pass.
+    - Levelled with locked colour channels, with no saturation boost and no retouching.
+    - Converted from Display P3 to sRGB and saved as 2000 px JPEGs at q82.
+  - Framed works add a second image with role `FRAMED`, and the work gets `framed = true`.
+  - The seed ingests every image through `media/ingest.ts`, as before. The storage keys are
+    `…/demo/<slug>-<hash12>.jpg`, and `credit_line` is NULL, so no "(CC0)" credit is shown.
+- **Commerce state.**
+  - The prices are size-based placeholders, and every seeded work stays `is_demo = true`. The
+    go-live blocker `DEMO_WORKS_PUBLISHED` therefore still applies until the painter sets real
+    prices.
+  - Works whose photo had no size get a placeholder size and a "TODO" description.
+- **Fixtures.**
+  - The 16 works with `fixture: true` take over the commerce roles of the 16 AIC works one to
+    one, with the same statuses, prices, flags, `featured`, `sortOrder` and `sampleOrder`.
+  - `db:reset --seed fixtures` seeds only those 16. The integration suites and the E2E server use
+    it, so their counts and timings are unchanged. `--seed demo`, the default, seeds the whole
+    catalog.
+- **`/credits`.** The page now lists only the font licences. `listCredits` and `CreditDTO` were
+  removed, and so was the work page's "(CC0)" suffix.
