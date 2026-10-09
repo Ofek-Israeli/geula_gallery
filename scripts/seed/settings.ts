@@ -22,8 +22,8 @@ const tbd = { he: TBD_HE, en: TBD_EN };
 export function businessProfileDefaults(env: SeedEnv): BusinessProfile {
   return {
     legalName: TBD_HE,
-    tradeName: { he: "גלריה גאולה", en: "Geula Gallery" },
-    artistName: { he: TBD_HE, en: TBD_EN },
+    tradeName: { he: "גאולה לוי", en: "Geula Levi" },
+    artistName: { he: "גאולה לוי", en: "Geula Levi" },
     signatureName: TBD_EN,
     idNumber: "000000018",
     vatMode: "OSEK_PATUR",
