@@ -2019,8 +2019,22 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - `QuoteHero` is a full-bleed band (`mx-[calc(50%-50vw)]`; `body` has `overflow-x: clip`).
   - The background is a fixed work, `HERO_ARTWORK_SLUG = "by-the-lake"`, read with
     `getHeroArtwork(locale)` (`getArtworkCard` by slug); when it is missing, the featured available
-    work is used. The public site footer uses the same painting as a dark band (its lower part,
-    lazy, `ink/70` overlay, light text); the checkout keeps the plain light footer.
+    work is used.
+  - The public site footer is a second window onto the same painting (`PaintingBackdrop`).
+    - Each band paints the painting as its own CSS background with `background-attachment: fixed`
+      and `cover`, so the painting is placed against the viewport. The page scrolls over it: the
+      quote band shows its upper part, and the footer, reached at the bottom of the viewport,
+      shows where it continues.
+    - A background cannot spill outside its band. The first version used a fixed `<img>` clipped
+      with `clip-path`, and real Safari let it cover the whole page.
+    - The fixed effect applies only with a fine pointer and without `prefers-reduced-motion`.
+      Touch browsers (iOS) ignore or mis-scale fixed backgrounds, so there each band shows its own
+      crop, and the footer shows the bottom of the painting.
+    - The URLs come from `getImageProps` as an `image-set()` (1x/2x), with the blur placeholder as
+      a second layer. Both bands use the same URLs, so the image is downloaded once, and the home
+      band preloads it with `fetchPriority: "high"`.
+    - Same `ink/65` overlay and light text in both bands. The checkout keeps the plain light
+      footer.
   - The image is the LCP: `fetchPriority="high"` and `alt=""`, with an `ink/65` overlay.
   - The quote is Georgia O'Keeffe's "I found that I could say things with color and shapes that I
     couldn't say in any other way—things I had no words for." Its quote marks are in the

@@ -331,10 +331,14 @@ test.describe("home: the quote over By the Lake, then the bio", () => {
       await expect(hero.locator("figure blockquote")).toHaveText(
         home.quote.text,
       );
-      await expect(hero.locator("img")).toHaveAttribute(
-        "fetchpriority",
-        "high",
-      );
+      // The painting is the band's background (and the footer's), preloaded as the LCP.
+      await expect(hero.getByTestId("painting-backdrop")).toHaveCount(1);
+      await expect(
+        page.getByTestId("site-footer").getByTestId("painting-backdrop"),
+      ).toHaveCount(1);
+      await expect(
+        page.locator('link[rel="preload"][as="image"][fetchpriority="high"]'),
+      ).toHaveCount(1);
       await expect(page.getByTestId("home-hero-caption")).toHaveAttribute(
         "href",
         `/${locale}/works/by-the-lake`,

@@ -1,9 +1,9 @@
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { CancelPurchaseLink } from "@/components/ui/CancelPurchaseLink";
 import { Link } from "@/i18n/navigation";
 import type { ArtworkImageDTO } from "@/lib/catalog";
 import { cx } from "@/lib/cx";
+import { PaintingBackdrop } from "./PaintingBackdrop";
 
 const LEGAL_DOCS = [
   "terms",
@@ -17,9 +17,10 @@ const LEGAL_DOCS = [
  * Public footer with the cancellation link and the legal pages (spec §1.2, §6.2). Never shows the
  * seller's ID number (spec §1.2 Compliance). `variant="minimal"` is the checkout footer.
  *
- * With `background` (the public site: "By the Lake", like the home page's quote band) the footer
- * is a dark band: the painting's lake, decorative and lazy, under an `ink/70` overlay that
- * keeps the light text above 4.5:1. Without it (checkout) it stays the plain light footer.
+ * With `background` (the public site: "By the Lake") the footer is the second window onto the
+ * painting behind the page (`PaintingBackdrop`): reached at the bottom of the viewport, it shows
+ * where the home page's quote band leaves off. Without it (checkout) it stays the plain light
+ * footer.
  */
 export function SiteFooter({
   year,
@@ -51,24 +52,7 @@ export function SiteFooter({
       data-testid="site-footer"
     >
       {background ? (
-        <>
-          <Image
-            src={background.src}
-            alt=""
-            aria-hidden="true"
-            fill
-            sizes="100vw"
-            quality={75}
-            placeholder={background.blurDataUrl ? "blur" : "empty"}
-            blurDataURL={background.blurDataUrl ?? undefined}
-            className="-z-20 object-cover"
-            style={{ objectPosition: "center 55%" }}
-          />
-          <div
-            className="absolute inset-0 -z-10 bg-ink/70"
-            aria-hidden="true"
-          />
-        </>
+        <PaintingBackdrop image={background} fallback="bottom" />
       ) : null}
       <div
         className={cx(
@@ -116,10 +100,10 @@ export function SiteFooter({
             </li>
           </ul>
         )}
-        <p className={background ? "text-paper/85" : "text-ink-muted"}>
+        <p className={background ? undefined : "text-ink-muted"}>
           {t("footer.merchantCountry")}
         </p>
-        <p className={background ? "text-paper/85" : "text-ink-muted"}>
+        <p className={background ? undefined : "text-ink-muted"}>
           {t("footer.copyright", { year: shownYear, name: t("meta.siteName") })}
         </p>
       </div>
