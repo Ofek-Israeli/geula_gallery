@@ -32,6 +32,7 @@ const NUMBERS = [
   "maxHoldCountPerOrder",
   "maxWebHoldSpanMinutes",
   "maxAttemptsPerOrder",
+  "maxCartItems",
 ] as const;
 
 /** `/admin/settings/checkout` (spec §4.7, §6.10): holds and limits, payments, FX, read-only Providers panel. */

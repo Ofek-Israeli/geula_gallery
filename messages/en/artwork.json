@@ -21,7 +21,17 @@
     "requestQuote": "Request a quote",
     "quoteOnly": "Delivery and the final price for this work are quoted on request.",
     "priceOnRequest": "Price on request",
-    "usdAbroad": "Buyers shipping abroad can pay in US dollars at checkout."
+    "usdAbroad": "Buyers shipping abroad can pay in US dollars at checkout.",
+    "addToCart": "Add to cart",
+    "inCart": "In your cart",
+    "viewCart": "View cart",
+    "cartNotice": {
+      "added": "Added to your cart.",
+      "already": "This work is already in your cart.",
+      "full": "Your cart is full (up to {max} works per order).",
+      "mixed": "Demo works and other works cannot be bought together.",
+      "unavailable": "This work cannot be added to the cart right now."
+    }
   },
   "delivery": {
     "title": "Delivery",

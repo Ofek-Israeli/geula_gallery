@@ -1,8 +1,8 @@
 import "server-only";
-import { and, asc, eq, lt, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, sql } from "drizzle-orm";
 import { audit } from "@/server/audit";
 import { type Db, db as defaultDb } from "@/server/db/client";
-import { orders } from "@/server/db/schema";
+import { artworks, orders } from "@/server/db/schema";
 import { withTx } from "@/server/db/tx";
 import { type ServiceResult, withEffects } from "@/server/domain/effects";
 import { ConflictError, NotFoundError } from "@/server/domain/errors";
@@ -139,4 +139,67 @@ export async function expireStaleOrders(
     );
   }
   return withEffects({ expired }, expired > 0 ? { revalidate: true } : {});
+}
+
+/** Order statuses whose remaining holds are orphans (the order can never pay with them). */
+const DEAD_HOLDER_STATUSES = ["EXPIRED", "CANCELLED"] as const;
+
+/**
+ * Releases the holds still pointing at dead orders (EXPIRED / CANCELLED, no attempt in flight).
+ * A takeover expires the previous holder of one work, but that order's *other* works kept its
+ * hold (a cart is one order with several works). Harmless to correctness (an expired hold is free
+ * to anyone), but stale. One short transaction per order: the order's held artworks → the order.
+ */
+export async function releaseOrphanedHolds(
+  orderIds: readonly string[],
+  deps: ReleaseDeps = {},
+): Promise<{ released: number }> {
+  const db = deps.db ?? defaultDb;
+  let released = 0;
+  for (const orderId of [...new Set(orderIds)].sort()) {
+    released += await withTx(
+      async (tx) => {
+        const held = await tx
+          .select({ id: artworks.id })
+          .from(artworks)
+          .where(eq(artworks.reservedByOrderId, orderId));
+        if (held.length === 0) return 0;
+        await lockArtworks(
+          tx,
+          held.map((h) => h.id),
+        );
+        const order = await lockOrder(tx, orderId);
+        if (
+          !order ||
+          !(DEAD_HOLDER_STATUSES as readonly string[]).includes(order.status)
+        ) {
+          return 0;
+        }
+        if ((await ordersWithAttemptInFlight(tx, [order.id])).size > 0) {
+          return 0;
+        }
+        return releaseHoldsOf(tx, order.id);
+      },
+      { db, name: "checkout.release_orphans" },
+    );
+  }
+  return { released };
+}
+
+/** Reconcile safety net: finds dead orders that still hold works and releases them. */
+export async function sweepOrphanedHolds(
+  opts: { limit: number },
+  deps: ReleaseDeps = {},
+): Promise<{ released: number }> {
+  const db = deps.db ?? defaultDb;
+  const rows = await db
+    .selectDistinct({ orderId: orders.id })
+    .from(artworks)
+    .innerJoin(orders, eq(orders.id, artworks.reservedByOrderId))
+    .where(inArray(orders.status, [...DEAD_HOLDER_STATUSES]))
+    .limit(opts.limit);
+  return releaseOrphanedHolds(
+    rows.map((r) => r.orderId),
+    deps,
+  );
 }

@@ -55,7 +55,11 @@
     "GB_LOW_VALUE": "Low-value parcels to the UK cannot be sold online; ask for a quote.",
     "requestQuote": "Request a quote",
     "ask": "Ask about this work",
-    "otherCountry": "Choose another destination"
+    "otherCountry": "Choose another destination",
+    "MIXED_DEMO": "Demo works and other works cannot be bought in one order.",
+    "TOO_MANY_ITEMS": "Too many works for one order.",
+    "cartTitle": "These works cannot be checked out together right now",
+    "VALUE_CAP_CART": "Together these works are above the carrier's value limit for this destination. Remove a work, or ask us for a quote."
   },
   "details": {
     "title": "Your details",
@@ -100,7 +104,7 @@
     "redirectNote": "You will be taken to the payment provider's secure page."
   },
   "privacy": "We use your details only to fulfil this order: payment, delivery and the receipt. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
-  "holdNotice": "When you continue, the work is reserved for you for {minutes} minutes.",
+  "holdNotice": "When you continue, {count, plural, one {the work is} other {the # works are}} reserved for you for {minutes} minutes.",
   "submit": "Continue to payment",
   "submitting": "Reserving…",
   "errors": {
@@ -116,7 +120,10 @@
     "provider_error": "We could not open the payment page. Your reservation is kept; you can try again from your order page.",
     "openOrder": "Open my order",
     "generic": "Something went wrong. Please try again.",
-    "fix": "Please fix the highlighted fields."
+    "fix": "Please fix the highlighted fields.",
+    "just_reserved_items": "Sorry – another buyer has just reserved: {titles}. Remove {count, plural, one {it} other {them}} from your cart to continue.",
+    "TOO_MANY_ITEMS": "Too many works for one order. Please remove some from your cart.",
+    "MIXED_DEMO": "Demo works and other works cannot be bought in one order."
   },
   "returned": {
     "title": "Return from the payment page",
@@ -141,5 +148,47 @@
     "done": "Done. You can close this window; the shop is notified by webhook.",
     "closed": "This payment is no longer open ({state}).",
     "continue": "Continue to the shop"
+  },
+  "cart": {
+    "title": "Your cart",
+    "empty": "Your cart is empty.",
+    "emptyCta": "Browse the works",
+    "count": "{count, plural, one {# work} other {# works}}",
+    "notReserved": "Works in your cart are not reserved yet: they are reserved for you only when you continue to payment.",
+    "limit": "Up to {max} works per order.",
+    "subtotal": "Subtotal",
+    "shippingAtCheckout": "Shipping is calculated at checkout.",
+    "checkout": "Checkout",
+    "remove": "Remove",
+    "removeLabel": "Remove {title} from the cart",
+    "unavailableTitle": "Not available now",
+    "status": {
+      "sold": "Sold",
+      "reserved": "Reserved by another buyer",
+      "on_hold": "On hold",
+      "not_for_sale": "Not for sale",
+      "not_buyable": "Not sold online",
+      "mixed": "Demo work – cannot be bought with the other works"
+    },
+    "notice": {
+      "removed": "The work was removed from your cart.",
+      "restored": "The works were added to your cart."
+    },
+    "back": "Back to the cart",
+    "excluded": "{count, plural, one {One work in your cart is} other {# works in your cart are}} not available and not included.",
+    "problemsTitle": "Some works cannot be checked out to this destination",
+    "removeFromCart": "Remove from cart",
+    "removeFromCartLabel": "Remove {title} from the cart",
+    "requestQuoteFor": "Ask for a quote for {title}",
+    "problem": {
+      "NOT_AVAILABLE": "No longer available",
+      "RESERVED": "Reserved by another buyer",
+      "NOT_PRICED": "Price on request",
+      "QUOTE_ONLY": "Delivery is quoted on request",
+      "NOT_INTERNATIONAL": "Sold for delivery in Israel only",
+      "SIZE_QUOTE": "Needs a quoted shipment to this destination",
+      "VALUE_CAP": "Above the carrier's value limit for this destination",
+      "MIXED_DEMO": "Demo work – cannot be bought with real works"
+    }
   }
 }

@@ -25,6 +25,7 @@ export const saveCheckoutAction = adminAction(
     maxHoldCountPerOrder: int(1, 20),
     maxWebHoldSpanMinutes: int(10, 1440),
     maxAttemptsPerOrder: int(1, 5),
+    maxCartItems: int(1, 20),
     maxInstallments: int(1, 36),
     paypalForIsraeliDestinations: checkboxSchema,
     receiptForRefundedPayments: checkboxSchema,

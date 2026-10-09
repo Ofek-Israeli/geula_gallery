@@ -59,6 +59,8 @@ export const checkoutSettingsSchema = z.object({
   maxHoldCountPerOrder: z.number().int().min(1).default(3),
   maxWebHoldSpanMinutes: z.number().int().min(1).default(120),
   maxAttemptsPerOrder: z.number().int().min(1).max(5).default(5),
+  /** Works per cart checkout, and live held works per buyer (email or IP) across orders. */
+  maxCartItems: z.number().int().min(1).max(20).default(10),
   maxInstallments: z.number().int().min(1).default(1),
   paypalForIsraeliDestinations: z.boolean().default(false),
   receiptForRefundedPayments: z.boolean().default(true),

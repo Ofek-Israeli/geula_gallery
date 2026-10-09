@@ -58,6 +58,7 @@
     "maxHoldCountPerOrder": "Maximum holds per order",
     "maxWebHoldSpanMinutes": "Maximum total hold span on the site (minutes)",
     "maxAttemptsPerOrder": "Payment attempts per order (up to 5)",
+    "maxCartItems": "Works per cart (and live held works per buyer)",
     "payments": "Payments",
     "maxInstallments": "Maximum installments",
     "paypalForIsraeliDestinations": "Offer PayPal for deliveries in Israel too",

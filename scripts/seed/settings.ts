@@ -51,6 +51,7 @@ export const checkoutDefaults: CheckoutSettings = {
   maxHoldCountPerOrder: 3,
   maxWebHoldSpanMinutes: 120,
   maxAttemptsPerOrder: 5,
+  maxCartItems: 10,
   maxInstallments: 1,
   paypalForIsraeliDestinations: false,
   receiptForRefundedPayments: true,

@@ -11,7 +11,9 @@
     "works": "יצירות",
     "about": "אודות",
     "contact": "יצירת קשר",
-    "menu": "תפריט"
+    "menu": "תפריט",
+    "cart": "עגלה",
+    "cartCount": "עגלה, {count, plural, one {יצירה אחת} other {# יצירות}}"
   },
   "cancelPurchase": "ביטול עסקה",
   "footer": {

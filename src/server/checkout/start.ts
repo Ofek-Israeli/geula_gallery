@@ -37,17 +37,19 @@ import { orderItemValues } from "./items";
 import { orderDetailsComplete } from "./link-details";
 import { itemPriceMinor } from "./pricing";
 import { getCheckoutQuote, liveProvidersBlocked } from "./quote";
+import { releaseOrphanedHolds } from "./release";
 import {
-  allReservable,
   checkHoldCaps,
   expireTakenOverOrders,
   HoldRefusedError,
+  type LockedArtwork,
   lockArtworks,
   lockOrder,
   orderArtworkIds,
   ordersWithAttemptInFlight,
   reserveArtworks,
   takeBuyerLocks,
+  unreservableIds,
 } from "./reservations";
 import type {
   CheckoutQuote,
@@ -272,6 +274,7 @@ async function resumeByClientRequestId(
     orderNumber: order.number,
     accessToken: orderAccessToken(order.id, order.accessVersion),
     url,
+    artworkIds: await orderArtworkIds(db, order.id),
   };
 }
 
@@ -293,28 +296,43 @@ export async function startCheckout(
   );
   if (resumed) return withEffects(resumed);
 
-  // Server re-quote: nothing is written when the total differs (step 3.3).
+  // Server re-quote: nothing is written when the total or an item price differs (step 3.3).
+  const base = {
+    locale: input.locale,
+    country: input.country,
+    method: input.method,
+    currency: input.currency,
+  };
   const quote = await getCheckoutQuote(
-    {
-      slug: input.slug,
-      locale: input.locale,
-      country: input.country,
-      method: input.method,
-      currency: input.currency,
-    },
+    input.slug !== undefined
+      ? { ...base, slug: input.slug }
+      : { ...base, artworkIds: input.items.map((i) => i.artworkId) },
     { db, env: e },
   );
   if (quote.kind === "blocked") {
+    const gone = quote.problems
+      .filter((p) => p.reason === "RESERVED" || p.reason === "NOT_AVAILABLE")
+      .map((p) => p.artworkId);
     if (quote.reason === "RESERVED") {
-      return withEffects({ kind: "just_reserved" });
+      return withEffects({ kind: "just_reserved", artworkIds: gone });
     }
-    return withEffects({ kind: "refused", code: quote.reason });
+    // A cart work someone bought meanwhile is "just reserved" too (the page names it).
+    if (input.items !== undefined && gone.length > 0) {
+      return withEffects({ kind: "just_reserved", artworkIds: gone });
+    }
+    return withEffects(
+      refused(
+        quote.reason,
+        quote.problems.map((p) => p.artworkId),
+      ),
+    );
   }
   if (
     quote.shipping.method !== input.method ||
     quote.currency !== input.currency ||
     quote.country !== input.country ||
-    quote.totalMinor !== input.expectedTotalMinor
+    quote.totalMinor !== input.expectedTotalMinor ||
+    (input.items !== undefined && !itemsMatch(input.items, quote.items))
   ) {
     return withEffects({ kind: "price_changed", quote });
   }
@@ -343,7 +361,7 @@ export async function startCheckout(
     now: new Date(),
   });
 
-  let created: { order: Order; attempt: PaymentAttempt } | null = null;
+  let created: Created | null = null;
   for (let round = 1; round <= 3 && !created; round++) {
     try {
       created = await withTx(
@@ -373,7 +391,7 @@ export async function startCheckout(
         if (again) return withEffects(again);
       }
       if (error instanceof HoldRefusedError) {
-        return withEffects({ kind: "refused", code: error.refusal });
+        return withEffects(refused(error.refusal, error.artworkIds));
       }
       // A colliding order number (about 1 in 10^9) is retried with a fresh one.
       if (isUniqueViolation(error, "orders_number_unique") && round < 3) {
@@ -384,16 +402,56 @@ export async function startCheckout(
   }
   if (!created) throw new Error("startCheckout: no order created");
 
+  await releaseOrphansAfterCommit(created.takenOver, { db, env: e });
   return launchResult(created, provider, input.locale, { db, env: e });
 }
 
+/** A refusal; `artworkIds` only when specific works caused it. */
+function refused(code: string, artworkIds: readonly string[] = []) {
+  return artworkIds.length > 0
+    ? ({ kind: "refused", code, artworkIds: [...artworkIds] } as const)
+    : ({ kind: "refused", code } as const);
+}
+
+/** The order with its attempt, and the orders whose lapsed holds it took over. */
+interface Created {
+  order: Order;
+  attempt: PaymentAttempt;
+  artworkIds: string[];
+  takenOver: string[];
+}
+
+/** The cart's works and prices are exactly the quoted ones (same set, same price each). */
+function itemsMatch(
+  expected: readonly { artworkId: string; expectedPriceMinor: number }[],
+  quoted: readonly { artworkId: string; priceMinor: number }[],
+): boolean {
+  if (expected.length !== quoted.length) return false;
+  const price = new Map(quoted.map((q) => [q.artworkId, q.priceMinor]));
+  return expected.every((x) => price.get(x.artworkId) === x.expectedPriceMinor);
+}
+
+/**
+ * A takeover expires the previous holder, whose *other* works may still point at it; release them
+ * after commit (their own transaction, artworks → order). Best-effort: the reconcile sweep retries.
+ */
+async function releaseOrphansAfterCommit(
+  orderIds: readonly string[],
+  deps: StartDeps,
+): Promise<void> {
+  if (orderIds.length === 0) return;
+  await releaseOrphanedHolds(orderIds, { db: deps.db }).catch((error) =>
+    log.error("checkout.release_orphans_failed", { orderIds }, error),
+  );
+}
+
 async function launchResult(
-  created: { order: Order; attempt: PaymentAttempt },
+  created: Created,
   provider: PaymentProvider,
   locale: Locale,
   deps: StartDeps,
 ): Promise<ServiceResult<StartCheckoutResult>> {
-  const { order, attempt } = created;
+  const { order, attempt, artworkIds } = created;
   const accessToken = orderAccessToken(order.id, order.accessVersion);
   const launched = await launchAttempt(attempt, order, provider, locale, deps);
   const effects = { revalidate: true };
@@ -404,6 +462,7 @@ async function launchResult(
         orderId: order.id,
         orderNumber: order.number,
         accessToken,
+        artworkIds,
       },
       effects,
     );
@@ -415,6 +474,7 @@ async function launchResult(
       orderNumber: order.number,
       accessToken,
       url: launched.url,
+      artworkIds,
     },
     effects,
   );
@@ -430,24 +490,46 @@ async function createHeldOrder(
     vatMode: "OSEK_PATUR" | "OSEK_MURSHE";
     conversation: { tookPlace: boolean; source: string | null };
   },
-): Promise<{ order: Order; attempt: PaymentAttempt }> {
+): Promise<Created> {
   const { input, quote } = i;
   const now = new Date();
+  const ids = quote.items.map((x) => x.artworkId);
+  if (ids.length > i.checkout.maxCartItems) {
+    throw new StartAbort({ kind: "refused", code: "TOO_MANY_ITEMS" });
+  }
 
   // 1. Lock the artworks (before any FK insert that references them) and check the predicate.
-  const locked = await lockArtworks(tx, [quote.artworkId]);
+  const locked = await lockArtworks(tx, ids);
   // A concurrent double submit may have committed while we waited for the lock: resume it.
   const [twin] = await tx
     .select({ id: orders.id })
     .from(orders)
     .where(eq(orders.clientRequestId, input.clientRequestId));
   if (twin) throw new ResumeSignal();
-  const art = locked[0];
-  if (!art || !(await allReservable(tx, locked, null, true, now))) {
-    throw new StartAbort({ kind: "just_reserved" });
+  const byId = new Map(locked.map((a) => [a.id, a]));
+  const missing = ids.filter((id) => !byId.has(id));
+  const taken = [
+    ...missing,
+    ...(await unreservableIds(tx, locked, null, true, now)),
+  ];
+  if (taken.length > 0) {
+    throw new StartAbort({ kind: "just_reserved", artworkIds: taken });
   }
-  if (itemPriceMinor(art, quote.currency) !== quote.itemsTotalMinor) {
-    throw new StartAbort({ kind: "price_changed", quote });
+  // Demo and real works are never one order (re-checked under the locks).
+  const isDemo = (locked[0] as LockedArtwork).isDemo;
+  if (locked.some((a) => a.isDemo !== isDemo)) {
+    throw new StartAbort({
+      kind: "refused",
+      code: "MIXED_DEMO",
+      artworkIds: locked.filter((a) => a.isDemo).map((a) => a.id),
+    });
+  }
+  // Each work's price, under the lock, must be the quoted one.
+  for (const item of quote.items) {
+    const art = byId.get(item.artworkId) as LockedArtwork;
+    if (itemPriceMinor(art, quote.currency) !== item.priceMinor) {
+      throw new StartAbort({ kind: "price_changed", quote });
+    }
   }
 
   // 2–3. Per-buyer advisory locks, then the anti-hoarding caps under them.
@@ -458,7 +540,7 @@ async function createHeldOrder(
   await checkHoldCaps(tx, {
     email: input.buyer.email,
     ipHash: input.ipHash,
-    artworkIds: [art.id],
+    artworkIds: ids,
     excludeOrderId: null,
     settings: i.checkout,
   });
@@ -477,7 +559,7 @@ async function createHeldOrder(
       status: "AWAITING_PAYMENT",
       locale: input.locale,
       currency: quote.currency,
-      isDemo: art.isDemo,
+      isDemo,
       itemsTotalMinor: quote.itemsTotalMinor,
       shippingMinor: quote.shipping.shippingMinor,
       insuranceMinor: quote.shipping.insuranceMinor,
@@ -522,21 +604,31 @@ async function createHeldOrder(
     })
     .returning();
   if (!order) throw new Error("order insert returned no row");
+  // One item per work, in cart order, each at its own quoted price.
   await tx
     .insert(orderItems)
     .values(
-      orderItemValues(order.id, art, quote.itemsTotalMinor, quote.currency),
+      quote.items.map((item) =>
+        orderItemValues(
+          order.id,
+          byId.get(item.artworkId) as LockedArtwork,
+          item.priceMinor,
+          quote.currency,
+        ),
+      ),
     );
 
   // 5. The conditional reserve (row count must equal n), 6. takeover expiry.
   const reserved = await reserveArtworks(tx, {
-    artworkIds: [art.id],
+    artworkIds: ids,
     orderId: order.id,
     until,
     web: true,
   });
-  if (!reserved) throw new StartAbort({ kind: "just_reserved" });
-  await expireTakenOverOrders(
+  if (!reserved) {
+    throw new StartAbort({ kind: "just_reserved", artworkIds: ids });
+  }
+  const takenOver = await expireTakenOverOrders(
     tx,
     locked.map((a) => a.reservedByOrderId),
     order.id,
@@ -557,12 +649,13 @@ async function createHeldOrder(
         method: order.shippingMethod,
         country: order.shipCountry,
         reservedUntil: until.toISOString(),
+        artworkIds: ids,
       },
       ipHash: input.ipHash,
     },
     tx,
   );
-  return { order, attempt };
+  return { order, attempt, artworkIds: ids, takenOver };
 }
 
 async function insertAttempt(
@@ -604,8 +697,11 @@ export type PayOrderRefusal =
   | "hold_span_exceeded";
 
 class PayRefused extends ConflictError {
-  constructor(public readonly refusal: PayOrderRefusal) {
-    super("PAY_REFUSED", `pay refused: ${refusal}`, { refusal });
+  constructor(
+    public readonly refusal: PayOrderRefusal,
+    public readonly artworkIds: string[] = [],
+  ) {
+    super("PAY_REFUSED", `pay refused: ${refusal}`, { refusal, artworkIds });
     this.name = "PayRefused";
   }
 }
@@ -639,21 +735,19 @@ export async function startPaymentForOrder(
   }
   const checkout = await getSetting("checkout", db);
 
-  let created: { order: Order; attempt: PaymentAttempt };
+  let created: Created;
   try {
     created = await withTx((tx) => payOrderTx(tx, input, provider, checkout), {
       db,
       name: "checkout.pay_order",
     });
   } catch (error) {
-    if (error instanceof PayRefused) {
-      return withEffects({ kind: "refused", code: error.refusal });
-    }
-    if (error instanceof HoldRefusedError) {
-      return withEffects({ kind: "refused", code: error.refusal });
+    if (error instanceof PayRefused || error instanceof HoldRefusedError) {
+      return withEffects(refused(error.refusal, error.artworkIds));
     }
     throw error;
   }
+  await releaseOrphansAfterCommit(created.takenOver, { db, env: e });
   return launchResult(created, provider, input.locale, { db, env: e });
 }
 
@@ -662,7 +756,7 @@ async function payOrderTx(
   input: { orderId: string; ipHash: string | null },
   provider: PaymentProvider,
   checkout: CheckoutSettings,
-): Promise<{ order: Order; attempt: PaymentAttempt }> {
+): Promise<Created> {
   const now = new Date();
   const artworkIds = await orderArtworkIds(tx, input.orderId);
   const locked = await lockArtworks(tx, artworkIds);
@@ -698,6 +792,7 @@ async function payOrderTx(
         a.reservedUntil.getTime() > now.getTime(),
     );
   let order = current;
+  let takenOver: string[] = [];
   if (liveHold) {
     if (!web) {
       await tx
@@ -728,9 +823,8 @@ async function payOrderTx(
     ) {
       throw new PayRefused("hold_span_exceeded");
     }
-    if (!(await allReservable(tx, locked, current.id, web, now))) {
-      throw new PayRefused("just_reserved");
-    }
+    const gone = await unreservableIds(tx, locked, current.id, web, now);
+    if (gone.length > 0) throw new PayRefused("just_reserved", gone);
     if (current.buyerEmail) {
       await takeBuyerLocks(tx, {
         email: current.buyerEmail,
@@ -752,8 +846,8 @@ async function payOrderTx(
       until,
       web,
     });
-    if (!ok) throw new PayRefused("just_reserved");
-    await expireTakenOverOrders(
+    if (!ok) throw new PayRefused("just_reserved", artworkIds);
+    takenOver = await expireTakenOverOrders(
       tx,
       locked.map((a) => a.reservedByOrderId),
       current.id,
@@ -777,7 +871,7 @@ async function payOrderTx(
     },
     tx,
   );
-  return { order, attempt };
+  return { order, attempt, artworkIds, takenOver };
 }
 
 async function updateOrder(

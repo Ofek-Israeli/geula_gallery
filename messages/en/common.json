@@ -11,7 +11,9 @@
     "works": "Works",
     "about": "About",
     "contact": "Contact",
-    "menu": "Menu"
+    "menu": "Menu",
+    "cart": "Cart",
+    "cartCount": "Cart, {count, plural, one {# work} other {# works}}"
   },
   "cancelPurchase": "Cancel a purchase",
   "footer": {

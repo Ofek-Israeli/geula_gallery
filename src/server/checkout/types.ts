@@ -10,19 +10,60 @@ import type {
   ShippingQuoteResult,
 } from "@/server/shipping/types";
 
-/** Shared checkout types (spec §5.1, §5.8; frozen with `checkout/*`). */
-export interface CheckoutQuoteRequest {
-  slug: string;
+/**
+ * Shared checkout types (spec §5.1, §5.8). A checkout covers one work (`slug`, "Buy now") or the
+ * works of a cart (`artworkIds`, in cart order); both go through the same N-item core.
+ */
+interface QuoteRequestBase {
   locale: Locale;
   country?: string;
   method?: ShippingMethod;
   currency?: Currency;
 }
+export type CheckoutQuoteRequest =
+  | (QuoteRequestBase & { slug: string; artworkIds?: undefined })
+  | (QuoteRequestBase & { artworkIds: readonly string[]; slug?: undefined });
+
+/** One quoted work, in the quote currency (request order). */
+export interface CheckoutQuoteItem {
+  artworkId: string;
+  slug: string;
+  priceMinor: number;
+}
+
+/** Why one work of a cart cannot be checked out (the cart page names it and offers "Remove"). */
+export type ItemProblemReason =
+  | "NOT_AVAILABLE"
+  | "RESERVED"
+  | "NOT_PRICED"
+  | "QUOTE_ONLY"
+  | "NOT_INTERNATIONAL"
+  | "SIZE_QUOTE"
+  | "VALUE_CAP"
+  | "MIXED_DEMO";
+export interface ItemProblem {
+  artworkId: string;
+  reason: ItemProblemReason;
+}
+
+export type QuoteBlockReason =
+  | BlockReason
+  | "NOT_AVAILABLE"
+  | "RESERVED"
+  | "NOT_PRICED"
+  | "DEMO_LIVE_PROVIDER"
+  | "NO_PROVIDER"
+  /** A cart mixing demo works with real works (never one order; spec §1.1 demo rules). */
+  | "MIXED_DEMO"
+  /** More works than `checkout.maxCartItems`. */
+  | "TOO_MANY_ITEMS";
 
 export type CheckoutQuote =
   | {
       kind: "ok";
+      /** The first work (single-item callers); `items` lists every work. */
       artworkId: string;
+      items: CheckoutQuoteItem[];
       country: string;
       currency: Currency;
       itemsTotalMinor: number;
@@ -44,14 +85,11 @@ export type CheckoutQuote =
     }
   | {
       kind: "blocked";
-      reason:
-        | BlockReason
-        | "NOT_AVAILABLE"
-        | "RESERVED"
-        | "NOT_PRICED"
-        | "DEMO_LIVE_PROVIDER"
-        | "NO_PROVIDER";
+      reason: QuoteBlockReason;
+      /** The first culprit work; null for an unknown slug or an empty cart. */
       artworkId: string | null;
+      /** Per-work causes ([] = the cart or destination as a whole). */
+      problems: ItemProblem[];
     };
 
 export interface BuyerDetails {
@@ -62,8 +100,7 @@ export interface BuyerDetails {
   vatId?: string;
 }
 
-export interface StartCheckoutInput {
-  slug: string;
+interface StartCheckoutBase {
   locale: Locale;
   country: string;
   method: ShippingMethod;
@@ -85,6 +122,13 @@ export interface StartCheckoutInput {
   };
   ipHash: string | null;
 }
+export type StartCheckoutInput =
+  | (StartCheckoutBase & { slug: string; items?: undefined })
+  | (StartCheckoutBase & {
+      /** Cart works in cart order, each with the price the buyer saw (quote currency). */
+      items: { artworkId: string; expectedPriceMinor: number }[];
+      slug?: undefined;
+    });
 
 export type StartCheckoutResult =
   | {
@@ -93,18 +137,22 @@ export type StartCheckoutResult =
       orderNumber: string;
       accessToken: string;
       url: string;
+      /** The order's works (the cart action removes them from the cart). */
+      artworkIds: string[];
     }
   | { kind: "price_changed"; quote: CheckoutQuote }
-  | { kind: "just_reserved" }
+  /** `artworkIds`: the works someone else reserved or bought meanwhile. */
+  | { kind: "just_reserved"; artworkIds: string[] }
   /**
    * A guard refused the start: a blocked quote reason, `provider_unavailable`, a hold refusal
    * (`too_many_holds`, `artwork_hold_budget`, `hold_cooldown`), `go_live_blocked`.
    */
-  | { kind: "refused"; code: string }
+  | { kind: "refused"; code: string; artworkIds?: string[] }
   /** The provider call failed; the hold is kept and the order page offers a retry. */
   | {
       kind: "provider_error";
       orderId: string;
       orderNumber: string;
       accessToken: string;
+      artworkIds: string[];
     };

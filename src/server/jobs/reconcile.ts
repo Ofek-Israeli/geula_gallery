@@ -1,6 +1,9 @@
 import "server-only";
 import { and, asc, inArray, lte, sql } from "drizzle-orm";
-import { expireStaleOrders } from "@/server/checkout/release";
+import {
+  expireStaleOrders,
+  sweepOrphanedHolds,
+} from "@/server/checkout/release";
 import type { Db } from "@/server/db/client";
 import { paymentAttempts } from "@/server/db/schema";
 import { RECONCILE_ATTEMPT_STATUSES } from "@/server/domain/state-machines";
@@ -90,11 +93,17 @@ export const reconcileJob: CronJob = async (ctx) => {
           { db },
         )
       ).result.expired;
+  // Holds still pointing at dead orders (a cart's other works after a takeover).
+  const orphanHolds = ctx.expired()
+    ? 0
+    : (await sweepOrphanedHolds({ limit: RECONCILE_EXPIRE_LIMIT }, { db }))
+        .released;
 
   return {
     events: { ...events, failed: events.failed + eventsFailed },
     attempts: { ...attempts, outcomes },
     refunds: { ...refunds, leasesExpired, statuses: refundStatuses },
     ordersExpired: expired,
+    orphanHoldsReleased: orphanHolds,
   };
 };

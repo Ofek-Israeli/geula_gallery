@@ -154,6 +154,20 @@ export async function holdContexts(
   return out;
 }
 
+/** The locked artworks that are *not* reservable for `orderId` (a cart names them). */
+export async function unreservableIds(
+  tx: Tx,
+  locked: readonly LockedArtwork[],
+  orderId: string | null,
+  web: boolean,
+  now: Date,
+): Promise<string[]> {
+  const ctx = await holdContexts(tx, locked, orderId, now);
+  return locked
+    .filter((a) => !isReservable(a, { ...(ctx.get(a.id) as HoldContext), web }))
+    .map((a) => a.id);
+}
+
 /** Every locked artwork is reservable for `orderId`. */
 export async function allReservable(
   tx: Tx,
@@ -162,10 +176,7 @@ export async function allReservable(
   web: boolean,
   now: Date,
 ): Promise<boolean> {
-  const ctx = await holdContexts(tx, locked, orderId, now);
-  return locked.every((a) =>
-    isReservable(a, { ...(ctx.get(a.id) as HoldContext), web }),
-  );
+  return (await unreservableIds(tx, locked, orderId, web, now)).length === 0;
 }
 
 /** Every locked artwork is sellable for `orderId`. */
@@ -234,10 +245,16 @@ export type HoldRefusal =
   | "hold_count_exceeded"
   | "hold_span_exceeded";
 
-/** A business rule refused the hold (spec §3.5 "Anti-hoarding"); the caller rolls back. */
+/**
+ * A business rule refused the hold (spec §3.5 "Anti-hoarding"); the caller rolls back.
+ * `artworkIds`: the works the per-artwork budget or cooldown refused (a cart names them).
+ */
 export class HoldRefusedError extends ConflictError {
-  constructor(public readonly refusal: HoldRefusal) {
-    super("HOLD_REFUSED", `hold refused: ${refusal}`, { refusal });
+  constructor(
+    public readonly refusal: HoldRefusal,
+    public readonly artworkIds: string[] = [],
+  ) {
+    super("HOLD_REFUSED", `hold refused: ${refusal}`, { refusal, artworkIds });
     this.name = "HoldRefusedError";
   }
 }
@@ -247,6 +264,11 @@ export class HoldRefusedError extends ConflictError {
  * two concurrent checkouts of one buyer cannot both pass. `excludeOrderId` is the order being
  * (re-)held, which never counts against itself. Only WEB orders count (link orders are the
  * painter's own decision).
+ *
+ * Live holds are counted per order (a cart is one hold), and live held *works* per buyer are capped
+ * at `maxCartItems` including the `newWorks` about to be held (default: `artworkIds.length`), so
+ * several carts cannot hoard more works than one full cart. The 24 h budget and the cooldown are
+ * per artwork: a cart [A, B] is judged on A's and B's own history, not their union.
  */
 export async function checkHoldCaps(
   tx: Tx,
@@ -256,6 +278,7 @@ export async function checkHoldCaps(
     artworkIds: readonly string[];
     excludeOrderId: string | null;
     settings: CheckoutSettings;
+    newWorks?: number;
   },
 ): Promise<void> {
   const email = i.email.trim().toLowerCase();
@@ -267,11 +290,18 @@ export async function checkHoldCaps(
     : sql`lower(o.buyer_email) = ${email}`;
   const byIp = ip ? sql`o.client_ip_hash = ${ip}` : sql`false`;
 
-  // Live WEB holds per email and per IP hash.
-  const live = await tx.execute<{ by_email: string; by_ip: string }>(sql`
+  // Live WEB holds (orders) and held works per email and per IP hash.
+  const live = await tx.execute<{
+    by_email: string;
+    by_ip: string;
+    works_by_email: string;
+    works_by_ip: string;
+  }>(sql`
     SELECT
       count(DISTINCT o.id) FILTER (WHERE lower(o.buyer_email) = ${email}) AS by_email,
-      count(DISTINCT o.id) FILTER (WHERE ${byIp}) AS by_ip
+      count(DISTINCT o.id) FILTER (WHERE ${byIp}) AS by_ip,
+      count(a.id) FILTER (WHERE lower(o.buyer_email) = ${email}) AS works_by_email,
+      count(a.id) FILTER (WHERE ${byIp}) AS works_by_ip
     FROM artworks a JOIN orders o ON o.id = a.reserved_by_order_id
     WHERE a.reserved_until > now() AND o.source = 'WEB' AND o.id <> ${exclude}::uuid
       AND ${sameBuyer}`);
@@ -280,6 +310,13 @@ export async function checkHoldCaps(
     throw new HoldRefusedError("too_many_holds");
   }
   if (ip && Number(liveRow?.by_ip ?? 0) >= s.maxActiveHoldsPerIp) {
+    throw new HoldRefusedError("too_many_holds");
+  }
+  const newWorks = i.newWorks ?? new Set(i.artworkIds).size;
+  if (
+    Number(liveRow?.works_by_email ?? 0) + newWorks > s.maxCartItems ||
+    (ip && Number(liveRow?.works_by_ip ?? 0) + newWorks > s.maxCartItems)
+  ) {
     throw new HoldRefusedError("too_many_holds");
   }
 
@@ -291,11 +328,13 @@ export async function checkHoldCaps(
   // Per artwork: at most N holding orders per email and per IP hash in 24 h, and a cooldown after
   // the buyer's own hold on that work lapsed.
   const per = await tx.execute<{
+    artwork_id: string;
     by_email: string;
     by_ip: string;
     cooling: string;
   }>(sql`
     SELECT
+      oi.artwork_id,
       count(DISTINCT o.id) FILTER (WHERE lower(o.buyer_email) = ${email} AND o.first_held_at > now() - interval '24 hours') AS by_email,
       count(DISTINCT o.id) FILTER (WHERE ${byIp} AND o.first_held_at > now() - interval '24 hours') AS by_ip,
       count(DISTINCT o.id) FILTER (WHERE o.status IN ('AWAITING_PAYMENT', 'EXPIRED')
@@ -304,16 +343,25 @@ export async function checkHoldCaps(
         AND o.expires_at > now() - make_interval(mins => ${s.holdCooldownMinutes}::int)) AS cooling
     FROM orders o JOIN order_items oi ON oi.order_id = o.id
     WHERE oi.artwork_id IN (${ids}) AND o.id <> ${exclude}::uuid AND o.source = 'WEB'
-      AND ${sameBuyer}`);
-  const perRow = per.rows[0];
-  if (
-    Number(perRow?.by_email ?? 0) >= s.maxHoldsPerArtworkPerBuyer24h ||
-    Number(perRow?.by_ip ?? 0) >= s.maxHoldsPerArtworkPerBuyer24h
-  ) {
-    throw new HoldRefusedError("artwork_hold_budget");
+      AND ${sameBuyer}
+    GROUP BY oi.artwork_id`);
+  const overBudget = per.rows
+    .filter(
+      (r) =>
+        Number(r.by_email) >= s.maxHoldsPerArtworkPerBuyer24h ||
+        Number(r.by_ip) >= s.maxHoldsPerArtworkPerBuyer24h,
+    )
+    .map((r) => r.artwork_id)
+    .sort();
+  if (overBudget.length > 0) {
+    throw new HoldRefusedError("artwork_hold_budget", overBudget);
   }
-  if (Number(perRow?.cooling ?? 0) > 0) {
-    throw new HoldRefusedError("hold_cooldown");
+  const cooling = per.rows
+    .filter((r) => Number(r.cooling) > 0)
+    .map((r) => r.artwork_id)
+    .sort();
+  if (cooling.length > 0) {
+    throw new HoldRefusedError("hold_cooldown", cooling);
   }
 }
 

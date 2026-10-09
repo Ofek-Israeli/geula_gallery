@@ -201,7 +201,11 @@ describe("reserve race", () => {
     });
     expect(expired.expired).toBe(1);
     const cooling = await startTestCheckout(art.slug, { buyer, ipHash });
-    expect(cooling.result).toEqual({ kind: "refused", code: "hold_cooldown" });
+    expect(cooling.result).toEqual({
+      kind: "refused",
+      code: "hold_cooldown",
+      artworkIds: [art.id],
+    });
 
     // After the cooldown, a second hold is allowed, the third in 24 h is not.
     await execSql(
@@ -218,6 +222,7 @@ describe("reserve race", () => {
     expect(third.result).toEqual({
       kind: "refused",
       code: "artwork_hold_budget",
+      artworkIds: [art.id],
     });
   });
 

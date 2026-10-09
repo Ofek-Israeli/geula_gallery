@@ -58,6 +58,7 @@
     "maxHoldCountPerOrder": "מספר שמירות מקסימלי להזמנה",
     "maxWebHoldSpanMinutes": "משך שמירה כולל מקסימלי באתר (דקות)",
     "maxAttemptsPerOrder": "ניסיונות תשלום להזמנה (עד 5)",
+    "maxCartItems": "יצירות בעגלה (וגם יצירות שמורות לקונה)",
     "payments": "תשלומים",
     "maxInstallments": "מספר תשלומים מקסימלי",
     "paypalForIsraeliDestinations": "להציע PayPal גם למשלוחים בישראל",

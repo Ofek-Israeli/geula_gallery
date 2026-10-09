@@ -113,6 +113,7 @@ describe("anti-hoarding and attempt caps (settings defaults)", () => {
       maxHoldCountPerOrder: 3,
       maxWebHoldSpanMinutes: 120,
       maxAttemptsPerOrder: 5,
+      maxCartItems: 10,
     });
   });
 
