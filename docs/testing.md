@@ -82,9 +82,9 @@ Set the `*_CONTRACT` flags in the **shell**, not in `.env.local`. Fixtures are w
 | Area | Files |
 |---|---|
 | Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `phone`, `il-id`, `countries`, `ids`, `validation` |
-| Deadlines and fee | `deadlines` |
+| Deadlines and fee | `deadlines`, `cancellation-amounts` (works only on a partial cancellation, shipping with the last work, the shared ₪100 cap, the refund clamped by what is still refundable) |
 | Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` |
-| Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines`, `payments-registry` |
+| Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines` (including the repack edges back to AWAITING_FULFILLMENT), `payments-registry`, `cart` (cookie codec, buy-box decisions) |
 | Provider maps | `cardcom-map`, `paypal-map`, `morning-map` (with the gateway builder), `dhl-builder`, `dhl-map`, `resend-driver` |
 | Platform | `env` (derivations and cross-field rules), `csp`, `security`, `auth-policy`, `storage`, `media-ingest`, `outbox-cron`, `routes`, `script`, `settings-schemas`, `mock-signature`, `test-helpers` |
 | Content | `email-core` (`lang`/`dir`, footer identity without the ID number, LTR runs), `legal-content` (s.14C(a) elements, forbidden phrases, the ID number never in legal pages or the footer), `storefront` |
@@ -114,6 +114,8 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `expire-job`, `reconcile-job` | hold release; in-flight attempts skipped; link expiry; the Cardcom watch window and tail; the sweep |
 | `link-orders`, `requests`, `offline` | 48 h hold, re-quoting, expiry; questions, quotes and offers (Tier B); exact offline payments |
 | `cancellations` | auto-match; double and web-then-phone notices both stored; the 4-month window; conversation detection; COMPLETED → CANCELLED; fee; EU; refund due from the notice; relist; masked acknowledgements |
+| `cancellation-items` | per-work cancellation: the buyer preview (identity match, 2+ works); chosen works stored, duplicates only on overlap; a partial cancellation refunds the works only, keeps the order PAID, repacks the parcel (PACKED, LABEL_CREATED, PICKUP_SCHEDULED) with a smaller declared value and relists only that work; the shared ₪100 cap; shipping with the last work and CANCELLED only after it settles; defect → no fee; the admin narrowing the works; goodwill refund absorbed; zero refund; a work cancelled once (also under parallel accepts); per-work return and inspection (MIXED relist); schema constraints; the four new invariants; review payload v2 |
+| `cart-checkout` | the N-item quote (per-item prices, one delivery, USD only when every work has it, named culprits, mixed demo refused, `maxCartItems`); the start (one hold and one attempt, price changes per item, a reserved or sold work named and nothing else held); per-artwork hold caps and the held-works cap; a paid cart sells every work; a lost work refunds the cart; partial-takeover cleanup; overlapping carts all-or-nothing |
 | `shipments`, `tracking-job`, `daily-shipping` | manual transitions; the label claim and LABEL_UNKNOWN; export declaration; the cancellation block and override; collection needs the disclosure; customs lines in the declared currency; tracking advances monotonically; unshipped and export alerts; 30-day raw tracking purge |
 | `daily-job`, `invariants`, `purge` | COMPLETED transitions, refund-deadline alerts, `admin-alert` emails; every invariant catches a broken row; retention |
 | `disclosure-pdf` | the bilingual disclosure PDF is generated once and attached |
@@ -134,6 +136,8 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `international`, `shipping-rules` | US destination: Latin-only validation, DAP acknowledgement, USD total; blocked countries, GB low value, value cap, crate → quote only |
 | `quote`, `offer`, `manual-order`, `contact` | quote → link → re-quote by switching to studio pickup → pay; offer through the artwork page → accept → pay, and auto-decline; manual order → exact transfer → PAID; the contact form |
 | `cancellation-il` | the POST form with name and ID only, the ID never in the URL, review → confirm → acknowledgement and email with the ID masked, a resubmission as a possible duplicate, then the admin side: match, fee, refund, credit note, relist |
+| `cancellation-partial` | a cart of three works paid by courier; the buyer unticks one on the review step; the admin sees the two ticked, the live preview (shipping kept, then refunded when the third is ticked), accepts; the refund settles with the order still PAID; relist → two AVAILABLE, one SOLD; the fulfillment page packs the third and names the cancelled works; axe on the review step in he and en |
+| `cart` | add two works (header count), remove and re-add, one pickup checkout and one courier checkout in Hebrew, both Sold and the cart emptied; a work sold meanwhile named and left out; "Buy now" takes the work out of the cart; two buyers with overlapping carts; add and remove without JavaScript; axe on the cart and the cart checkout |
 | `fulfill` | a 5 MB packing photo upload, mock label, tracking cron → DELIVERED, printables, the label only through a signed URL, pickup blocked until the disclosure is confirmed |
 | `admin-artwork`, `admin-offline`, `admin-auth` | create, upload, publish blocked until alt text is filled; an audited price change; offline hold and sale; 6 bad logins → 429; TOTP enrolment |
 | `a11y`, `admin-a11y` | axe on home, works, artwork, checkout, cancel, order, admin login and the editor, in he and en → zero serious or critical |

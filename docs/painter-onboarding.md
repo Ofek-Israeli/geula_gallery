@@ -72,6 +72,8 @@
 - מספרי הקצאה: רק לחשבונית מס של עוסק מורשה מעל ‎5,000 ₪ לפני מע״מ, לעסק רשום (מאז 1.6.2026).
   לכן יש בקופה שדות רשות לשם חברה ומספר עוסק.
 - סעיף 18ב; מספור החשבונית המסחרית לעומת מסמכי המס; שמירה 7 שנים.
+- **ביטול חלקי (יצירה אחת מתוך הזמנה)**: הזיכוי הוא על סכום ההחזר בלבד, עם השורה "ביטול עסקה
+  C-XXXXXX: <שמות היצירות>". האם זה מספיק, או שצריך שורה לכל יצירה ושורה נפרדת לדמי הביטול?
 
 ## 4. רשימת בדיקה לעורך הדין
 - **נוסחים**: תנאי מכירה, ביטולים והחזרות, משלוחים ומכס, פרטיות, הצהרת נגישות; מסמך הגילוי
@@ -85,7 +87,13 @@
     המחדל להעניק 4 חודשים כשהוצהרה זכאות;
   - חלון הביטול נספר עד סוף היום ה-14 (שעון ישראל); מועד ההחזר – 14 ימים מקבלת ההודעה;
   - משלוח אחרי הודעת ביטול פתוחה (חסום כברירת מחדל, עם עקיפה מנומקת);
-  - נוסחי דחייה וסייג סעיף 2(ב2).
+  - נוסחי דחייה וסייג סעיף 2(ב2);
+  - **ביטול לפי יצירה** (הקונה בוחר אילו יצירות מההזמנה לבטל): (1) דמי המשלוח והביטוח מוחזרים
+    רק בביטול שלא משאיר אף יצירה פעילה – בביטול חלקי היצירות האחרות עדיין נשלחות; (2) דמי הביטול
+    הם 5% מהסכום שמוחזר בפועל (היצירות, ובביטול האחרון גם המשלוח), ותקרת ‎100 ₪ אחת להזמנה כולה
+    – הפרשנות המיטיבה עם הקונה; (3) האם אפשר לחייב את הקונה במשלוח מחדש אם החבילה כבר נארזה.
+- **עגלת קניות**: עוגייה הכרחית אחת (`gg_cart`, מזהי היצירות בלבד, 30 יום) – נוסח שורת הפרטיות;
+  יצירות בעגלה אינן שמורות לקונה עד "המשך לתשלום".
 - **מחירים**: הצגת מחיר במטבע חוץ (סעיף 17ז(א)(1)); פרטי הסוחר לפי Visa; ניסוח "מבוטח".
 - **חוצה גבולות ומידע**: GPSR ומכירה לאיחוד האירופי וטופס הביטול האירופי; משלוחים בערך נמוך
   לבריטניה; רשימת המדינות החסומות (עיראק? תימן?); הצגת מספר הזהות והכתובת העסקית; ספקי עיבוד
@@ -111,10 +119,15 @@
 1. ההודעה מופיעה ב**ביטולים**, ממוינת לפי מועד ההחזר. מספר הזהות מוצג רק חלקית.
 2. אם לא שויכה להזמנה – מזינים את מספר ההזמנה ולוחצים "שיוך להזמנה".
 3. הודעה כפולה (אותו אדם שלח פעמיים, או גם התקשר) – "סגירה ככפילות" עם מספר ההודעה המקורית.
-4. בודקים: חלון הביטול, מקור השיחה, דמי הביטול המוצעים.
-5. **אישור הביטול**: אם היצירה לא נשלחה – המשלוח מבוטל וההחזר יוצא מיד. אם נשלחה – נשלחות
-   הוראות החזרה; כשהיצירה מגיעה מסמנים "היצירה התקבלה בסטודיו", בודקים ("נבדקה – תקינה"), ואז "ביצוע ההחזר".
-6. אחרי שההחזר הושלם: "סגירת הטיפול", ואז "החזרה למכירה" (או "סימון כלא למכירה (פגומה)").
+4. בודקים: חלון הביטול, מקור השיחה, דמי הביטול המוצעים. בהזמנה עם כמה יצירות מסומנות היצירות
+   שהקונה בחר/ה לבטל; אפשר לשנות את הבחירה, והסכומים (החזר על היצירות, משלוח, דמי ביטול, החזר)
+   מתעדכנים מיד.
+5. **אישור הביטול**: אם היצירות לא נשלחו – ההחזר יוצא מיד. כשלא נשארת יצירה פעילה המשלוח מבוטל;
+   בביטול חלקי החבילה חוזרת ל"ממתין לאריזה" ואורזים מחדש רק את היצירות שנשארו. אם נשלחו – נשלחות
+   הוראות החזרה; כשהיצירות מגיעות מסמנים "היצירה התקבלה בסטודיו", מסמנים בבדיקה אילו נפגמו, ואז
+   "ביצוע ההחזר".
+6. אחרי שההחזר הושלם: "סגירת הטיפול", ואז "החזרה למכירה" – רק היצירות שבוטלו חוזרות למכירה (יצירה
+   פגומה מסומנת כלא למכירה). ההזמנה עצמה מסומנת "בוטלה" רק כשכל היצירות שבה בוטלו.
 7. הודעה שהתקבלה בטלפון, במייל או בדואר: **ביטולים ← רישום הודעת ביטול**, עם מועד הקבלה בפועל: 14 הימים להחזר נספרים ממנו.
 
 ### לאשר החזר "לא ידוע" או "נכשל"
@@ -226,6 +239,9 @@
   VAT-registered business buyer (since 2026-06-01). That is why checkout has optional company
   name and VAT number fields.
 - Section 18B; the commercial invoice's numbering versus the tax documents; 7-year retention.
+- **Partial cancellation (one work of an order):** the credit note is for the refunded amount
+  only, with the line "Cancellation C-XXXXXX: <titles of the works>". Is that enough, or does it
+  need one line per work and a separate line for the cancellation fee?
 
 ## 4. Lawyer checklist
 - **Texts:** terms of sale, cancellations and returns, shipping and duties, privacy, the
@@ -245,7 +261,18 @@
   - the cancellation window runs to the end of the 14th day (Israel time); the refund is due
     14 days after the notice is received;
   - shipping while a cancellation notice is open (blocked by default, with a reasoned override);
-  - rejection templates and the s.2(b2) exception.
+  - rejection templates and the s.2(b2) exception;
+  - **cancellation per work** (the buyer chooses which works of an order to cancel):
+    1. Shipping and insurance are refunded only by the cancellation that leaves no active work. On
+       a partial cancellation the other works still ship.
+    2. The fee is 5% of what is actually refunded: the works, plus the shipping on the last
+       cancellation. There is one ₪100 cap for the whole order, which is the reading most
+       favourable to the buyer.
+    3. Whether the buyer may be charged for repacking when the parcel was already packed.
+- **Shopping cart:**
+  - The privacy text for its one strictly necessary cookie (`gg_cart`: artwork ids only, 30
+    days).
+  - Works in the cart are not reserved for the buyer until "Continue to payment".
 - **Pricing:** showing prices in a foreign currency (s.17G(a)(1)); Visa's merchant-disclosure
   details; the wording of "insured".
 - **Cross-border and data:** GPSR, selling to the EU, and the EU model withdrawal form; UK
@@ -278,13 +305,18 @@
 2. If it was not matched to an order, enter the order number and press "Match to order".
 3. A duplicate notice (the same person sent it twice, or also phoned): "Close as duplicate",
    with the number of the original notice.
-4. Check the cancellation window, the conversation source and the suggested fee.
-5. **Accept cancellation.** If the work was not shipped, the shipment is cancelled and the
-   refund goes out at once. If it was shipped, return instructions are sent; when the work
-   arrives, press "The work arrived at the studio", inspect it ("Inspected – fine"), then
-   "Make the refund".
-6. Once the refund is complete: "Close", then "Relist for sale" (or "Mark not for sale
-   (damaged)").
+4. Check the cancellation window, the conversation source and the suggested fee. For an order
+   with several works, the works the buyer chose are ticked. You can change the choice, and the
+   amounts update at once: works refunded, shipping, fee and refund.
+5. **Accept cancellation.**
+   - If the works were not shipped, the refund goes out at once. When no work is left, the
+     shipment is cancelled. On a partial cancellation the parcel goes back to "Awaiting
+     fulfillment", and only the remaining works are packed again.
+   - If they were shipped, return instructions are sent. When the works arrive, press "The work
+     arrived at the studio", tick the damaged ones during inspection, then "Make the refund".
+6. Once the refund is complete, press "Close", then "Relist for sale". Only the cancelled works go
+   back on sale, and a damaged work is marked not for sale. The order itself shows "Cancelled"
+   only when every work in it was cancelled.
 7. A notice received by phone, email or post: **Cancellations → Log a notice**, with the actual
    time it was received; the 14 days for the refund count from it.
 

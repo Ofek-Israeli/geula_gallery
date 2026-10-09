@@ -6,8 +6,9 @@ work is bought it shows "Sold", and the database makes a second sale impossible.
 
 One Next.js app and one PostgreSQL database run four things:
 
-1. **The public gallery and shop:** the works grid, artwork pages with a lightbox, checkout with
-   a 35-minute hold, order pages, quote and offer requests, the contact form and the legal pages.
+1. **The public gallery and shop:** the works grid, artwork pages with a lightbox, "Buy now" or a
+   cart of up to 10 works with one delivery choice and one payment, a 35-minute hold, order
+   pages, quote and offer requests, the contact form and the legal pages.
 2. **A Hebrew-first, mobile-friendly admin:** dashboard, artworks, orders and fulfillment,
    inbox, cancellations, alerts and settings. TOTP 2FA is required on any https deployment.
 3. **Real provider integrations, each behind an interface with a mock:**
@@ -15,8 +16,8 @@ One Next.js app and one PostgreSQL database run four things:
    - tax documents: Morning (Green Invoice) or Cardcom gateway documents;
    - shipping: DHL Express MyDHL, a manual carrier, and a table-rate engine the painter edits;
    - email: Resend.
-4. **The Israeli consumer-law flows:** the pre-contract disclosure, the cancellation form,
-   refund deadlines and data retention.
+4. **The Israeli consumer-law flows:** the pre-contract disclosure, the cancellation form (per
+   work: the buyer may cancel some works of an order), refund deadlines and data retention.
 
 > **Status:** v1 is on the `feat/gallery-v1` branch and in review. The full plan is in
 > [`docs/implementation-spec.md`](docs/implementation-spec.md). Nothing has been deployed yet.
@@ -157,8 +158,8 @@ variables, so a bad configuration fails fast instead of misbehaving.
 
 ```
 src/proxy.ts                     locale routing plus an early admin-cookie redirect (never the only check)
-src/app/[locale]/(site)/         public pages: home, works, artwork, about, contact, credits, legal, cancel, orders
-src/app/[locale]/(checkout)/     checkout and the mock payment page (minimal chrome, noindex)
+src/app/[locale]/(site)/         public pages: home, works, artwork, cart, about, contact, credits, legal, cancel, orders
+src/app/[locale]/(checkout)/     checkout (one work, or the cart) and the mock payment page (minimal chrome, noindex)
 src/app/[locale]/(print)/print/  printables: disclosure and receipt; admin/ has the packing slip, commercial invoice, COA, studio notice
 src/app/[locale]/admin/          admin (requireAdmin() in every page, action and route)
 src/app/api/                     auth, payments/[provider]/{webhook,return}, cron/[job], files, admin uploads, health
@@ -223,7 +224,6 @@ Fonts: Frank Ruhl Libre and Assistant, under the SIL Open Font License (`assets/
 
 - **Rendering:** Cache Components / PPR. Data functions already take `locale` explicitly, so
   this can be adopted later.
-- **A cart UI.** The schema and the reservation SQL already handle several items per order.
 - **Advertising email**, such as a newsletter or "notify me". Under s.30A these count as
   advertising, so sold or held works offer a one-to-one inquiry instead.
 - **EU sales:** EUR prices and EU targeting (GPSR). The EUROPE zone exists but is disabled and
