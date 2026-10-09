@@ -19,14 +19,15 @@ import type { SeedDb, SeedModule } from "./types";
 /**
  * Catalog seed (spec §8.4). Reads `data/catalog/manifest.json`, ingests each committed image
  * through `media/ingest.ts` (web master, private original, OG image, blur, dominant colour) into
- * the local storage directory, and inserts the series and the painter's works (`is_demo = true`
- * until the painter confirms the prices, published) with bilingual titles and alt texts,
- * packaging defaults and statuses. Framed works get a second, FRAMED image.
+ * the local storage directory, and inserts the series and the painter's works (published) with
+ * bilingual titles and alt texts, packaging defaults and statuses. Framed works get a second,
+ * FRAMED image.
  * - Mode `demo` seeds every work as the painter's real catalog (`asCatalogWork`): all AVAILABLE,
- *   priced by the formula in `src/lib/price-formula.ts`, default shipping flags.
+ *   priced by the formula in `src/lib/price-formula.ts`, default shipping flags, and real listings
+ *   (`is_demo = false`; the painter confirmed the prices).
  * - Mode `fixtures` seeds only the 16 `fixture` works the tests use, with their commerce roles:
  *   test prices and flags, ON_HOLD and NOT_FOR_SALE from the manifest; the three sold works are
- *   inserted AVAILABLE and marked SOLD by `orders.ts`.
+ *   inserted AVAILABLE and marked SOLD by `orders.ts`. They are demo listings (`is_demo = true`).
  *
  * Idempotent: series and works are inserted with `ON CONFLICT (slug) DO NOTHING` (existing rows,
  * including the painter's edits, are left alone); image files use content-derived keys, so a
@@ -130,7 +131,9 @@ export const catalogSeed: SeedModule = {
           .insert(artworks)
           .values({
             slug: w.slug,
-            isDemo: true,
+            // The painter's catalog is real (live providers may sell it once the go-live checks
+            // pass); only the `fixtures` seed's test works are demo listings.
+            isDemo: mode === "fixtures",
             seriesId: seriesIds.get(w.series) ?? null,
             titleHe: w.title.he,
             titleEn: w.title.en,

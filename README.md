@@ -212,15 +212,16 @@ in `data/catalog/manifest.json` with their images in `data/catalog/images/`.
   texts and the series were written for this site, and the painter should review them.
 - **Prices.** Every price comes from one formula: NIS 4,800 for an 80×80 cm acrylic on canvas,
   growing with area^0.6, oil +15 %, rounded to NIS 100 (`src/lib/price-formula.ts`; the
-  procedure and its rationale are in `docs/pricing/pricing-procedure.tex`). Every work is still a
-  demo listing (`is_demo`), so live payments refuse it until the painter confirms the prices.
+  procedure and its rationale are in `docs/pricing/pricing-procedure.tex`). The painter confirmed
+  the prices, so the works are real listings (`is_demo = false`): a live provider may sell them
+  once the other go-live checks pass.
 - **Sizes.** Works whose photo had no size carry a placeholder size and a "TODO" description.
 - **Test fixtures.** The 16 works marked `fixture` keep the commerce roles the tests rely on
   (statuses, sample orders and shipping flags), but only in the `fixtures` seed. The `demo` seed
   shows the real catalog: every work available, with no invented sales.
 
-In demo mode the prices, sales and business details are fictitious, and a banner on every page
-says so.
+In demo mode (`DEMO_MODE=true`) payments are test payments, sales are not real and the business
+details are placeholders, and a banner on every page says so.
 
 Fonts: Frank Ruhl Libre and Assistant, under the SIL Open Font License (`assets/fonts/OFL.txt`).
 

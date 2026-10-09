@@ -3,9 +3,9 @@
  *
  * The images in `data/catalog/images/` are web-size (2000 px) JPEGs edited from the painter's
  * own RAW photos (cropped to the canvas, perspective-corrected, levelled, sRGB). Prices come from
- * the pricing formula (`src/lib/price-formula.ts`, docs/pricing/pricing-procedure.tex); every
- * seeded work stays a demo listing (`is_demo = true`) until the painter confirms the prices for
- * live sales.
+ * the pricing formula (`src/lib/price-formula.ts`, docs/pricing/pricing-procedure.tex), which the
+ * painter confirmed: the `demo` seed lists her works as real (`is_demo = false`), and only the
+ * `fixtures` seed's test works are demo listings.
  * The 16 `fixture` works keep the commerce roles the tests rely on (statuses, test prices, flags,
  * `sampleOrder`), but only in `db:reset --seed fixtures`; the `demo` seed lists them like every
  * other work (`asCatalogWork`).

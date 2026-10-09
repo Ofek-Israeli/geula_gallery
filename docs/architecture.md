@@ -1882,9 +1882,10 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - The seed ingests every image through `media/ingest.ts`, as before. The storage keys are
     `…/demo/<slug>-<hash12>.jpg`, and `credit_line` is NULL, so no "(CC0)" credit is shown.
 - **Commerce state.**
-  - The prices come from the pricing formula (see "Pricing formula" below), and every seeded
-    work stays `is_demo = true`. The go-live blocker `DEMO_WORKS_PUBLISHED` therefore still
-    applies until the painter confirms the prices.
+  - The prices come from the pricing formula (see "Pricing formula" below). The painter
+    confirmed them, so the `demo` seed lists her works as real (`is_demo = false`) and the go-live
+    blocker `DEMO_WORKS_PUBLISHED` is clear for her catalog; only the `fixtures` seed's test works
+    are demo listings.
   - Works whose photo had no size get a placeholder size and a "TODO" description.
 - **Fixtures.**
   - The 16 works with `fixture: true` take over the commerce roles of the 16 AIC works one to
@@ -2095,3 +2096,24 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   manifest matches.
 - **Live databases.** There is no repricing tool: in a live database, prices are changed in the
   admin, or by a one-off update that applies the formula.
+
+### Real listings
+
+- **Her works are real.** The painter confirmed the formula prices, so the `demo` seed inserts her
+  works with `is_demo = false`. Only the `fixtures` seed's 16 test works stay demo listings,
+  because the suites rely on them.
+- **What that changes.**
+  - The "demo listing" notes on the artwork and checkout pages, and the admin's "Demo" badge,
+    disappear for her works.
+  - The go-live blocker `DEMO_WORKS_PUBLISHED` no longer fires for her catalog.
+- **What stays the same.**
+  - Live providers are still refused while any other go-live blocker exists (`golive.ts`):
+    `DEMO_MODE`, `PROFILE_INCOMPLETE`, `LEGAL_NOT_APPROVED`, `RATES_UNCALIBRATED`,
+    `INSURANCE_UNCONFIRMED`, `MOCK_SALES_ON_REAL_WORKS`, `ADMIN_2FA_MISSING`, `CARDCOM_NOT_LIVE`.
+  - In production the mock provider never sells a real work. A deployment with `DEMO_MODE=true`
+    therefore offers no way to pay for her works; it is a preview, not a store.
+  - Locally (`APP_ENV≠production`) the mock provider still sells them, so the dev site's checkout
+    works. A test purchase there leaves a mock sale on a real work, which the dashboard reports as
+    `MOCK_SALES_ON_REAL_WORKS` until the database is reset.
+- **The banner.** The demo banner and the About page's demo note no longer say the prices are
+  placeholders. They now say that payments are test payments and sales are not real.

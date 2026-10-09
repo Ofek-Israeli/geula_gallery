@@ -21,8 +21,9 @@
 - מדיניות דמי ביטול (עד המקסימום שהחוק מתיר, או בלי דמי ביטול) – הגדרות ← ביטול עסקה.
 - בדיקת הקטלוג: שמות היצירות (בעברית ובאנגלית), הסדרות, המידות (ובמיוחד יצירות שמסומנות "TODO"
   במידות זמניות), הצבעים בתמונות מול המקור, והמחירים: כולם מחושבים בנוסחה אחת (‎4,800 ₪ לציור
-  אקריליק על קנבס בגודל 80×80, שמן +15%; ההסבר ב-docs/pricing/pricing-procedure.tex). צריך לאשר
-  את רמת המחירים לפני שמתחילים למכור באמת.
+  אקריליק על קנבס בגודל 80×80, שמן +15%; ההסבר ב-docs/pricing/pricing-procedure.tex). המחירים
+  אושרו, והיצירות מסומנות כאמיתיות (לא הדגמה): הן נמכרות בתשלום אמיתי ברגע שכל שאר הסעיפים ברשימת
+  "מוכנות לעלייה לאוויר" נסגרים.
 
 ## 2. שאלות לספקים
 
@@ -184,8 +185,9 @@
 - Review the catalog: the titles (Hebrew and English), the series, the sizes (especially works
   marked "TODO" with a placeholder size), the colours of the photos against the originals, and
   the prices. Every price comes from one formula (NIS 4,800 for an 80×80 acrylic on canvas, oil
-  +15 %; explained in `docs/pricing/pricing-procedure.tex`). Confirm the price level before real
-  sales start.
+  +15 %; explained in `docs/pricing/pricing-procedure.tex`). The prices are confirmed and the
+  works are real listings (not demo): they sell for real money as soon as every other item on the
+  "go-live readiness" list is closed.
 
 ## 2. Questions for the providers
 
