@@ -149,18 +149,21 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
                     href={paths.works({ series: s.slug })}
                     tabIndex={-1}
                     aria-hidden="true"
-                    className="flex aspect-square items-end justify-center"
+                    className="relative block aspect-square"
                   >
+                    {/* `fill` keeps every cover inside the same square, so a portrait painting
+                        never grows its card or spills over the series name. `style` (not a
+                        class) so the blur placeholder is letterboxed the same way. */}
                     <Image
                       src={s.cover.src}
                       alt=""
-                      width={s.cover.width}
-                      height={s.cover.height}
+                      fill
                       sizes="(min-width:1024px) 18vw, (min-width:768px) 30vw, 45vw"
                       quality={75}
                       placeholder={s.cover.blurDataUrl ? "blur" : "empty"}
                       blurDataURL={s.cover.blurDataUrl ?? undefined}
-                      className="fade-in max-h-full w-auto object-contain"
+                      className="fade-in"
+                      style={{ objectFit: "contain", objectPosition: "bottom" }}
                     />
                   </Link>
                 ) : null}
