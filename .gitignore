@@ -49,3 +49,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# LaTeX build files (docs/pricing: only the .tex sources are committed)
+docs/pricing/*.aux
+docs/pricing/*.fdb_latexmk
+docs/pricing/*.fls
+docs/pricing/*.log
+docs/pricing/*.out
+docs/pricing/*.pdf
+docs/pricing/*.synctex.gz

@@ -7,7 +7,11 @@ import {
   IMMUTABLE_CACHE_CONTROL,
   type StorageAdapter,
 } from "@/server/storage/types";
-import { type CatalogWork, readCatalogManifest } from "../lib/catalog-manifest";
+import {
+  asCatalogWork,
+  type CatalogWork,
+  readCatalogManifest,
+} from "../lib/catalog-manifest";
 import { demoPackaging } from "./packaging";
 import { createSeedStorage } from "./storage";
 import type { SeedDb, SeedModule } from "./types";
@@ -16,13 +20,13 @@ import type { SeedDb, SeedModule } from "./types";
  * Catalog seed (spec §8.4). Reads `data/catalog/manifest.json`, ingests each committed image
  * through `media/ingest.ts` (web master, private original, OG image, blur, dominant colour) into
  * the local storage directory, and inserts the series and the painter's works (`is_demo = true`
- * while prices are placeholders, published) with bilingual titles and alt texts, packaging
- * defaults and statuses. Framed works get a second, FRAMED image.
- * - Mode `demo` seeds every work, all AVAILABLE: the painter's real catalog, with no invented
- *   statuses.
+ * until the painter confirms the prices, published) with bilingual titles and alt texts,
+ * packaging defaults and statuses. Framed works get a second, FRAMED image.
+ * - Mode `demo` seeds every work as the painter's real catalog (`asCatalogWork`): all AVAILABLE,
+ *   priced by the formula in `src/lib/price-formula.ts`, default shipping flags.
  * - Mode `fixtures` seeds only the 16 `fixture` works the tests use, with their commerce roles:
- *   ON_HOLD and NOT_FOR_SALE from the manifest; the three sold works are inserted AVAILABLE and
- *   marked SOLD by `orders.ts`.
+ *   test prices and flags, ON_HOLD and NOT_FOR_SALE from the manifest; the three sold works are
+ *   inserted AVAILABLE and marked SOLD by `orders.ts`.
  *
  * Idempotent: series and works are inserted with `ON CONFLICT (slug) DO NOTHING` (existing rows,
  * including the painter's edits, are left alone); image files use content-derived keys, so a
@@ -102,10 +106,11 @@ export const catalogSeed: SeedModule = {
     }
     const store = createSeedStorage(env.storageDir ?? ".data/uploads");
     const manifest = await readCatalogManifest();
+    // `fixtures`: the 16 test works with their roles; `demo`: the real catalog, formula prices.
     const works =
       mode === "fixtures"
         ? manifest.works.filter((w) => w.fixture)
-        : manifest.works;
+        : manifest.works.map(asCatalogWork);
     const seriesIds = await seedSeries(db, manifest.series);
     const now = new Date();
     let inserted = 0;
@@ -151,14 +156,12 @@ export const catalogSeed: SeedModule = {
             publishedAt: now,
             featured: w.featured,
             sortOrder: w.sortOrder,
-            // Test roles only in `fixtures` (SOLD works start AVAILABLE; orders.ts records their
-            // sale). The demo seed is the painter's real catalog: every work AVAILABLE.
+            // SOLD works start AVAILABLE; orders.ts records their sale (fixtures only).
             saleStatus:
-              mode === "fixtures" &&
-              (w.status === "ON_HOLD" || w.status === "NOT_FOR_SALE")
+              w.status === "ON_HOLD" || w.status === "NOT_FOR_SALE"
                 ? w.status
                 : "AVAILABLE",
-            holdReason: mode === "fixtures" ? w.holdReason : null,
+            holdReason: w.holdReason,
             priceIlsMinor: w.priceIls === null ? null : w.priceIls * 100,
             priceUsdMinor: w.priceUsd === null ? null : w.priceUsd * 100,
             priceOnRequest: false,

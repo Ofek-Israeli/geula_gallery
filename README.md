@@ -71,7 +71,7 @@ npm ci && npm run env:init && npm run db:setup && npm run db:reset && npm run de
   storage. It never overwrites an existing file; `-- --force` regenerates it.
 - `db:setup` creates the three local databases. It refuses any host other than localhost.
 - `db:reset` drops, migrates and seeds `geula_dev` with the painter's catalog (about 150 works
-  with placeholder prices, all available), a placeholder business profile and the painter's
+  priced by the pricing formula, all available), a placeholder business profile and the painter's
   account. `--seed fixtures` seeds only the 16 works the test suites use, with their test roles
   (sold, on hold, not for sale, 3 sample orders), which is much faster.
 - Open <http://localhost:3000>. It redirects to `/he` or `/en` based on your browser language.
@@ -210,8 +210,10 @@ in `data/catalog/manifest.json` with their images in `data/catalog/images/`.
   4000 px masters are kept outside the repository.
 - **Data.** Titles, sizes and media come from the photo filenames. The Hebrew titles, the alt
   texts and the series were written for this site, and the painter should review them.
-- **Prices.** The prices are size-based placeholders, and every work is still a demo listing
-  (`is_demo`), so live payments refuse them until the painter sets real prices.
+- **Prices.** Every price comes from one formula: NIS 4,800 for an 80×80 cm acrylic on canvas,
+  growing with area^0.6, oil +15 %, rounded to NIS 100 (`src/lib/price-formula.ts`; the
+  procedure and its rationale are in `docs/pricing/pricing-procedure.tex`). Every work is still a
+  demo listing (`is_demo`), so live payments refuse it until the painter confirms the prices.
 - **Sizes.** Works whose photo had no size carry a placeholder size and a "TODO" description.
 - **Test fixtures.** The 16 works marked `fixture` keep the commerce roles the tests rely on
   (statuses, sample orders and shipping flags), but only in the `fixtures` seed. The `demo` seed

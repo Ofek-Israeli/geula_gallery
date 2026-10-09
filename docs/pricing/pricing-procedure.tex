@@ -1,0 +1,221 @@
+% The pricing procedure for the works on the website.
+% Build: latexmk -pdf pricing-procedure.tex   (pdfLaTeX; build files are git-ignored)
+% The numbers below are produced by src/lib/price-formula.ts and checked by
+% tests/unit/price-formula.test.ts: change the three together.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{lake}{HTML}{2E7D8C}
+\newcommand{\nis}[1]{NIS\,#1}
+\newcommand{\code}[1]{\nolinkurl{#1}}  % breaks at / and .
+\newcommand{\Pref}{P_{\mathrm{ref}}}
+\newcommand{\Aref}{A_{\mathrm{ref}}}
+\setlist{itemsep=2pt,topsep=4pt}
+
+\title{\textbf{Pricing procedure}\\[4pt]\large How every price of Geula Levi's works on the website
+  is set}
+\author{Geula Levi website}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{tcolorbox}[colback=lake!6,colframe=lake,title=\textbf{The rule},fonttitle=\sffamily]
+Every work is priced by one formula, so that works of the same size and material always cost the
+same, and larger works cost more but less than in proportion to their area:
+\[
+  P \;=\; \operatorname{round}_{100}\!\Bigl(\Pref \cdot m_{\text{medium}} \cdot m_{\text{surface}}
+  \cdot \Bigl(\frac{A}{\Aref}\Bigr)^{\beta}\Bigr) \;+\; F_{\text{framed}},
+  \qquad P_{\text{USD}} \;=\; \operatorname{round}_{10}\!\Bigl(\frac{P}{3.7}\Bigr)
+\]
+with $\Pref = \nis{4{,}800}$ (an $80\times80$\,cm acrylic on canvas), $\Aref = 6{,}400$\,cm$^2$,
+$\beta = 0.6$, and $A$ the painted area in cm$^2$.
+\end{tcolorbox}
+
+\section{Where the formula lives}
+\begin{itemize}
+  \item \textbf{Code:} \code{src/lib/price-formula.ts} holds the parameters (\code{PRICING}), the
+    material factors and the two functions \code{formulaPriceIls} and \code{formulaPriceUsd}.
+  \item \textbf{Seed:} \texttt{npm run db:reset} (the \code{demo} seed, the painter's catalog) prices
+    every work with the formula (\code{asCatalogWork} in \code{scripts/lib/catalog-manifest.ts}).
+    The catalog manifest stores the same prices for reference.
+  \item \textbf{Tests:} \code{tests/unit/price-formula.test.ts} checks the formula against every
+    number in this document and checks that the manifest matches it.
+  \item \textbf{Exception:} the 16 test works of the \code{fixtures} seed keep their own test
+    prices. They are used only by the automated tests, never on the real site.
+\end{itemize}
+
+\section{Parameters}
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}l>{\raggedright\arraybackslash}p{5.6cm}r>{\ttfamily}l@{}}
+  \toprule
+  Symbol & Meaning & Value & \normalfont In \code{PRICING} \\
+  \midrule
+  $\Pref$ & price of the reference work, an $80\times80$\,cm acrylic on canvas & \nis{4{,}800} & referenceIls \\
+  $\Aref$ & area of the reference work & 6{,}400\,cm$^2$ & referenceAreaCm2 \\
+  $\beta$ & size exponent: price grows with area$^{\beta}$ & 0.6 & sizeExponent \\
+  & rounding of the shekel price & \nis{100} & roundIls \\
+  $F_{\text{framed}}$ & added for a work sold framed (the frame's cost) & \nis{0} for now & framedAddIls \\
+  & reference rate for the dollar price & 3.7\,NIS/\$ & ilsPerUsd \\
+  & rounding of the dollar price & \$10 & roundUsd \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Material factors}
+The material factor is the medium factor times the surface factor. Acrylic on canvas, 148 of her
+151 works, is the base.
+\begin{center}
+\begin{tabular}{@{}llr@{}}
+  \toprule
+  Factor & Material & Value \\
+  \midrule
+  $m_{\text{medium}}$ & oil & 1.15 \\
+                      & every other medium (acrylic, watercolour, tempera, mixed media, \ldots) & 1.00 \\
+  \midrule
+  $m_{\text{surface}}$ & canvas, linen & 1.00 \\
+                       & wood panel, board, cardboard & 0.95 \\
+                       & paper & 0.65 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+For an $80\times80$ work: acrylic on canvas \nis{4{,}800}, oil on canvas \nis{5{,}500}, acrylic on
+board \nis{4{,}600}, watercolour on paper \nis{3{,}100}.
+
+\section{Pricing a work, step by step}
+\begin{enumerate}
+  \item Measure the painted surface: height $H$ and width $W$ in centimetres, without the frame.
+    Orientation does not matter.
+  \item Area: $A = H \times W$ (cm$^2$).
+  \item Material factor: $m = m_{\text{medium}} \times m_{\text{surface}}$ (Section~3).
+  \item Raw price: $4{,}800 \times m \times (A / 6{,}400)^{0.6}$.
+  \item Round to the nearest \nis{100}.
+  \item If the work is sold framed, add $F_{\text{framed}}$ (currently \nis{0}: the frame is part of
+    the work).
+  \item Dollar price: divide by 3.7 and round to the nearest \$10.
+  \item In the admin: \emph{Artworks} $\rightarrow$ the work $\rightarrow$ \emph{Price \& sale}.
+    Enter \emph{Price in ILS} and \emph{Price in USD}, and tick \emph{I confirm the price change}.
+\end{enumerate}
+
+\paragraph{Example 1: \emph{By the Lake}, acrylic on canvas, $60\times80$.}
+$A = 4{,}800$; $(4{,}800/6{,}400)^{0.6} = 0.75^{0.6} = 0.8415$; $4{,}800 \times 0.8415 = 4{,}039$
+$\Rightarrow$ \nis{4{,}000}; $4{,}000/3.7 = 1{,}081$ $\Rightarrow$ \$1{,}080.
+
+\paragraph{Example 2: an oil on canvas, $60\times60$.}
+$A = 3{,}600$; $(3{,}600/6{,}400)^{0.6} = 0.5625^{0.6} = 0.7080$;
+$4{,}800 \times 1.15 \times 0.7080 = 3{,}908$ $\Rightarrow$ \nis{3{,}900};
+$3{,}900/3.7 = 1{,}054$ $\Rightarrow$ \$1{,}050.
+
+\section{Price list}
+Prices for common sizes, unframed (sizes in cm, area in cm$^2$):
+\begin{center}
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrrrr@{}}
+  \toprule
+  & & \multicolumn{2}{c}{Acrylic on canvas} & \multicolumn{2}{c}{Oil on canvas} \\
+  \cmidrule(lr){3-4}\cmidrule(l){5-6}
+  Size & Area & NIS & USD & NIS & USD \\
+  \midrule
+  40\,$\times$\,60 & 2{,}400 & 2{,}700 & 730 & 3{,}100 & 840 \\
+  60\,$\times$\,60 & 3{,}600 & 3{,}400 & 920 & 3{,}900 & 1{,}050 \\
+  60\,$\times$\,80 & 4{,}800 & 4{,}000 & 1{,}080 & 4{,}600 & 1{,}240 \\
+  70\,$\times$\,100 & 7{,}000 & 5{,}100 & 1{,}380 & 5{,}800 & 1{,}570 \\
+  80\,$\times$\,80 & 6{,}400 & 4{,}800 & 1{,}300 & 5{,}500 & 1{,}490 \\
+  80\,$\times$\,100 & 8{,}000 & 5{,}500 & 1{,}490 & 6{,}300 & 1{,}700 \\
+  90\,$\times$\,90 & 8{,}100 & 5{,}500 & 1{,}490 & 6{,}400 & 1{,}730 \\
+  80\,$\times$\,120 & 9{,}600 & 6{,}100 & 1{,}650 & 7{,}000 & 1{,}890 \\
+  100\,$\times$\,100 & 10{,}000 & 6{,}300 & 1{,}700 & 7{,}200 & 1{,}950 \\
+  100\,$\times$\,120 & 12{,}000 & 7{,}000 & 1{,}890 & 8{,}000 & 2{,}160 \\
+  100\,$\times$\,150 & 15{,}000 & 8{,}000 & 2{,}160 & 9{,}200 & 2{,}490 \\
+  120\,$\times$\,145 & 17{,}400 & 8{,}700 & 2{,}350 & 10{,}100 & 2{,}730 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+International parcels are capped at \$2{,}500 declared value with DHL (\emph{Settings}
+$\rightarrow$ \emph{Shipping}). A work priced above the cap, such as the largest oil, is offered
+abroad by quote only.
+
+\section{Rules}
+\begin{enumerate}
+  \item \textbf{One price per size and material.} Subject and series do not change the price. An
+    exceptional work may be set up to 15\,\% above or below the formula, rarely, and for a reason a
+    buyer would understand (unusual complexity, a key work of a series).
+  \item \textbf{One price everywhere.} The website, the studio and any future gallery show the same
+    price. A gallery takes its commission from that price; it does not add to it.
+  \item \textbf{Prices only go up.} When 70--80\,\% of a body of work has sold, raise $\Pref$ by
+    10--15\,\%. Every price moves by the same percentage, so the list stays consistent. Never lower
+    prices.
+  \item \textbf{VAT.} The admin's shekel price is the price the buyer pays. As an \emph{osek patur}
+    she charges no VAT. If she becomes an \emph{osek murshe}, that price includes VAT (18\,\%):
+    either keep the prices and absorb it, or raise $\Pref$ by 18\,\%.
+  \item \textbf{Dollar prices} follow the shekel prices at the reference rate. If the rate moves a
+    lot, update \code{ilsPerUsd} and the dollar prices together.
+  \item \textbf{Shipping and insurance} are charged separately at checkout and are not part of the
+    price.
+\end{enumerate}
+
+\section{Changing the formula}
+\begin{enumerate}
+  \item Edit \code{PRICING} or a factor in \code{src/lib/price-formula.ts}. To raise all prices by
+    12\,\%, for example, set \code{referenceIls} to 5{,}400 (4{,}800 $\times$ 1.12 = 5{,}376,
+    rounded).
+  \item Recompute the manifest prices and the examples in this document. Run
+    \code{tests/unit/price-formula.test.ts}; it fails until both match the new formula.
+  \item A local database picks up the new prices with \texttt{npm run db:reset}. A live database is
+    not repriced automatically: change the prices in the admin, or have a developer run a one-off
+    update that applies the formula to the works that have no individual exception.
+\end{enumerate}
+
+\section{Why this formula}
+Art-market research that models auction prices from a work's characteristics finds that price
+rises with size, but less than in proportion. A 10\,\% larger canvas sells for roughly 3--7\,\%
+more \cite{masterworks,renneboog}, and about 6\,\% for contemporary painters (an elasticity of
+0.59 in a 2026 study of 18{,}821 works) \cite{orstavik}.
+\begin{itemize}
+  \item \textbf{The exponent 0.6} follows that research. Pricing by area (``per square inch'') has an
+    exponent of~1 and overprices large works. Pricing by width plus height (``linear inch'') has
+    0.5 for a given shape and is recommended for its gentler steps \cite{foundmyself}.
+  \item \textbf{Works on paper} sell 20--50\,\% below canvas \cite{milan,masterworks}, hence the
+    0.65 factor.
+  \item \textbf{Oil} sells above acrylic; a common set of multipliers gives oil 1.30 and acrylic 1.10,
+    a ratio of about 1.18 \cite{priceyourpainting}, rounded down here to 1.15.
+  \item \textbf{The reference price} \nis{4{,}800} for $80\times80$ (about \nis{0.75} per cm$^2$) is
+    at the upper end of published direct-sale rates for artists without a gallery or auction
+    record. Examples: \$1 per in$^2$ direct, about \nis{3{,}700} for this size \cite{milan};
+    \pounds1.00--1.25 per in$^2$, about \nis{4{,}700}--\nis{5{,}800} \cite{priceyourpainting}.
+    It is below gallery and established-artist levels.
+\end{itemize}
+
+{\raggedright
+\begin{thebibliography}{9}
+\bibitem{masterworks} Masterworks Research, \emph{Hedonic regression in art pricing: how
+  characteristics drive value}, June 2026.
+  \url{https://www.masterworks.com/academy/posts/hedonic-regression-in-art-pricing-how-characteristics-drive-value}
+\bibitem{renneboog} L.~Renneboog and C.~Spaenjers, Buying beauty: on prices and returns in the art
+  market, \emph{Management Science} 59(1):36--53, 2013.
+\bibitem{orstavik} O.~H.~S.~{\O}rstavik, \emph{Size Matters: How Physical Scale Is (or Is Not)
+  Rewarded in a Global, Ultra-Contemporary, Online Art Market}, MA thesis, Sotheby's Institute of
+  Art, 2026. \url{https://digitalcommons.sia.edu/ma_art_bus/22}
+\bibitem{foundmyself} FoundMyself, \emph{How to price your art}.
+  \url{https://www.foundmyself.com/blog/how-to-price-your-art/}
+\bibitem{milan} Milan Art Institute, \emph{Sell \& Price Your Art}.
+  \url{https://blog.milanartinstitute.com/how-to-price-paintings/}
+\bibitem{priceyourpainting} Price Your Painting, \emph{How to value a painting: the complete guide
+  for artists}. \url{https://priceyourpainting.substack.com/p/how-to-value-a-painting-the-complete}
+\end{thebibliography}
+}
+
+\end{document}

@@ -2,14 +2,18 @@
  * `data/catalog/manifest.json`: the painter's works, read by the catalog and orders seeds.
  *
  * The images in `data/catalog/images/` are web-size (2000 px) JPEGs edited from the painter's
- * own RAW photos (cropped to the canvas, perspective-corrected, levelled, sRGB). Prices are
- * placeholders and every seeded work is a demo listing (`is_demo = true`) until the painter sets
- * real prices. The 16 `fixture` works keep the commerce roles the tests rely on (statuses, prices,
- * flags, `sampleOrder`); `db:reset --seed fixtures` seeds only those.
+ * own RAW photos (cropped to the canvas, perspective-corrected, levelled, sRGB). Prices come from
+ * the pricing formula (`src/lib/price-formula.ts`, docs/pricing/pricing-procedure.tex); every
+ * seeded work stays a demo listing (`is_demo = true`) until the painter confirms the prices for
+ * live sales.
+ * The 16 `fixture` works keep the commerce roles the tests rely on (statuses, test prices, flags,
+ * `sampleOrder`), but only in `db:reset --seed fixtures`; the `demo` seed lists them like every
+ * other work (`asCatalogWork`).
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { formulaPriceIls, formulaPriceUsd } from "@/lib/price-formula";
 
 export const MANIFEST_PATH = "data/catalog/manifest.json";
 export const CATALOG_IMAGES_DIR = "data/catalog/images";
@@ -41,7 +45,10 @@ export const catalogWorkSchema = z.object({
   series: z.string().min(1),
   status: z.enum(["AVAILABLE", "ON_HOLD", "SOLD", "NOT_FOR_SALE"]),
   holdReason: z.literal("RESERVED_OFFLINE").nullable(),
-  /** Whole shekels / dollars (placeholders). */
+  /**
+   * Whole shekels / dollars. Fixture works: their test prices. Other works: the formula price
+   * (`src/lib/price-formula.ts`), which the demo seed recomputes anyway.
+   */
   priceIls: z.number().int().positive().nullable(),
   priceUsd: z.number().int().positive().nullable(),
   canBeRolled: z.boolean(),
@@ -65,6 +72,26 @@ export const catalogWorkSchema = z.object({
     ),
 });
 export type CatalogWork = z.infer<typeof catalogWorkSchema>;
+
+/**
+ * A work as the `demo` seed lists it, i.e. the painter's real catalog: available, priced by the
+ * formula, with the default shipping flags. A fixture's test roles (status, test prices,
+ * quote-only, crate, rolled, domestic-only) apply only to the `fixtures` seed.
+ */
+export function asCatalogWork(w: CatalogWork): CatalogWork {
+  const priceIls = formulaPriceIls(w);
+  return {
+    ...w,
+    status: "AVAILABLE",
+    holdReason: null,
+    priceIls,
+    priceUsd: formulaPriceUsd(priceIls),
+    canBeRolled: false,
+    crate: false,
+    quoteOnly: false,
+    shipsInternationally: true,
+  };
+}
 
 export const catalogManifestSchema = z
   .object({

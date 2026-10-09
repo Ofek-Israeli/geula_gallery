@@ -1882,9 +1882,9 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - The seed ingests every image through `media/ingest.ts`, as before. The storage keys are
     `…/demo/<slug>-<hash12>.jpg`, and `credit_line` is NULL, so no "(CC0)" credit is shown.
 - **Commerce state.**
-  - The prices are size-based placeholders, and every seeded work stays `is_demo = true`. The
-    go-live blocker `DEMO_WORKS_PUBLISHED` therefore still applies until the painter sets real
-    prices.
+  - The prices come from the pricing formula (see "Pricing formula" below), and every seeded
+    work stays `is_demo = true`. The go-live blocker `DEMO_WORKS_PUBLISHED` therefore still
+    applies until the painter confirms the prices.
   - Works whose photo had no size get a placeholder size and a "TODO" description.
 - **Fixtures.**
   - The 16 works with `fixture: true` take over the commerce roles of the 16 AIC works one to
@@ -2076,3 +2076,22 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
     and creates no sample orders.
   - The test roles (three sold works with sample orders, one on hold, one not for sale) apply
     only to the `fixtures` seed the suites use.
+
+### Pricing formula
+
+- **The formula.** Every work's price comes from `src/lib/price-formula.ts`:
+  `round_100(4,800 × medium factor × surface factor × (area / 6,400 cm²)^0.6)`. The medium factor
+  is oil 1.15 and 1.00 otherwise. The surface factor is 1.00 for canvas, 0.95 for board or panel
+  and 0.65 for paper. The dollar price is `round_10(NIS / 3.7)`.
+  - The procedure, the price list and the rationale (size elasticity about 0.6 in the research,
+    material discounts, the reference-price benchmarks) are in
+    `docs/pricing/pricing-procedure.tex`. Its build files and PDF are git-ignored.
+- **The demo seed** prices every work with `asCatalogWork` (`scripts/lib/catalog-manifest.ts`).
+  That also drops the fixtures' test roles (quote-only, crate, rolled, domestic-only, test prices).
+  The manifest stores the formula prices for the non-fixture works.
+- **The `fixtures` seed** keeps the 16 test works' own prices and flags, which the suites rely on.
+- **Tests.** `tests/unit/price-formula.test.ts` pins the formula to every number in the procedure
+  document, checks that a factor exists for every DB medium and surface, and checks that the
+  manifest matches.
+- **Live databases.** There is no repricing tool: in a live database, prices are changed in the
+  admin, or by a one-off update that applies the formula.
