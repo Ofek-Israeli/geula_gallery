@@ -57,7 +57,6 @@ export function WorksFilters({
       options: [
         { value: "", label: t("availabilityCurrent") },
         { value: "available", label: t("availabilityAvailable") },
-        { value: "sold", label: t("availabilitySold") },
       ],
     },
     {

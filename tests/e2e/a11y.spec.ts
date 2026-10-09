@@ -4,15 +4,15 @@ import { withGalleryImages } from "../helpers/factories/storefront";
 
 /**
  * axe on the public storefront pages (spec §6.7, §10.4 `a11y`; WS1 part): home, works (default,
- * filtered, archive), artwork (available, sold, with the lightbox open), about, contact and
- * credits, in Hebrew and English. Zero serious or critical violations. Checkout, cancel, order
- * and admin pages are covered by their owners' specs.
+ * filtered, a series with a sold work), artwork (available, sold, with the lightbox open), about,
+ * contact and credits, in Hebrew and English. Zero serious or critical violations. Checkout,
+ * cancel, order and admin pages are covered by their owners' specs.
  */
 const PAGES = [
   "/",
   "/works",
   "/works?size=m&sort=price-asc",
-  "/works?availability=sold",
+  "/works?series=landscapes",
   "/works/the-path",
   "/works/reflection-in-the-pool",
   "/works/a-ship-in-the-heart-of-the-sea",

@@ -5,8 +5,9 @@
  *
  * `db:reset` calls `runSeeds()` after migrating. Every module is idempotent and none enqueues
  * outbox jobs. Mode `none` runs only baseline configuration (settings); `demo` (default) also
- * seeds the painter's catalog, sample orders and admin users; `fixtures` is `demo` limited to the
- * 16 fixture works the test suites rely on.
+ * seeds the painter's catalog (every work available, no invented sales) and admin users;
+ * `fixtures` seeds only the 16 fixture works the test suites rely on, with their commerce roles
+ * (on hold, not for sale, the three sample orders).
  */
 import { pathToFileURL } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";

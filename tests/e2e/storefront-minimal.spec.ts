@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * `storefront` spec (filters, lightbox, JSON-LD).
  */
 test.describe("minimal storefront @smoke", () => {
-  test("works lists available works first, with the recently sold strip", async ({
+  test("works lists available works first; a sold work stays in its list, labelled Sold", async ({
     page,
   }) => {
     await page.goto("/en/works");
@@ -15,15 +15,17 @@ test.describe("minimal storefront @smoke", () => {
     await expect(
       page.getByRole("link", { name: "The Path" }).first(),
     ).toBeVisible();
-    // The strip shows the latest ≤ 4 sold works. Purchase specs running in parallel sell works
-    // too, so the seeded "Reflection in the Pool" may already have scrolled out: check it in the archive.
-    const sold = page.getByRole("region", { name: "Recently sold" });
-    await expect(sold.getByText("Sold").first()).toBeVisible();
-    expect(await sold.getByRole("link").count()).toBeLessThanOrEqual(4);
-    await page.goto("/en/works?availability=sold");
+    // No sold strip, archive or filter (the painter's choice).
     await expect(
-      page.getByRole("link", { name: "Reflection in the Pool" }).first(),
-    ).toBeVisible();
+      page.getByRole("region", { name: "Recently sold" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("option", { name: /sold/i })).toHaveCount(0);
+    // The seeded sold "Reflection in the Pool" stays in its series, labelled Sold.
+    await page.goto("/en/works?series=landscapes");
+    const card = page.getByRole("article").filter({
+      has: page.getByRole("link", { name: "Reflection in the Pool" }),
+    });
+    await expect(card.getByText("Sold", { exact: true })).toBeVisible();
   });
 
   test("an available work shows price, Buy now and delivery from IL", async ({
@@ -59,14 +61,16 @@ test.describe("minimal storefront @smoke", () => {
     }
   });
 
-  test("the sold archive and credits render in Hebrew", async ({ page }) => {
+  test("an old archive link shows the works list; credits render in Hebrew", async ({
+    page,
+  }) => {
     await page.goto("/he/works?availability=sold");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "ארכיון: יצירות שנמכרו",
-    );
-    await expect(
-      page.getByRole("link", { name: "השתקפות בבריכה" }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("יצירות");
+    await page.goto("/he/works?series=landscapes");
+    const card = page
+      .getByRole("article")
+      .filter({ has: page.getByRole("link", { name: "השתקפות בבריכה" }) });
+    await expect(card.getByText("נמכרה", { exact: true })).toBeVisible();
     await page.goto("/he/credits");
     await expect(page.getByText(/Frank Ruhl Libre/)).toBeVisible();
   });

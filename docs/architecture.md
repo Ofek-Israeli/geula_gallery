@@ -2061,3 +2061,18 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
     s.14C(d) and s.2(b2) reference without mentioning commissions, and `LEGAL_VERSIONS.returns`
     was bumped to `2026-10-09-draft`.
 - The database keeps the COMMISSION topic value so that older rows still load.
+
+### No sold archive; sold works stay in their lists
+
+- **Listings.** Visitors cannot browse for sold works. There is no sold filter, no
+  `?availability=sold` archive (the value is ignored, like any unknown one), no "Recently sold"
+  strip and no archive entry in the sitemap.
+  - A work that sells stays wherever it appears (the works list, its series, price and size
+    filters), labelled "Sold", after the available works (`statusRank`: available, on hold, not
+    for sale, sold).
+  - Series counts include it, and its page stays reachable with "Ask about similar works".
+- **Seed.**
+  - The `demo` seed (the painter's catalog, used for the dev site) now sets every work AVAILABLE
+    and creates no sample orders.
+  - The test roles (three sold works with sample orders, one on hold, one not for sale) apply
+    only to the `fixtures` seed the suites use.

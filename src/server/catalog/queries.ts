@@ -135,15 +135,16 @@ function cardQuery(db: DbOrTx) {
     );
 }
 
-/** Available first, then on hold, then not for sale; featured first within a status. */
-const statusRank = sql`CASE ${artworks.saleStatus} WHEN 'AVAILABLE' THEN 0 WHEN 'ON_HOLD' THEN 1 ELSE 2 END`;
+/** Available first, then on hold, not for sale and sold; featured first within a status. */
+const statusRank = sql`CASE ${artworks.saleStatus} WHEN 'AVAILABLE' THEN 0 WHEN 'ON_HOLD' THEN 1 WHEN 'NOT_FOR_SALE' THEN 2 ELSE 3 END`;
 
 /**
- * `current`: available, on-hold and not-for-sale works (available first); `available`: only works
- * whose sale status is AVAILABLE (including ones in another buyer's live checkout hold); `sold`:
- * the archive.
+ * `current`: every published work, sold ones included and labelled "Sold" where they appear
+ * (available first); `available`: only works whose sale status is AVAILABLE (including ones in
+ * another buyer's live checkout hold). There is no sold-only view: visitors cannot browse for
+ * sold works, they simply meet them, labelled, in the lists they belong to.
  */
-export type WorksView = "current" | "available" | "sold";
+export type WorksView = "current" | "available";
 export type WorksSort =
   | "featured"
   | "newest"
@@ -172,13 +173,7 @@ const area = sql`(${artworks.heightMm}::bigint * ${artworks.widthMm})`;
 function listWhere(q: ArtworkListQuery): SQL | undefined {
   const view = q.view ?? "current";
   const conds: (SQL | undefined)[] = [eq(artworks.isPublished, true)];
-  if (view === "sold") conds.push(eq(artworks.saleStatus, "SOLD"));
-  else if (view === "available")
-    conds.push(eq(artworks.saleStatus, "AVAILABLE"));
-  else
-    conds.push(
-      inArray(artworks.saleStatus, ["AVAILABLE", "ON_HOLD", "NOT_FOR_SALE"]),
-    );
+  if (view === "available") conds.push(eq(artworks.saleStatus, "AVAILABLE"));
   if (q.seriesSlug) {
     conds.push(
       sql`${artworks.seriesId} = (SELECT s.id FROM series s WHERE s.slug = ${q.seriesSlug})`,
@@ -221,15 +216,13 @@ function listOrder(q: ArtworkListQuery): SQL[] {
     case "size-desc":
       return [...rank, sql`${area} DESC`];
     case "featured":
-      return view === "sold"
-        ? [sql`${artworks.soldAt} DESC NULLS LAST`, asc(artworks.sortOrder)]
-        : [...rank, desc(artworks.featured), asc(artworks.sortOrder)];
+      return [...rank, desc(artworks.featured), asc(artworks.sortOrder)];
   }
 }
 
 /**
- * `/works`: filtered, sorted and paginated (24 per page). The default view lists available, on-hold
- * and not-for-sale works (available first); `view: "sold"` is the archive, newest sale first.
+ * `/works`: filtered, sorted and paginated (24 per page). The default view lists every published
+ * work, available first and sold last (labelled "Sold").
  */
 export async function listArtworks(
   locale: Locale,
@@ -259,21 +252,18 @@ export async function listArtworks(
 export interface SeriesSummary {
   slug: string;
   name: string;
-  /** Published works in the current view (available, on hold, not for sale). */
+  /** Published works in the series (sold ones included). */
   count: number;
   /** MAIN image of the series' first work (available and featured first). */
   cover: ArtworkImageDTO | null;
 }
 
-/** Series with at least one published, unsold work (filters and the home page). */
+/** Series with at least one published work (filters and the home page). */
 export async function listSeries(
   locale: Locale,
   db: DbOrTx = defaultDb,
 ): Promise<SeriesSummary[]> {
-  const current = and(
-    eq(artworks.isPublished, true),
-    inArray(artworks.saleStatus, ["AVAILABLE", "ON_HOLD", "NOT_FOR_SALE"]),
-  );
+  const current = eq(artworks.isPublished, true);
   const [counts, covers] = await Promise.all([
     db
       .select({
@@ -329,26 +319,6 @@ export async function listSeries(
       cover: img ? imageDto(img, locale) : null,
     };
   });
-}
-
-/** The "Recently sold" strip (≤ 4). */
-export async function listRecentlySold(
-  locale: Locale,
-  limit = 4,
-  db: DbOrTx = defaultDb,
-): Promise<ArtworkCardDTO[]> {
-  const rows = await cardQuery(db)
-    .where(
-      and(
-        eq(artworks.isPublished, true),
-        eq(artworks.saleStatus, "SOLD"),
-        isNotNull(artworks.soldAt),
-      ),
-    )
-    .orderBy(desc(artworks.soldAt))
-    .limit(limit);
-  const now = new Date();
-  return rows.map((r) => cardDto(r, locale, now));
 }
 
 /** Home hero: a featured available work, else the first available one. */

@@ -16,35 +16,27 @@ import { breadcrumbJsonLd } from "@/components/site/structured-data";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { localePath, paths } from "@/lib/routes";
-import {
-  listArtworks,
-  listRecentlySold,
-  listSeries,
-} from "@/server/catalog/queries";
+import { listArtworks, listSeries } from "@/server/catalog/queries";
 import { env } from "@/server/env";
 
 /**
  * `/works` (spec §6.2): URL-synced filters (availability, series, size, orientation, price band)
- * and sorts (featured, newest, price, size), 24 per page. The default view lists available works
- * first, then on hold and not for sale, with a "Recently sold" strip (≤ 4);
- * `?availability=sold` is the archive.
+ * and sorts (featured, newest, price, size), 24 per page. The default view lists every work,
+ * available first; a sold work stays where it belongs, labelled "Sold". There is no sold filter or
+ * archive (the painter's choice): `?availability=sold` is ignored like any unknown value.
  */
 export async function generateMetadata({
   params,
-  searchParams,
 }: PageProps<"/[locale]/works">): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
-  const p = parseWorksParams(await searchParams);
-  const sold = p.availability === "sold";
   const t = await getTranslations({ locale, namespace: "catalog.works" });
-  // Filtered and sorted variants canonicalize to the plain list (or the archive).
-  const path = sold ? paths.works({ availability: "sold" }) : paths.works();
+  // Filtered and sorted variants canonicalize to the plain list.
   return pageMetadata({
     locale,
-    path,
-    title: sold ? t("archiveTitle") : t("title"),
-    description: sold ? t("archiveIntro") : t("intro"),
+    path: paths.works(),
+    title: t("title"),
+    description: t("intro"),
   });
 }
 
@@ -55,14 +47,9 @@ export default async function WorksPage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const p = parseWorksParams(await searchParams);
-  const sold = p.availability === "sold";
-  const view = sold
-    ? "sold"
-    : p.availability === "available"
-      ? "available"
-      : "current";
+  const view = p.availability === "available" ? "available" : "current";
   const filtered = hasFilters(p);
-  const [t, tb, works, series, recentlySold] = await Promise.all([
+  const [t, tb, works, series] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.works" }),
     getTranslations({ locale, namespace: "artwork.breadcrumbs" }),
     listArtworks(locale, {
@@ -75,12 +62,9 @@ export default async function WorksPage({
       sort: p.sort,
     }),
     listSeries(locale),
-    sold || filtered || p.page > 1
-      ? Promise.resolve([])
-      : listRecentlySold(locale),
   ]);
   const pages = Math.max(1, Math.ceil(works.total / works.pageSize));
-  const title = sold ? t("archiveTitle") : t("title");
+  const title = t("title");
 
   return (
     <div className="flex flex-col gap-8">
@@ -92,9 +76,7 @@ export default async function WorksPage({
       />
       <header className="flex flex-col gap-3">
         <h1 className="text-4xl">{title}</h1>
-        <p className="max-w-prose text-ink-muted">
-          {sold ? t("archiveIntro") : t("intro")}
-        </p>
+        <p className="max-w-prose text-ink-muted">{t("intro")}</p>
       </header>
 
       <WorksFilters
@@ -117,9 +99,7 @@ export default async function WorksPage({
           <p>{filtered ? t("emptyFiltered") : t("empty")}</p>
           {filtered ? (
             <p>
-              <Link href={paths.works(sold ? { availability: "sold" } : {})}>
-                {t("clearFilters")}
-              </Link>
+              <Link href={paths.works()}>{t("clearFilters")}</Link>
             </p>
           ) : null}
         </div>
@@ -150,28 +130,6 @@ export default async function WorksPage({
           ) : null}
         </nav>
       ) : null}
-
-      {recentlySold.length > 0 ? (
-        <section
-          aria-labelledby="recently-sold"
-          className="flex flex-col gap-6 border-t border-line pt-8"
-        >
-          <h2 id="recently-sold" className="text-2xl">
-            {t("recentlySold")}
-          </h2>
-          <WorksGrid works={recentlySold} headingLevel={3} />
-        </section>
-      ) : null}
-
-      <p>
-        {sold ? (
-          <Link href={paths.works()}>{t("backToCurrent")}</Link>
-        ) : (
-          <Link href={paths.works({ availability: "sold" })}>
-            {t("viewArchive")}
-          </Link>
-        )}
-      </p>
     </div>
   );
 }

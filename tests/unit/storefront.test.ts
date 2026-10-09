@@ -73,7 +73,7 @@ describe("works URL params", () => {
   it("parses valid values and ignores invalid ones", () => {
     expect(
       parseWorksParams({
-        availability: "sold",
+        availability: "available",
         series: "landscapes",
         size: "m",
         orientation: "Landscape",
@@ -82,7 +82,7 @@ describe("works URL params", () => {
         page: "3",
       }),
     ).toEqual({
-      availability: "sold",
+      availability: "available",
       series: "landscapes",
       size: "M",
       orientation: "LANDSCAPE",
@@ -92,7 +92,8 @@ describe("works URL params", () => {
     });
     expect(
       parseWorksParams({
-        availability: "all",
+        // There is no sold filter (the painter's choice): an old archive link is the plain list.
+        availability: "sold",
         series: "../x",
         size: "huge",
         orientation: "",
@@ -119,9 +120,6 @@ describe("works URL params", () => {
   it("knows when filters narrow the view and maps price bands to minor units", () => {
     expect(hasFilters(DEFAULT_WORKS_PARAMS)).toBe(false);
     expect(hasFilters({ ...DEFAULT_WORKS_PARAMS, sort: "newest" })).toBe(false);
-    expect(hasFilters({ ...DEFAULT_WORKS_PARAMS, availability: "sold" })).toBe(
-      false,
-    );
     expect(
       hasFilters({ ...DEFAULT_WORKS_PARAMS, availability: "available" }),
     ).toBe(true);

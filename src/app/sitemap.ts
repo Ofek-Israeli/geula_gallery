@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 const STATIC_PAGES = [
   paths.home(),
   paths.works(),
-  paths.works({ availability: "sold" }),
   paths.about(),
   paths.contact(),
   paths.credits(),

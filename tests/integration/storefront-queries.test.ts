@@ -49,16 +49,16 @@ describe("listArtworks filters", () => {
     const interiors = await listArtworks("en", {
       seriesSlug: "interiors-still-life",
     });
-    // Plant Near a Window is sold, so only The Vase is in the current view.
-    expect(slugs(interiors)).toEqual(["the-vase"]);
+    // Plant Near a Window is sold: it stays in its series, after the available work.
+    expect(slugs(interiors)).toEqual(["the-vase", "plant-near-a-window"]);
     expect(
       slugs(
         await listArtworks("en", {
-          view: "sold",
+          view: "available",
           seriesSlug: "interiors-still-life",
         }),
       ),
-    ).toEqual(["plant-near-a-window"]);
+    ).toEqual(["the-vase"]);
     expect(
       (await listArtworks("en", { seriesSlug: "no-such-series" })).total,
     ).toBe(0);
@@ -72,9 +72,10 @@ describe("listArtworks filters", () => {
     const pano = await listArtworks("en", { orientation: "PANORAMIC" });
     expect(slugs(pano)).toEqual(["reflection-in-yellow"]);
 
+    // Sold works stay in the results (labelled "Sold"): The Purple City is under ₪5,000.
     const cheap = await listArtworks("en", { priceMaxIlsMinor: 500_000 });
     expect(new Set(slugs(cheap))).toEqual(
-      new Set(["the-path", "the-vase", "underground-city"]),
+      new Set(["the-path", "the-vase", "underground-city", "the-purple-city"]),
     );
     // The not-for-sale work has no price, so any price band excludes it.
     const band = await listArtworks("en", {
@@ -87,6 +88,7 @@ describe("listArtworks filters", () => {
         "a-ship-in-the-heart-of-the-sea",
         "reflection-in-yellow",
         "jerusalem",
+        "reflection-in-the-pool",
       ]),
     );
   });
@@ -131,19 +133,20 @@ describe("listArtworks filters", () => {
     const p1 = await listArtworks("en", { pageSize: 5, page: 1 });
     const p2 = await listArtworks("en", { pageSize: 5, page: 2 });
     const p3 = await listArtworks("en", { pageSize: 5, page: 3 });
-    const all = [...slugs(p1), ...slugs(p2), ...slugs(p3)];
-    expect(all).toHaveLength(13);
-    expect(new Set(all).size).toBe(13);
+    const p4 = await listArtworks("en", { pageSize: 5, page: 4 });
+    const all = [...slugs(p1), ...slugs(p2), ...slugs(p3), ...slugs(p4)];
+    expect(all).toHaveLength(16);
+    expect(new Set(all).size).toBe(16);
   });
 });
 
 describe("series, sitemap and SEO reads", () => {
-  it("lists series with counts of unsold works and a cover image", async () => {
+  it("lists series with counts of their works (sold included) and a cover image", async () => {
     const series = await listSeries("he");
     expect(series.map((s) => s.slug)).toContain("landscapes");
     const landscapes = series.find((s) => s.slug === "landscapes");
-    // Seven landscapes, one of them (Reflection in the Pool) sold.
-    expect(landscapes?.count).toBe(6);
+    // Seven landscapes; the sold one (Reflection in the Pool) counts too.
+    expect(landscapes?.count).toBe(7);
     expect(landscapes?.cover?.src).toMatch(/^\/api\/files\/public\//);
     expect(landscapes?.name).not.toBe("Landscapes");
   });

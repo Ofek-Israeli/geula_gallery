@@ -7,7 +7,6 @@ import {
   getDeliveryEstimates,
   getFeaturedArtwork,
   listArtworks,
-  listRecentlySold,
 } from "@/server/catalog/queries";
 import { db } from "@/server/db/client";
 import { artworkImages, artworks, sales } from "@/server/db/schema";
@@ -101,21 +100,22 @@ describe("catalog seed", () => {
 });
 
 describe("catalog queries", () => {
-  it("lists available works first and keeps sold works in the archive", async () => {
+  it("lists every work, available first and the sold ones last, labelled sold", async () => {
     const current = await listArtworks("en");
-    expect(current.total).toBe(13);
+    expect(current.total).toBe(16);
     expect(current.items[0]?.state.kind).toBe("available");
-    expect(current.items.at(-1)?.saleStatus).not.toBe("AVAILABLE");
-    const sold = await listArtworks("he", { view: "sold" });
-    expect(sold.total).toBe(3);
-    expect(sold.items[0]?.slug).toBe("the-purple-city");
-    expect(sold.items[0]?.title).toBe("העיר הסגולה");
-    const recent = await listRecentlySold("en");
-    expect(recent.map((w) => w.slug)).toEqual([
-      "the-purple-city",
-      "reflection-in-the-pool",
-      "plant-near-a-window",
-    ]);
+    const sold = current.items.filter((w) => w.saleStatus === "SOLD");
+    expect(new Set(sold.map((w) => w.slug))).toEqual(
+      new Set([
+        "the-purple-city",
+        "reflection-in-the-pool",
+        "plant-near-a-window",
+      ]),
+    );
+    expect(sold.every((w) => w.state.kind === "sold")).toBe(true);
+    expect(current.items.slice(-3).every((w) => w.saleStatus === "SOLD")).toBe(
+      true,
+    );
   });
 
   it("returns the featured work and a full artwork page", async () => {

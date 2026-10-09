@@ -71,8 +71,9 @@ npm ci && npm run env:init && npm run db:setup && npm run db:reset && npm run de
   storage. It never overwrites an existing file; `-- --force` regenerates it.
 - `db:setup` creates the three local databases. It refuses any host other than localhost.
 - `db:reset` drops, migrates and seeds `geula_dev` with the painter's catalog (about 150 works
-  with placeholder prices), 3 sample orders, a placeholder business profile and the painter's
-  account. `--seed fixtures` seeds only the 16 works the test suites use, which is much faster.
+  with placeholder prices, all available), a placeholder business profile and the painter's
+  account. `--seed fixtures` seeds only the 16 works the test suites use, with their test roles
+  (sold, on hold, not for sale, 3 sample orders), which is much faster.
 - Open <http://localhost:3000>. It redirects to `/he` or `/en` based on your browser language.
 
 **Admin login:** go to <http://localhost:3000/he/admin>. The email is `ADMIN_EMAIL`
@@ -212,8 +213,9 @@ in `data/catalog/manifest.json` with their images in `data/catalog/images/`.
 - **Prices.** The prices are size-based placeholders, and every work is still a demo listing
   (`is_demo`), so live payments refuse them until the painter sets real prices.
 - **Sizes.** Works whose photo had no size carry a placeholder size and a "TODO" description.
-- **Test fixtures.** The 16 works marked `fixture` keep the commerce roles the tests rely on:
-  statuses, sample orders and shipping flags.
+- **Test fixtures.** The 16 works marked `fixture` keep the commerce roles the tests rely on
+  (statuses, sample orders and shipping flags), but only in the `fixtures` seed. The `demo` seed
+  shows the real catalog: every work available, with no invented sales.
 
 In demo mode the prices, sales and business details are fictitious, and a banner on every page
 says so.

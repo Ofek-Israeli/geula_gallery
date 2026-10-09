@@ -10,11 +10,11 @@ const messages = (locale: "he" | "en") =>
   appMessages(locale, "catalog") as Record<string, unknown>;
 
 /**
- * WS1 storefront (spec §10.4 `storefront`): URL filters and sorts, Sold as text, the recently sold
- * strip (≤ 4), JSON-LD availability, the keyboard lightbox (mirrored arrows in Hebrew, Esc, focus
- * return, live region), "insured" only where a quote includes insurance, the home page (the quote
- * over "By the Lake", the bio as its h1), about and contact, and the mobile gallery strip and
- * sticky buy bar.
+ * WS1 storefront (spec §10.4 `storefront`): URL filters and sorts, Sold as text on sold works in
+ * the ordinary lists (no sold strip, archive or filter), JSON-LD availability, the keyboard
+ * lightbox (mirrored arrows in Hebrew, Esc, focus return, live region), "insured" only where a
+ * quote includes insurance, the home page (the quote over "By the Lake", the bio as its h1), about
+ * and contact, and the mobile gallery strip and sticky buy bar.
  *
  * Works used read-only: `the-path` (given 3 images here), `underground-city`, the seeded sold and
  * held works. Purchase specs run in parallel and sell other works, so assertions never depend on
@@ -127,29 +127,27 @@ test.describe("works filters and sorts", () => {
   });
 });
 
-test.describe("status, strip and archive", () => {
-  test("sold works show Sold as text, the strip has at most 4 works", async ({
+test.describe("sold works in the ordinary lists", () => {
+  test("a sold work stays in its series and filters, states Sold as text, and has no Buy now", async ({
     page,
   }) => {
-    await page.goto("/en/works");
-    const strip = page.getByRole("region", { name: "Recently sold" });
-    await expect(strip.getByText("Sold").first()).toBeVisible();
-    expect(await strip.getByRole("article").count()).toBeLessThanOrEqual(4);
-    expect(await strip.getByRole("article").count()).toBeGreaterThanOrEqual(1);
-
-    await page.goto("/en/works?availability=sold");
-    const archive = page.getByRole("list", { name: "Archive: sold works" });
+    // The landscapes series lists its sold work after the available ones.
+    await page.goto("/en/works?series=landscapes");
+    const cards = page.getByRole("article");
+    const sold = cards.filter({
+      has: page.getByRole("link", { name: "Reflection in the Pool" }),
+    });
+    // "Sold" in text, not only with the red dot.
+    await expect(sold.getByText("Sold", { exact: true })).toBeVisible();
+    // A price filter keeps it too.
+    await page.goto("/en/works?series=landscapes&price=10000-20000");
     await expect(
-      archive.getByRole("link", { name: "Reflection in the Pool" }),
+      page.getByRole("link", { name: "Reflection in the Pool" }),
     ).toBeVisible();
-    // Every archived card states "Sold" in text, not only with the red dot.
-    const cards = archive.getByRole("article");
-    const n = await cards.count();
-    for (let i = 0; i < n; i++) {
-      await expect(
-        cards.nth(i).getByText("Sold", { exact: true }),
-      ).toBeVisible();
-    }
+    // There is no sold filter to choose.
+    await expect(
+      page.locator('select[name="availability"] option[value="sold"]'),
+    ).toHaveCount(0);
 
     await page.goto("/he/works/reflection-in-the-pool");
     await expect(page.getByTestId("artwork-status")).toHaveText("נמכרה");

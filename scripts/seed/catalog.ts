@@ -18,9 +18,11 @@ import type { SeedDb, SeedModule } from "./types";
  * the local storage directory, and inserts the series and the painter's works (`is_demo = true`
  * while prices are placeholders, published) with bilingual titles and alt texts, packaging
  * defaults and statuses. Framed works get a second, FRAMED image.
- * - Mode `demo` seeds every work; mode `fixtures` seeds only the 16 `fixture` works the tests use.
- * - ON_HOLD and NOT_FOR_SALE come from the manifest; the three sold works are inserted AVAILABLE
- *   and marked SOLD by `orders.ts`.
+ * - Mode `demo` seeds every work, all AVAILABLE: the painter's real catalog, with no invented
+ *   statuses.
+ * - Mode `fixtures` seeds only the 16 `fixture` works the tests use, with their commerce roles:
+ *   ON_HOLD and NOT_FOR_SALE from the manifest; the three sold works are inserted AVAILABLE and
+ *   marked SOLD by `orders.ts`.
  *
  * Idempotent: series and works are inserted with `ON CONFLICT (slug) DO NOTHING` (existing rows,
  * including the painter's edits, are left alone); image files use content-derived keys, so a
@@ -149,12 +151,14 @@ export const catalogSeed: SeedModule = {
             publishedAt: now,
             featured: w.featured,
             sortOrder: w.sortOrder,
-            // SOLD works start AVAILABLE; orders.ts records their sale.
+            // Test roles only in `fixtures` (SOLD works start AVAILABLE; orders.ts records their
+            // sale). The demo seed is the painter's real catalog: every work AVAILABLE.
             saleStatus:
-              w.status === "ON_HOLD" || w.status === "NOT_FOR_SALE"
+              mode === "fixtures" &&
+              (w.status === "ON_HOLD" || w.status === "NOT_FOR_SALE")
                 ? w.status
                 : "AVAILABLE",
-            holdReason: w.holdReason,
+            holdReason: mode === "fixtures" ? w.holdReason : null,
             priceIlsMinor: w.priceIls === null ? null : w.priceIls * 100,
             priceUsdMinor: w.priceUsd === null ? null : w.priceUsd * 100,
             priceOnRequest: false,

@@ -17,11 +17,13 @@ import { readCatalogManifest } from "../lib/catalog-manifest";
 import type { SeedDb, SeedModule } from "./types";
 
 /**
- * Sample orders (spec §8.4; owner WS6). Three demo orders for the three sold catalog works
- * (manifest `sampleOrder` 1–3, all fixtures), each consistent with the invariants (spec §3.4): a SUCCEEDED MOCK
- * attempt bound to the order's quote version and exact total, a matching `mock_payments` row (so a
- * refund through the mock provider works), an ONLINE `is_mock` sale for the order item, the work
- * SOLD, an ISSUED mock receipt, and a shipment. **No outbox jobs** are created.
+ * Sample orders (spec §8.4; owner WS6), `fixtures` mode only: the test suites rely on them, while
+ * the `demo` seed is the painter's real catalog and invents no sales. Three orders for the three
+ * sold fixture works (manifest `sampleOrder` 1–3), each consistent with the invariants (spec §3.4):
+ * a SUCCEEDED MOCK attempt bound to the order's quote version and exact total, a matching
+ * `mock_payments` row (so a refund through the mock provider works), an ONLINE `is_mock` sale for
+ * the order item, the work SOLD, an ISSUED mock receipt, and a shipment. **No outbox jobs** are
+ * created.
  *
  * 1. Israeli buyer, ILS, courier via the manual carrier "Israel
  *    Post", DELIVERED 7 days ago — plus a RECEIVED cancellation notice (received 5 days ago, so the
@@ -98,7 +100,7 @@ const hex = (bytes: number) => randomBytes(bytes).toString("hex");
 
 export const ordersSeed: SeedModule = {
   name: "orders",
-  modes: ["demo", "fixtures"],
+  modes: ["fixtures"],
   async run({ db, log, env }) {
     const manifest = await readCatalogManifest();
     const appUrl = env.authBaseUrl.replace(/\/$/, "");

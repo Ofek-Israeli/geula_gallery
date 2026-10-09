@@ -5,7 +5,7 @@
  *
  * | Param          | Values                                                        |
  * |----------------|---------------------------------------------------------------|
- * | `availability` | `available` · `sold` (archive); absent = available + on hold + not for sale |
+ * | `availability` | `available`; absent = every work (sold ones labelled "Sold"; no sold filter) |
  * | `series`       | a series slug                                                 |
  * | `size`         | `s` · `m` · `l` · `xl`                                        |
  * | `orientation`  | `portrait` · `landscape` · `square` · `panoramic`             |
@@ -16,7 +16,7 @@
 import type { Orientation, SizeBucket } from "@/lib/catalog";
 import { paths } from "@/lib/routes";
 
-export const AVAILABILITY_VALUES = ["available", "sold"] as const;
+export const AVAILABILITY_VALUES = ["available"] as const;
 export type Availability = (typeof AVAILABILITY_VALUES)[number];
 
 export const SIZE_VALUES = [

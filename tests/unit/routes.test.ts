@@ -15,8 +15,8 @@ describe("routes", () => {
     expect(paths.artworkRequest("sunset", "quote")).toBe(
       "/works/sunset/request?kind=quote",
     );
-    expect(paths.works({ availability: "sold", page: undefined })).toBe(
-      "/works?availability=sold",
+    expect(paths.works({ availability: "available", page: undefined })).toBe(
+      "/works?availability=available",
     );
     expect(paths.checkout("sunset", { to: "US", ship: "CARRIER_TABLE" })).toBe(
       "/checkout/sunset?to=US&ship=CARRIER_TABLE",
