@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { buttonClasses } from "@/components/ui/Button";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { ErrorSummary, type FormErrorItem } from "@/components/ui/ErrorSummary";
 import { Field } from "@/components/ui/Field";
 import { HoneypotField } from "@/components/ui/HoneypotField";
@@ -397,13 +398,50 @@ function Review({
           { label: t("labels.message"), value: d.message },
         ]}
       />
-      <div className="flex flex-wrap gap-3">
-        <form action={formAction}>
+      <div className="flex flex-wrap items-end gap-3">
+        <form action={formAction} className="flex flex-col gap-4">
           <Hidden locale={locale} formStart={formStart} step="confirm" />
           <input type="hidden" name="token" value={data.token} />
-          <SubmitButton pendingLabel={t("review.pending")}>
-            {t("review.confirm")}
-          </SubmitButton>
+          {data.items.length > 1 ? (
+            <fieldset
+              className="flex flex-col gap-2"
+              data-testid="cancel-works"
+              aria-describedby={
+                data.error ? "cancel-works-error" : "cancel-works-hint"
+              }
+            >
+              <legend className="mbe-1 font-semibold">
+                {t("review.works")}
+              </legend>
+              <p id="cancel-works-hint" className="text-sm text-ink-muted">
+                {t("review.worksHint")}
+              </p>
+              {data.error ? (
+                <p
+                  id="cancel-works-error"
+                  role="alert"
+                  className="text-sm font-medium text-reddot"
+                >
+                  {t("review.chooseWorks")}
+                </p>
+              ) : null}
+              {data.items.map((i) => (
+                <Checkbox
+                  key={i.id}
+                  id={`cx-work-${i.id}`}
+                  name="orderItemId"
+                  value={i.id}
+                  label={i.title}
+                  defaultChecked={!data.checked || data.checked.includes(i.id)}
+                />
+              ))}
+            </fieldset>
+          ) : null}
+          <div>
+            <SubmitButton pendingLabel={t("review.pending")}>
+              {t("review.confirm")}
+            </SubmitButton>
+          </div>
         </form>
         <form action={formAction}>
           <Hidden locale={locale} formStart={formStart} step="edit" />
@@ -459,6 +497,10 @@ function Acknowledgement({
           },
           { label: t("labels.message"), value: ack.message },
           { label: t("labels.channel"), value: t(`channel.${ack.channel}`) },
+          {
+            label: t("labels.works"),
+            value: ack.works?.length ? ack.works.join(" · ") : null,
+          },
         ]}
       />
       <p className="font-medium">

@@ -269,6 +269,21 @@ export default async function FulfillPage({
             </li>
           ))}
         </ul>
+        {v.removed.length > 0 ? (
+          <div
+            className="rounded-sm border border-hold p-3 text-sm"
+            data-testid="fulfill-removed"
+          >
+            <p className="font-medium">{t("fulfill.items.removed")}</p>
+            <ul className="list-disc ps-5">
+              {v.removed.map((r) => (
+                <li key={`${r.cancellationNumber}:${r.title}`}>
+                  {r.title} (<bdi dir="ltr">{r.cancellationNumber}</bdi>)
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <div className="text-sm">
           <p className="font-medium">{t("fulfill.shipTo")}</p>
           <address className="not-italic" dir="auto">

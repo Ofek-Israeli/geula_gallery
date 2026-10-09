@@ -8,6 +8,7 @@ import { buyerOrderUrls } from "@/server/documents/data";
 import { NotFoundError } from "@/server/domain/errors";
 import type { BuiltEmail } from "@/server/email/props";
 import type { Env } from "@/server/env";
+import { itemsOfCancellation } from "@/server/orders/items";
 import { getSetting } from "@/server/settings";
 import type { AckSnapshot } from "./service";
 import { maskedFromLast3 } from "./service";
@@ -57,6 +58,7 @@ export async function cancellationAckProps(
       receivedAt: c.receivedAt.toISOString(),
       refundDueAt: (c.refundDueAt ?? c.receivedAt).toISOString(),
       ...(c.message ? { message: c.message } : {}),
+      ...(ack?.works?.length ? { works: ack.works } : {}),
     },
   };
 }
@@ -68,6 +70,7 @@ export async function painterCancellationProps(
 ): Promise<BuiltEmail<"painter-cancellation">> {
   const { c, order } = await load(db, refId);
   const idMasked = masked(c);
+  const works = (c.ackSnapshot as Partial<AckSnapshot> | null)?.works;
   return {
     locale: "he",
     orderId: order?.id ?? null,
@@ -84,6 +87,7 @@ export async function painterCancellationProps(
       receivedAt: c.receivedAt.toISOString(),
       refundDueAt: (c.refundDueAt ?? c.receivedAt).toISOString(),
       possibleDuplicate: c.possibleDuplicate,
+      ...(works?.length ? { works } : {}),
     },
   };
 }
@@ -97,6 +101,9 @@ export async function returnInstructionsProps(
   if (!order) throw new NotFoundError("order for cancellation", refId);
   const profile = await getSetting("business_profile", db);
   const locale = order.locale;
+  const works = (await itemsOfCancellation(db, c.id)).map((i) =>
+    locale === "he" ? i.titleHe : i.titleEn,
+  );
   return {
     locale,
     orderId: order.id,
@@ -105,6 +112,7 @@ export async function returnInstructionsProps(
       buyerName: order.buyerName ?? c.fullName,
       orderUrl: buyerOrderUrls(order, locale, env).orderUrl,
       cancellationNumber: c.number,
+      ...(works.length > 0 ? { works } : {}),
       returnAddress: profile.returnAddress[locale],
       refundAmountMinor: c.refundAmountMinor ?? 0,
       currency: order.currency,

@@ -34,6 +34,7 @@ import {
   ProviderNotConfiguredError,
 } from "@/server/integrations/http";
 import { log } from "@/server/log";
+import { activeOrderItems } from "@/server/orders/items";
 import { getSetting } from "@/server/settings";
 import type { BusinessProfile } from "@/server/settings/schemas";
 import {
@@ -80,8 +81,10 @@ import type {
  * `recordManualTracking`.
  *
  * Guards (spec §5.5): the order is PAID; no `fulfillment_blocked_reason` other than a pending
- * cancellation; no ACCEPTED cancellation; a RECEIVED cancellation (or the PENDING_CANCELLATION
- * block) stops fulfillment unless the admin overrides it with a reason (audited).
+ * cancellation; at least one work not cancelled (an ACCEPTED cancellation of some works leaves the
+ * others to ship); a RECEIVED cancellation (or the PENDING_CANCELLATION block) stops fulfillment
+ * unless the admin overrides it with a reason (audited). Packing, customs and the label cover the
+ * active (not cancelled) works only.
  *
  * The label claim protocol (no idempotency key and no cancel at DHL): PACKED → LABEL_REQUESTED
  * (`label_attempt+1`, `idempotency_key` derived from `<orderId>:<n>`, a new `message_reference`)
@@ -107,16 +110,18 @@ export type FulfillmentBlock =
   | { code: "CANCELLATION_ACCEPTED" }
   | { code: "CANCELLATION_PENDING"; overridable: true };
 
-/** Pure: why fulfillment is refused, or null. */
+/**
+ * Pure: why fulfillment is refused, or null. `activeItems` = the order's works not covered by an
+ * accepted cancellation: an accepted cancellation blocks only when it left nothing to ship.
+ */
 export function fulfillmentBlock(
   order: Pick<Order, "status" | "fulfillmentBlockedReason">,
   shipment: Pick<Shipment, "cancellationOverrideReason"> | null,
   cancellationStatuses: readonly string[],
+  activeItems: number,
 ): FulfillmentBlock | null {
   if (order.status !== "PAID") return { code: "ORDER_NOT_PAID" };
-  if (cancellationStatuses.includes("ACCEPTED")) {
-    return { code: "CANCELLATION_ACCEPTED" };
-  }
+  if (activeItems === 0) return { code: "CANCELLATION_ACCEPTED" };
   const blocked = order.fulfillmentBlockedReason;
   if (blocked && blocked !== "PENDING_CANCELLATION") {
     return { code: "FULFILLMENT_BLOCKED", reason: blocked };
@@ -141,6 +146,11 @@ export class FulfillmentBlockedError extends ConflictError {
     );
     this.name = "FulfillmentBlockedError";
   }
+}
+
+/** The order's works not covered by an accepted cancellation. */
+async function countActiveItems(db: DbOrTx, orderId: string): Promise<number> {
+  return (await activeOrderItems(db, orderId)).length;
 }
 
 async function openCancellationStatuses(
@@ -186,6 +196,7 @@ async function lockForFulfillment(
       order,
       shipment,
       await openCancellationStatuses(tx, order.id),
+      await countActiveItems(tx, order.id),
     );
     if (block) throw new FulfillmentBlockedError(block);
   }
@@ -333,6 +344,7 @@ export async function overrideCancellationBlock(
         order,
         { cancellationOverrideReason: null },
         await openCancellationStatuses(tx, order.id),
+        await countActiveItems(tx, order.id),
       );
       if (block?.code !== "CANCELLATION_PENDING") {
         throw new ConflictError(
@@ -412,14 +424,16 @@ export async function savePacking(
         );
       }
       requireStatus(shipment, ["AWAITING_FULFILLMENT", "PACKED"]);
+      const active = (await activeOrderItems(tx, order.id)).map(
+        (i) => i.artworkId,
+      );
       const works = await tx
         .select({
           packagingType: artworks.packagingType,
           coaIncluded: artworks.coaIncluded,
         })
-        .from(orderItems)
-        .innerJoin(artworks, eq(artworks.id, orderItems.artworkId))
-        .where(eq(orderItems.orderId, order.id));
+        .from(artworks)
+        .where(inArray(artworks.id, active));
       const entries = checklistFor({
         packagingTypes: works.map((w) => w.packagingType as PackagingType),
         coaIncluded: works.some((w) => w.coaIncluded),
@@ -738,6 +752,7 @@ async function buildCreateRequest(
       "complete the customs step (description and export declaration)",
     );
   }
+  const activeIds = (await activeOrderItems(db, order.id)).map((i) => i.id);
   const [profile, items] = await Promise.all([
     getSetting("business_profile", db),
     db
@@ -752,7 +767,7 @@ async function buildCreateRequest(
       })
       .from(orderItems)
       .innerJoin(artworks, eq(artworks.id, orderItems.artworkId))
-      .where(eq(orderItems.orderId, order.id))
+      .where(inArray(orderItems.id, activeIds))
       .orderBy(asc(orderItems.createdAt)),
   ]);
   const shipper =
@@ -803,7 +818,7 @@ async function buildCreateRequest(
   }
   const firstMedium = items[0] ? englishMedium(items[0]) : "";
   const declaredValueMinor =
-    shipment.declaredValueMinor ?? order.itemsTotalMinor;
+    shipment.declaredValueMinor ?? items.reduce((s, i) => s + i.priceMinor, 0);
   const lineValues = declaredLineValues(
     declaredValueMinor,
     items.map((i) => declaredLineWeight(i, order)),
@@ -904,6 +919,7 @@ export async function requestLabel(
     order,
     current,
     await openCancellationStatuses(db, order.id),
+    await countActiveItems(db, order.id),
   );
   if (block) throw new FulfillmentBlockedError(block);
   requireStatus(current, ["PACKED"]);
@@ -1666,6 +1682,11 @@ export async function markArtistDelivered(
 
 // ---------------------------------------------------------------- cancellation (WS6 hook)
 
+const LABEL_PENDING_STATES: readonly ShipmentStatus[] = [
+  "LABEL_REQUESTED",
+  "LABEL_UNKNOWN",
+];
+
 const CANCELLABLE: readonly ShipmentStatus[] = [
   "AWAITING_FULFILLMENT",
   "PACKED",
@@ -1696,10 +1717,7 @@ export async function cancelShipmentForOrder(
   if (!shipment || shipment.status === "CANCELLED") {
     return { cancelled: false, shipped: false, pickupConfirmation: null };
   }
-  if (
-    shipment.status === "LABEL_REQUESTED" ||
-    shipment.status === "LABEL_UNKNOWN"
-  ) {
+  if (LABEL_PENDING_STATES.includes(shipment.status)) {
     throw new ConflictError(
       "LABEL_IN_FLIGHT",
       "resolve the label request first",
@@ -1718,6 +1736,103 @@ export async function cancelShipmentForOrder(
   });
   return {
     cancelled: true,
+    shipped: false,
+    pickupConfirmation: shipment.pickupConfirmation,
+  };
+}
+
+/** Statuses a partial cancellation sends back to AWAITING_FULFILLMENT (the parcel is repacked). */
+const REPACK_FROM: readonly ShipmentStatus[] = [
+  "PACKED",
+  "LABEL_CREATED",
+  "PICKUP_SCHEDULED",
+];
+
+/**
+ * For an accepted cancellation of **some** works of the order (the others still ship), in the
+ * caller's transaction with the order locked and the cancellation items already written:
+ * - not packed yet, or waiting for pickup at the studio → only the declared and insured values
+ *   shrink to the remaining works;
+ * - PACKED / LABEL_CREATED / PICKUP_SCHEDULED → back to AWAITING_FULFILLMENT: packages, photos,
+ *   checklist, the unused label and the customs description are cleared (the remaining works are
+ *   packed and declared again). A booked carrier pickup is returned for the caller to cancel after
+ *   commit;
+ * - already left → `shipped: true` (the cancelled works come back as a return).
+ * Refuses while a label call is in flight or unknown.
+ */
+export async function removeItemsFromShipment(
+  tx: Parameters<Parameters<typeof withTx>[0]>[0],
+  orderId: string,
+  actor: string,
+): Promise<{
+  reset: boolean;
+  shipped: boolean;
+  pickupConfirmation: string | null;
+}> {
+  const [order] = await tx.select().from(orders).where(eq(orders.id, orderId));
+  if (!order) throw new NotFoundError("order", orderId);
+  const shipment = await lockShipmentOf(tx, orderId);
+  if (!shipment || shipment.status === "CANCELLED") {
+    return { reset: false, shipped: false, pickupConfirmation: null };
+  }
+  if (LABEL_PENDING_STATES.includes(shipment.status)) {
+    throw new ConflictError(
+      "LABEL_IN_FLIGHT",
+      "resolve the label request first",
+    );
+  }
+  if (!CANCELLABLE.includes(shipment.status)) {
+    return { reset: false, shipped: true, pickupConfirmation: null };
+  }
+  const active = await activeOrderItems(tx, orderId);
+  const activeMinor = active.reduce((s, i) => s + i.priceMinor, 0);
+  // The insured value (ILS, capped) shrinks in proportion to the works that remain.
+  const insured =
+    shipment.insuredValueMinor && order.itemsTotalMinor > 0
+      ? Math.floor(
+          (shipment.insuredValueMinor * activeMinor) / order.itemsTotalMinor,
+        )
+      : shipment.insuredValueMinor;
+  const values = {
+    declaredValueMinor: activeMinor,
+    insuredValueMinor: insured || null,
+  };
+  if (!REPACK_FROM.includes(shipment.status)) {
+    await tx.update(shipments).set(values).where(eq(shipments.id, shipment.id));
+    return { reset: false, shipped: false, pickupConfirmation: null };
+  }
+  await applyShipmentStatus(tx, {
+    order,
+    shipment,
+    from: REPACK_FROM,
+    to: "AWAITING_FULFILLMENT",
+    actor,
+    source: "SYSTEM",
+    action: "shipment.repack",
+    event: {
+      description: shipment.trackingNumber
+        ? `works cancelled; label ${shipment.trackingNumber} discarded`
+        : "works cancelled; repack",
+    },
+    patch: {
+      ...values,
+      packages: [],
+      packingPhotoKeys: [],
+      checklist: {},
+      contentsDescriptionEn: null,
+      trackingNumber: null,
+      trackingUrl: null,
+      labelFileKey: null,
+      invoiceFileKey: null,
+      pickupConfirmation: null,
+      providerShipmentId: null,
+      idempotencyKey: null,
+      messageReference: null,
+      cancellationOverrideReason: null,
+    },
+  });
+  return {
+    reset: true,
     shipped: false,
     pickupConfirmation: shipment.pickupConfirmation,
   };

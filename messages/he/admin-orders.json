@@ -82,7 +82,8 @@
     "manualReference": "אסמכתה: {reference}",
     "failureConfirmed": "אושר בלוח הבקרה של הספק",
     "requestedBy": "התבקש על ידי {actor}",
-    "orderCreated": "ההזמנה נוצרה והקישור לתשלום נשלח לקונה."
+    "orderCreated": "ההזמנה נוצרה והקישור לתשלום נשלח לקונה.",
+    "itemCancelled": "בוטלה ({number})"
   },
   "tracking": {
     "title": "מעקב ידני",

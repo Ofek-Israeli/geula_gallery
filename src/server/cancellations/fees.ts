@@ -1,4 +1,5 @@
 import "server-only";
+import { cancellationRefund } from "@/lib/cancellation-amounts";
 import {
   type CancellationReasonValue,
   type CancellationRegime,
@@ -26,6 +27,13 @@ export interface AssessmentInput {
   };
   /** What was captured for the order (the paid attempt's amount). */
   paidMinor: number;
+  /**
+   * What this cancellation refunds before the fee (`cancellationBase`: the cancelled works, plus
+   * shipping when no work is left). Defaults to `paidMinor` (the whole order).
+   */
+  baseMinor?: number;
+  /** Fees withheld by earlier cancellations of the order (the ₪100 cap is shared). */
+  feesWithheldMinor?: number;
   /** Refund rows that already count against the capture (spec §3.3 cap rule). */
   alreadyRefundedMinor: number;
   regime: CancellationRegime;
@@ -46,7 +54,7 @@ export interface Assessment {
   withinWindow: boolean;
   /** Suggested (maximum) fee in the order currency. */
   suggestedFeeMinor: number;
-  /** Refund for the suggested fee: paid − fee − already refunded, never below 0. */
+  /** Refund for the suggested fee: min(base, paid − already refunded) − fee, never below 0. */
   refundAmountMinor: number;
   /** True when eligibility was declared but no conversation is on record. */
   conversationUncertain: boolean;
@@ -69,10 +77,11 @@ export function assessCancellation(input: AssessmentInput): Assessment {
   const { feeMinor } = changeOfMindFee({
     regime: input.regime,
     reason: input.reason ?? "OTHER",
-    totalPaidMinor: input.paidMinor,
+    totalPaidMinor: input.baseMinor ?? input.paidMinor,
     currency: input.order.currency,
     ...(fx && fx > 0 ? { ilsPerUsd: fx } : {}),
     policy: input.policy,
+    alreadyWithheldMinor: input.feesWithheldMinor ?? 0,
   });
   return {
     window,
@@ -86,10 +95,20 @@ export function assessCancellation(input: AssessmentInput): Assessment {
 
 /** The refund for a chosen fee (clamped to what is still refundable). */
 export function refundFor(
-  input: Pick<AssessmentInput, "paidMinor" | "alreadyRefundedMinor">,
+  input: Pick<
+    AssessmentInput,
+    "paidMinor" | "alreadyRefundedMinor" | "baseMinor"
+  >,
   feeMinor: number,
 ): number {
-  return Math.max(0, input.paidMinor - input.alreadyRefundedMinor - feeMinor);
+  return cancellationRefund(
+    {
+      baseMinor: input.baseMinor ?? input.paidMinor,
+      paidMinor: input.paidMinor,
+      alreadyRefundedMinor: input.alreadyRefundedMinor,
+    },
+    feeMinor,
+  );
 }
 
 /** The fee the admin chose, never above the suggestion (spec §4.7: may only lower it). */

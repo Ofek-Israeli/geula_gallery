@@ -1,6 +1,10 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import {
+  cancellationBase,
+  cancellationRefund,
+} from "@/lib/cancellation-amounts";
 import { isEuCountry } from "@/lib/countries";
 import { refundDueAt as legalRefundDueAt } from "@/lib/deadlines";
 import { formatDateTime } from "@/lib/format";
@@ -18,9 +22,9 @@ import {
 } from "@/server/db/client";
 import {
   type Cancellation,
+  cancellationItems,
   cancellations,
   type Order,
-  orderItems,
   orders,
   paymentAttempts,
   refunds,
@@ -35,19 +39,29 @@ import { newCancellationNumber } from "@/server/domain/ids";
 import type { ShipmentStatus } from "@/server/domain/state-machines";
 import { transition } from "@/server/domain/transition";
 import { log } from "@/server/log";
+import {
+  activeOrderItems,
+  itemsOfCancellation,
+  type OrderItemState,
+  orderItemsWithState,
+} from "@/server/orders/items";
 import { enqueueEmail } from "@/server/outbox/enqueue";
 import { countedRefundsMinor, requestRefund } from "@/server/payments/refunds";
 import { encryptAesGcm } from "@/server/security/crypto";
 import { piiKey } from "@/server/security/keys";
 import { getSetting } from "@/server/settings";
 import { carrierAdapter } from "@/server/shipping/registry";
-import { cancelShipmentForOrder } from "@/server/shipping/shipments";
+import {
+  cancelShipmentForOrder,
+  removeItemsFromShipment,
+} from "@/server/shipping/shipments";
 import { assessCancellation, clampFee } from "./fees";
 import {
   type CancellationNotice,
   displayNotice,
   type NoticeDisplay,
 } from "./notice";
+import { cancelOrderIfFullyCancelled } from "./settlement";
 
 /**
  * Cancellation notices (spec §5.7): intake that never blocks, matching, duplicates, deadlines and
@@ -63,6 +77,11 @@ import {
  *   `possible_duplicate` with `duplicate_of_id`, and acknowledged like the first.
  * - Matching sets `orders.fulfillment_blocked_reason = 'PENDING_CANCELLATION'` (on a PAID order
  *   with no other block) and re-runs conversation detection on the order.
+ * - Per work: a notice names the works to cancel (`requested_item_ids`; null = every work still
+ *   active). Acceptance writes `cancellation_items` (a work is cancelled once), refunds the works'
+ *   prices (plus shipping only when no work is left), and either repacks the remaining works or
+ *   cancels the shipment. The order becomes CANCELLED only when every work is cancelled and
+ *   settled (`settlement.ts`). Duplicates are flagged only when the works overlap.
  * - Lock order: artworks → order → payment attempt → refunds → cancellation (spec §2.2).
  * - The full ID number exists only encrypted (`id_number_enc`, AES-256-GCM bound to the row id);
  *   `id_number_last3` helps the admin match; every other place shows `•••••••12`.
@@ -92,6 +111,8 @@ export interface AckSnapshot extends NoticeDisplay {
   locale: Locale;
   /** Human-readable time in Asia/Jerusalem, as shown to the buyer. */
   receivedAtText: string;
+  /** Titles of the works the buyer chose (absent = the whole order). */
+  works?: string[];
 }
 
 export interface NoticeMeta {
@@ -103,6 +124,11 @@ export interface NoticeMeta {
   ipHash?: string | null;
   /** Admin-logged notices may name the order directly. */
   orderId?: string;
+  /**
+   * The works the buyer chose (order item ids and titles, from `previewCancellableItems`); absent
+   * or every work = the whole order.
+   */
+  requestedItems?: readonly { id: string; title: string }[];
 }
 
 function normalizeName(name: string | null | undefined): string {
@@ -154,6 +180,9 @@ export async function recordCancellationNotice(
       if (meta.orderId) await lockOrder(tx, meta.orderId);
       const due = legalRefundDueAt(receivedAt);
       const display = displayNotice(notice);
+      const requested = meta.requestedItems?.length
+        ? meta.requestedItems
+        : null;
       let number = "";
       let inserted = false;
       for (let i = 0; i < 6 && !inserted; i++) {
@@ -166,6 +195,7 @@ export async function recordCancellationNotice(
           refundDueAt: due.toISOString(),
           locale: meta.locale,
           receivedAtText: formatDateTime(receivedAt, meta.locale),
+          ...(requested ? { works: requested.map((i) => i.title) } : {}),
         };
         const rows = await tx
           .insert(cancellations)
@@ -194,6 +224,7 @@ export async function recordCancellationNotice(
             phone: notice.phone ?? null,
             message: notice.message ?? null,
             eligibleGroup: notice.eligibleGroup,
+            requestedItemIds: requested ? requested.map((i) => i.id) : null,
             receivedAt,
             refundDueAt: due,
             ackSnapshot: ack,
@@ -313,7 +344,8 @@ export async function autoMatchCancellation(
 
 /**
  * Links a notice to an order (the order row must already be locked by the caller): duplicate
- * flags, regime, conversation re-detection, the deadline assessment and the fulfillment block.
+ * flags (only when the works overlap an earlier open notice), the requested works narrowed to the
+ * order's, regime, conversation re-detection, the deadline assessment and the fulfillment block.
  */
 async function linkToOrder(
   tx: Tx,
@@ -329,8 +361,15 @@ async function linkToOrder(
       "the notice is linked to another order",
     );
   }
-  const [first] = await tx
-    .select({ id: cancellations.id })
+  const items = await orderItemsWithState(tx, order.id);
+  const requestedItemIds = narrowRequested(c.requestedItemIds, items);
+  const mine = noticeItemSet(requestedItemIds, items);
+  const others = await tx
+    .select({
+      id: cancellations.id,
+      status: cancellations.status,
+      requestedItemIds: cancellations.requestedItemIds,
+    })
     .from(cancellations)
     .where(
       and(
@@ -339,8 +378,17 @@ async function linkToOrder(
         inArray(cancellations.status, [...OPEN_CANCELLATION_STATUSES]),
       ),
     )
-    .orderBy(asc(cancellations.receivedAt))
-    .limit(1);
+    .orderBy(asc(cancellations.receivedAt));
+  // A second notice is a possible duplicate only when it names a work an earlier one names.
+  const first = others.find((o) => {
+    const theirs =
+      o.status === "ACCEPTED"
+        ? new Set(
+            items.filter((i) => i.cancellation?.id === o.id).map((i) => i.id),
+          )
+        : noticeItemSet(o.requestedItemIds, items);
+    return [...mine].some((id) => theirs.has(id));
+  });
 
   // Conversation detection again (spec §5.7 step 5): it can only lengthen the window.
   let conversationTookPlace = order.conversationTookPlace;
@@ -364,15 +412,18 @@ async function linkToOrder(
     }
   }
 
-  const assessment = await assessFor(tx, c, {
-    ...order,
-    conversationTookPlace,
-  });
+  const assessment = await assessFor(
+    tx,
+    c,
+    { ...order, conversationTookPlace },
+    { orderItemIds: requestedItemIds },
+  );
   await tx
     .update(cancellations)
     .set({
       orderId: order.id,
       regime: regimeFor(order.shipCountry),
+      requestedItemIds,
       ...(first ? { possibleDuplicate: true, duplicateOfId: first.id } : {}),
       windowEndsAt: assessment?.window.end ?? null,
       withinWindow: assessment?.withinWindow ?? null,
@@ -408,12 +459,53 @@ async function linkToOrder(
   );
 }
 
-/** The assessment for a notice and its order (null when the order was never paid). */
+/**
+ * The requested works narrowed to the order's own items (unknown ids dropped); null when nothing
+ * is left or every item is named (= the whole order).
+ */
+function narrowRequested(
+  requested: readonly string[] | null,
+  items: readonly OrderItemState[],
+): string[] | null {
+  if (!requested) return null;
+  const known = new Set(items.map((i) => i.id));
+  const ids = [...new Set(requested)].filter((id) => known.has(id));
+  if (ids.length === 0 || ids.length === items.length) return null;
+  return ids;
+}
+
+/** The works a (not yet accepted) notice is about: the requested ones, else every active work. */
+function noticeItemSet(
+  requested: readonly string[] | null,
+  items: readonly OrderItemState[],
+): Set<string> {
+  if (requested) return new Set(requested);
+  return new Set(items.filter((i) => i.cancellation === null).map((i) => i.id));
+}
+
+export interface AssessedItem {
+  id: string;
+  artworkId: string;
+  titleHe: string;
+  titleEn: string;
+  priceMinor: number;
+}
+
+/**
+ * The assessment for a notice, its order and the works to cancel (`orderItemIds`; null = every
+ * work still active). Works already cancelled are skipped. Null when the order was never paid.
+ */
 async function assessFor(
   tx: DbOrTx,
-  c: Pick<Cancellation, "regime" | "reason" | "eligibleGroup" | "receivedAt">,
+  c: Pick<
+    Cancellation,
+    "id" | "regime" | "reason" | "eligibleGroup" | "receivedAt"
+  >,
   order: Order,
-  opts: { grantFourMonths?: boolean } = {},
+  opts: {
+    grantFourMonths?: boolean;
+    orderItemIds?: readonly string[] | null;
+  } = {},
 ) {
   if (!order.paidAttemptId) return null;
   const [attempt] = await tx
@@ -430,10 +522,39 @@ async function assessFor(
     .from(refunds)
     .where(eq(refunds.attemptId, order.paidAttemptId));
   const policy = await getSetting("cancellation_policy", tx);
-  return assessCancellation({
+  const all = await orderItemsWithState(tx, order.id);
+  const active = all.filter((i) => i.cancellation === null);
+  const wanted = opts.orderItemIds ? new Set(opts.orderItemIds) : null;
+  const selected = active.filter((i) => !wanted || wanted.has(i.id));
+  const base = cancellationBase({
+    cancelledItemsMinor: selected.reduce((s, i) => s + i.priceMinor, 0),
+    orderItemsMinor: all.reduce((s, i) => s + i.priceMinor, 0),
+    paidMinor: attempt.amountMinor,
+    final: selected.length > 0 && selected.length === active.length,
+  });
+  // The ₪100 cap is shared by every fee withheld on the order: accepted notices only (they cover
+  // works). A notice closed as a duplicate or rejected keeps its suggestion, never withheld.
+  const [withheld] = await tx
+    .select({
+      sum: sql<number>`coalesce(sum(${cancellations.feeMinor}), 0)::int`,
+    })
+    .from(cancellations)
+    .where(
+      and(
+        eq(cancellations.orderId, order.id),
+        ne(cancellations.id, c.id),
+        inArray(cancellations.status, ["ACCEPTED", "CLOSED"]),
+        sql`EXISTS (SELECT 1 FROM cancellation_items ci WHERE ci.cancellation_id = ${cancellations.id})`,
+      ),
+    );
+  const alreadyRefundedMinor = countedRefundsMinor(rows);
+  const feesWithheldMinor = withheld?.sum ?? 0;
+  const assessment = assessCancellation({
     order,
     paidMinor: attempt.amountMinor,
-    alreadyRefundedMinor: countedRefundsMinor(rows),
+    alreadyRefundedMinor,
+    baseMinor: base.baseMinor,
+    feesWithheldMinor,
     regime: regimeFor(order.shipCountry) ?? c.regime,
     reason: c.reason,
     eligibleGroup: c.eligibleGroup,
@@ -443,6 +564,23 @@ async function assessFor(
       ? { grantFourMonths: opts.grantFourMonths }
       : {}),
   });
+  return {
+    ...assessment,
+    ...base,
+    paidMinor: attempt.amountMinor,
+    alreadyRefundedMinor,
+    feesWithheldMinor,
+    final: selected.length > 0 && selected.length === active.length,
+    items: selected.map(
+      (i): AssessedItem => ({
+        id: i.id,
+        artworkId: i.artworkId,
+        titleHe: i.titleHe,
+        titleEn: i.titleEn,
+        priceMinor: i.priceMinor,
+      }),
+    ),
+  };
 }
 
 /** Clears the PENDING_CANCELLATION block when no open notice is left for the order. */
@@ -496,6 +634,11 @@ export async function matchCancellationToOrder(
 }
 
 export interface AcceptInput {
+  /**
+   * The works to cancel (order item ids, all still active). Default: the works the buyer named,
+   * else every work still active.
+   */
+  orderItemIds?: readonly string[];
   /** The fee the admin chose; clamped to the suggestion (may only be lowered). */
   feeMinor?: number;
   /** Grant the 4-month window although no conversation is on record. */
@@ -504,10 +647,12 @@ export interface AcceptInput {
 }
 
 /**
- * Accept (spec §5.7 step 7). Not shipped → shipment CANCELLED and the refund requested now (due
- * date = the notice + 14 days). Shipped → AWAITING_RETURN and the `return-instructions` email; the
- * refund is requested with `refundCancellation` (whether it may wait for the return is a lawyer
- * question; the admin decides). Works on PAID **and** COMPLETED orders.
+ * Accept (spec §5.7 step 7), for the chosen works. Not shipped → the refund is requested now (due
+ * date = the notice + 14 days), and the shipment is CANCELLED when no work is left, or repacked
+ * for the remaining works (`removeItemsFromShipment`, which also lifts the fulfillment block).
+ * Shipped → AWAITING_RETURN and the `return-instructions` email; the refund is requested with
+ * `refundCancellation` (whether it may wait for the return is a lawyer question; the admin
+ * decides). Works on PAID **and** COMPLETED orders.
  */
 export async function acceptCancellation(
   ctx: AdminContext,
@@ -520,6 +665,9 @@ export async function acceptCancellation(
     returnRequired: boolean;
     feeMinor: number;
     refundAmountMinor: number;
+    orderItemIds: string[];
+    /** No work of the order is left active. */
+    final: boolean;
   }>
 > {
   const db = deps.db ?? defaultDb;
@@ -538,10 +686,7 @@ export async function acceptCancellation(
         );
       }
       // artworks → order → attempt → refunds → cancellation
-      const items = await tx
-        .select({ artworkId: orderItems.artworkId })
-        .from(orderItems)
-        .where(eq(orderItems.orderId, head.orderId));
+      const items = await orderItemsWithState(tx, head.orderId);
       await lockArtworks(
         tx,
         items.map((i) => i.artworkId),
@@ -562,15 +707,39 @@ export async function acceptCancellation(
       if (c.status !== "RECEIVED") {
         throw new ConflictError("NOT_RECEIVED", `notice is ${c.status}`);
       }
+      // The works: the admin's choice, else the buyer's, else every active work.
+      const active = new Set(
+        (await activeOrderItems(tx, order.id)).map((i) => i.id),
+      );
+      const chosen = input.orderItemIds
+        ? [...new Set(input.orderItemIds)]
+        : (c.requestedItemIds ?? null);
+      if (input.orderItemIds) {
+        const stray = chosen?.find((id) => !active.has(id));
+        if (stray) {
+          throw new ConflictError(
+            "ITEM_NOT_ACTIVE",
+            "a chosen work is not an active work of this order",
+            { orderItemId: stray },
+          );
+        }
+      }
       const assessment = await assessFor(tx, c, order, {
         grantFourMonths: input.grantFourMonths,
+        orderItemIds: chosen,
       });
       if (!assessment) {
         throw new ConflictError("ORDER_NOT_PAID", "nothing was captured");
       }
+      if (assessment.items.length === 0) {
+        throw new ConflictError(
+          "NO_ITEMS",
+          "every work of this notice was already cancelled",
+        );
+      }
       const feeMinor = clampFee(input.feeMinor, assessment.suggestedFeeMinor);
-      const refundAmountMinor =
-        assessment.refundAmountMinor + assessment.suggestedFeeMinor - feeMinor;
+      const refundAmountMinor = cancellationRefund(assessment, feeMinor);
+      const orderItemIds = assessment.items.map((i) => i.id);
 
       const [shipment] = await tx
         .select()
@@ -583,9 +752,26 @@ export async function acceptCancellation(
           "resolve the pending label request first",
         );
       }
-      // WS3's hook: a parcel that has not left → CANCELLED (event row, audited, silent).
-      const shipped = await cancelShipmentForOrder(tx, order.id, ctx.actor);
+      // A work is cancelled once: the primary key on order_item_id refuses a second row.
+      await tx.insert(cancellationItems).values(
+        orderItemIds.map((orderItemId) => ({
+          orderItemId,
+          cancellationId: c.id,
+          orderId: order.id,
+        })),
+      );
+      // WS3's hooks: no work left → the parcel that has not left is CANCELLED; otherwise it is
+      // repacked for the remaining works (event row, audited, silent).
+      const shipped = assessment.final
+        ? await cancelShipmentForOrder(tx, order.id, ctx.actor)
+        : await removeItemsFromShipment(tx, order.id, ctx.actor);
       const notShipped = !shipped.shipped;
+      if (!notShipped) {
+        await tx
+          .update(cancellationItems)
+          .set({ returnStatus: "AWAITING_RETURN", updatedAt: now })
+          .where(eq(cancellationItems.cancellationId, c.id));
+      }
 
       let refundId: string | null = null;
       if (notShipped && refundAmountMinor > 0) {
@@ -616,6 +802,8 @@ export async function acceptCancellation(
           decisionReason: input.note?.trim() || null,
           feeMinor,
           refundAmountMinor,
+          itemsMinor: assessment.itemsMinor,
+          shippingRefundMinor: assessment.shippingRefundMinor,
           refundId,
           windowEndsAt: assessment.window.end,
           withinWindow: assessment.withinWindow,
@@ -625,6 +813,12 @@ export async function acceptCancellation(
         ctx.actor,
         { ipHash: ctx.ipHash },
       );
+      if (!assessment.final) {
+        // The remaining works ship: lift the block unless another notice is still open.
+        await releaseBlockIfClear(tx, order.id, now);
+      }
+      // Nothing to refund (or all settled) and no work left: the order is CANCELLED now.
+      await cancelOrderIfFullyCancelled(tx, order.id, ctx.actor, now);
 
       const buyerEmail = order.buyerEmail ?? c.email;
       if (!notShipped && buyerEmail) {
@@ -640,6 +834,8 @@ export async function acceptCancellation(
         returnRequired: !notShipped,
         feeMinor,
         refundAmountMinor,
+        orderItemIds,
+        final: assessment.final,
         pickup: shipped.pickupConfirmation
           ? { orderId: order.id, confirmation: shipped.pickupConfirmation }
           : null,
@@ -842,7 +1038,7 @@ export async function closeAsDuplicate(
   return withEffects({ closed: true as const }, { revalidate: true });
 }
 
-/** The returned work arrived at the studio. */
+/** The returned works (all of the notice's, one parcel) arrived at the studio. */
 export async function recordReturnReceived(
   ctx: AdminContext,
   cancellationId: string,
@@ -851,22 +1047,37 @@ export async function recordReturnReceived(
 ): Promise<ServiceResult<{ ok: true }>> {
   const db = deps.db ?? defaultDb;
   const now = deps.now ?? new Date();
-  const rows = await db
-    .update(cancellations)
-    .set({
-      returnStatus: "RECEIVED",
-      returnReceivedAt: now,
-      ...(input.tracking ? { returnTracking: input.tracking } : {}),
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(cancellations.id, cancellationId),
-        eq(cancellations.status, "ACCEPTED"),
-        eq(cancellations.returnStatus, "AWAITING_RETURN"),
-      ),
-    )
-    .returning({ id: cancellations.id });
+  const rows = await withTx(
+    async (tx) => {
+      const updated = await tx
+        .update(cancellations)
+        .set({
+          returnStatus: "RECEIVED",
+          returnReceivedAt: now,
+          ...(input.tracking ? { returnTracking: input.tracking } : {}),
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(cancellations.id, cancellationId),
+            eq(cancellations.status, "ACCEPTED"),
+            eq(cancellations.returnStatus, "AWAITING_RETURN"),
+          ),
+        )
+        .returning({ id: cancellations.id });
+      await tx
+        .update(cancellationItems)
+        .set({ returnStatus: "RECEIVED", updatedAt: now })
+        .where(
+          and(
+            eq(cancellationItems.cancellationId, cancellationId),
+            eq(cancellationItems.returnStatus, "AWAITING_RETURN"),
+          ),
+        );
+      return updated;
+    },
+    { db, name: "cancellation.return_received" },
+  );
   if (rows.length === 0) {
     throw new ConflictError("NOT_AWAITING_RETURN", "no return is expected");
   }
@@ -883,29 +1094,66 @@ export async function recordReturnReceived(
   return withEffects({ ok: true as const }, { revalidate: true });
 }
 
-/** Inspection result of a returned work. */
+/**
+ * Inspection of the returned works, per work: `damagedItemIds` names the damaged ones (order item
+ * ids of this notice); without it, `damaged` applies to every work. A damaged work is relisted as
+ * NOT_FOR_SALE, the others as AVAILABLE. The notice shows INSPECTED_DAMAGED when any work is.
+ */
 export async function recordInspection(
   ctx: AdminContext,
   cancellationId: string,
-  input: { damaged: boolean; notes?: string },
+  input: {
+    damaged: boolean;
+    damagedItemIds?: readonly string[];
+    notes?: string;
+  },
   deps: CancellationDeps = {},
 ): Promise<ServiceResult<{ ok: true }>> {
   const db = deps.db ?? defaultDb;
   const now = deps.now ?? new Date();
-  const rows = await db
-    .update(cancellations)
-    .set({
-      returnStatus: input.damaged ? "INSPECTED_DAMAGED" : "INSPECTED_OK",
-      inspectionNotes: input.notes?.trim() || null,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(cancellations.id, cancellationId),
-        eq(cancellations.returnStatus, "RECEIVED"),
-      ),
-    )
-    .returning({ id: cancellations.id });
+  const rows = await withTx(
+    async (tx) => {
+      const c = await lockCancellation(tx, cancellationId);
+      if (c.returnStatus !== "RECEIVED") return [];
+      const items = await tx
+        .select({ id: cancellationItems.orderItemId })
+        .from(cancellationItems)
+        .where(eq(cancellationItems.cancellationId, cancellationId));
+      const damaged = new Set(
+        input.damagedItemIds ?? (input.damaged ? items.map((i) => i.id) : []),
+      );
+      const stray = [...damaged].find((id) => !items.some((i) => i.id === id));
+      if (stray) {
+        throw new ConflictError(
+          "ITEM_NOT_IN_NOTICE",
+          "the damaged work is not part of this cancellation",
+          { orderItemId: stray },
+        );
+      }
+      for (const i of items) {
+        await tx
+          .update(cancellationItems)
+          .set({
+            returnStatus: damaged.has(i.id)
+              ? "INSPECTED_DAMAGED"
+              : "INSPECTED_OK",
+            updatedAt: now,
+          })
+          .where(eq(cancellationItems.orderItemId, i.id));
+      }
+      const anyDamaged = items.length > 0 ? damaged.size > 0 : input.damaged;
+      return tx
+        .update(cancellations)
+        .set({
+          returnStatus: anyDamaged ? "INSPECTED_DAMAGED" : "INSPECTED_OK",
+          inspectionNotes: input.notes?.trim() || null,
+          updatedAt: now,
+        })
+        .where(eq(cancellations.id, cancellationId))
+        .returning({ id: cancellations.id });
+    },
+    { db, name: "cancellation.inspect" },
+  );
   if (rows.length === 0) {
     throw new ConflictError("NOT_RECEIVED_BACK", "the work is not back yet");
   }
@@ -916,7 +1164,10 @@ export async function recordInspection(
       action: "cancellation.inspected",
       entity: "cancellation",
       entityId: cancellationId,
-      after: { damaged: input.damaged },
+      after: {
+        damaged: input.damaged,
+        damagedItemIds: input.damagedItemIds ?? null,
+      },
     },
     db,
   );
@@ -984,16 +1235,23 @@ async function refundSettled(tx: DbOrTx, c: Cancellation): Promise<boolean> {
 }
 
 /**
- * Relist (INSPECTED_OK / NOT_APPLICABLE) or mark damaged (INSPECTED_DAMAGED) after a closed
- * online-sale cancellation (spec §3.6, §5.9): the order is CANCELLED, the refund settled; the sale
- * is voided and the work goes SOLD → AVAILABLE (or NOT_FOR_SALE). Artworks are locked first.
+ * Relist (INSPECTED_OK / NOT_APPLICABLE) or mark damaged (INSPECTED_DAMAGED) the works of an
+ * accepted online-sale cancellation once its refund settled and the return is final (spec §3.6,
+ * §5.9): only this notice's works — their sales are voided and each goes SOLD → AVAILABLE (or
+ * NOT_FOR_SALE when that work was inspected damaged). The order's other works stay sold. Artworks
+ * are locked first.
  */
 export async function relistAfterCancellation(
   ctx: AdminContext,
   cancellationId: string,
   deps: CancellationDeps = {},
 ): Promise<
-  ServiceResult<{ artworkIds: string[]; to: "AVAILABLE" | "NOT_FOR_SALE" }>
+  ServiceResult<{
+    artworkIds: string[];
+    /** One outcome for every work, or MIXED. */
+    to: "AVAILABLE" | "NOT_FOR_SALE" | "MIXED";
+    outcomes: { artworkId: string; to: "AVAILABLE" | "NOT_FOR_SALE" }[];
+  }>
 > {
   const db = deps.db ?? defaultDb;
   const now = deps.now ?? new Date();
@@ -1005,20 +1263,13 @@ export async function relistAfterCancellation(
         .where(eq(cancellations.id, cancellationId));
       if (!head?.orderId)
         throw new NotFoundError("cancellation", cancellationId);
-      const items = await tx
-        .select({ artworkId: orderItems.artworkId })
-        .from(orderItems)
-        .where(eq(orderItems.orderId, head.orderId));
-      const ids = items.map((i) => i.artworkId);
-      await lockArtworks(tx, ids);
+      const items = await itemsOfCancellation(tx, cancellationId);
+      await lockArtworks(
+        tx,
+        items.map((i) => i.artworkId),
+      );
       const order = await lockOrder(tx, head.orderId);
       const c = await lockCancellation(tx, cancellationId);
-      if (order.status !== "CANCELLED") {
-        throw new ConflictError(
-          "ORDER_NOT_CANCELLED",
-          `order is ${order.status}`,
-        );
-      }
       if (c.status !== "ACCEPTED" && c.status !== "CLOSED") {
         throw new ConflictError("NOT_ACCEPTED", `notice is ${c.status}`);
       }
@@ -1031,8 +1282,14 @@ export async function relistAfterCancellation(
       if (!(RETURN_FINAL as readonly string[]).includes(c.returnStatus)) {
         throw new ConflictError("RETURN_OPEN", `return is ${c.returnStatus}`);
       }
-      const to =
-        c.returnStatus === "INSPECTED_DAMAGED" ? "NOT_FOR_SALE" : "AVAILABLE";
+      const toOf = new Map(
+        items.map((i) => [
+          i.id,
+          i.cancellation?.returnStatus === "INSPECTED_DAMAGED"
+            ? ("NOT_FOR_SALE" as const)
+            : ("AVAILABLE" as const),
+        ]),
+      );
       const voided = await tx
         .update(sales)
         .set({
@@ -1044,12 +1301,22 @@ export async function relistAfterCancellation(
           and(
             eq(sales.orderId, order.id),
             isNull(sales.voidedAt),
-            inArray(sales.artworkId, ids),
+            inArray(
+              sales.orderItemId,
+              items.map((i) => i.id),
+            ),
           ),
         )
-        .returning({ artworkId: sales.artworkId });
-      const moved: string[] = [];
+        .returning({
+          artworkId: sales.artworkId,
+          orderItemId: sales.orderItemId,
+        });
+      const outcomes: {
+        artworkId: string;
+        to: "AVAILABLE" | "NOT_FOR_SALE";
+      }[] = [];
       for (const v of voided) {
+        const to = toOf.get(v.orderItemId ?? "") ?? "AVAILABLE";
         await transition(
           tx,
           "artwork",
@@ -1063,15 +1330,23 @@ export async function relistAfterCancellation(
             action: to === "AVAILABLE" ? "artwork.relisted" : "artwork.damaged",
           },
         );
-        moved.push(v.artworkId);
+        outcomes.push({ artworkId: v.artworkId, to });
       }
-      if (moved.length === 0) {
+      if (outcomes.length === 0) {
         throw new ConflictError(
           "NOTHING_TO_RELIST",
-          "no active sale for this order",
+          "no active sale for this notice's works",
         );
       }
-      return { artworkIds: moved, to: to as "AVAILABLE" | "NOT_FOR_SALE" };
+      const kinds = new Set(outcomes.map((o) => o.to));
+      return {
+        artworkIds: outcomes.map((o) => o.artworkId),
+        to:
+          kinds.size === 1
+            ? (outcomes[0]?.to ?? "AVAILABLE")
+            : ("MIXED" as const),
+        outcomes,
+      };
     },
     { db, name: "cancellation.relist" },
   );
@@ -1093,6 +1368,10 @@ export interface CancellationListItem {
   receivedAt: Date;
   refundDueAt: Date | null;
   possibleDuplicate: boolean;
+  /** Works of this notice (covered once accepted, else requested); null = the whole order. */
+  itemCount: number | null;
+  /** Works in the order (0 when unmatched). */
+  orderItemCount: number;
 }
 
 /** `•••••••12` from the stored last 3 characters (the full number is never decrypted for display). */
@@ -1120,6 +1399,8 @@ export async function listCancellations(
     .select({
       c: cancellations,
       orderNumber: orders.number,
+      covered: sql<number>`(SELECT count(*)::int FROM cancellation_items ci WHERE ci.cancellation_id = ${cancellations.id})`,
+      orderItemCount: sql<number>`(SELECT count(*)::int FROM order_items oi WHERE oi.order_id = ${cancellations.orderId})`,
     })
     .from(cancellations)
     .leftJoin(orders, eq(orders.id, cancellations.orderId))
@@ -1130,7 +1411,7 @@ export async function listCancellations(
       asc(cancellations.receivedAt),
     )
     .limit(opts.limit ?? 200);
-  return rows.map(({ c, orderNumber }) => ({
+  return rows.map(({ c, orderNumber, covered, orderItemCount }) => ({
     id: c.id,
     number: c.number,
     status: c.status,
@@ -1143,6 +1424,9 @@ export async function listCancellations(
     receivedAt: c.receivedAt,
     refundDueAt: c.refundDueAt,
     possibleDuplicate: c.possibleDuplicate,
+    itemCount:
+      covered > 0 ? covered : (c.requestedItemIds?.length ?? null) || null,
+    orderItemCount,
   }));
 }
 
@@ -1161,7 +1445,44 @@ export interface CancellationDetail {
   } | null;
   shipmentStatus: ShipmentStatus | null;
   assessment: Awaited<ReturnType<typeof assessFor>>;
-  artworks: { id: string; title: string; saleStatus: string }[];
+  /** Every work of the order, with this notice's choice and any cancellation that covers it. */
+  items: CancellationItemView[];
+  /** Inputs of the accept form's live amount preview (open notices on a paid order). */
+  preview: AcceptPreview | null;
+}
+
+export interface CancellationItemView {
+  orderItemId: string;
+  artworkId: string;
+  titleHe: string;
+  titleEn: string;
+  priceMinor: number;
+  saleStatus: string;
+  /** Named by this notice: covered by it once accepted; requested (or the whole order) before. */
+  inNotice: boolean;
+  /** The accepted cancellation that covers the work (this notice or another). */
+  cancelledBy: { id: string; number: string } | null;
+  /** The work's return and inspection, when this notice covers it. */
+  returnStatus: Cancellation["returnStatus"] | null;
+}
+
+/**
+ * What the accept form needs to recompute the amounts for any choice of works (pure helpers
+ * `cancellationBase`, `changeOfMindFee`, `cancellationRefund` on the client).
+ */
+export interface AcceptPreview {
+  currency: Order["currency"];
+  paidMinor: number;
+  alreadyRefundedMinor: number;
+  orderItemsMinor: number;
+  activeItemIds: string[];
+  fee: {
+    regime: "IL" | "EU";
+    reason: NonNullable<Cancellation["reason"]>;
+    policy: "STATUTORY_MAX" | "NONE";
+    ilsPerUsd: number | null;
+    alreadyWithheldMinor: number;
+  };
 }
 
 export async function getCancellationDetail(
@@ -1214,11 +1535,60 @@ export async function getCancellationDetail(
         .from(shipments)
         .where(eq(shipments.orderId, order.id))
     : [];
-  const artworkRows = order
-    ? await db.execute<{ id: string; title: string; sale_status: string }>(
-        sql`SELECT a.id, a.title_he AS title, a.sale_status FROM order_items oi JOIN artworks a ON a.id = oi.artwork_id WHERE oi.order_id = ${order.id} ORDER BY oi.created_at`,
+  const stateRows = order ? await orderItemsWithState(db, order.id) : [];
+  const saleRows = order
+    ? await db.execute<{ id: string; sale_status: string }>(
+        sql`SELECT a.id, a.sale_status FROM order_items oi JOIN artworks a ON a.id = oi.artwork_id WHERE oi.order_id = ${order.id}`,
       )
     : { rows: [] };
+  const saleOf = new Map(saleRows.rows.map((r) => [r.id, r.sale_status]));
+  const requested = c.requestedItemIds ? new Set(c.requestedItemIds) : null;
+  const items: CancellationItemView[] = stateRows.map((i) => {
+    const mine = i.cancellation?.id === c.id;
+    return {
+      orderItemId: i.id,
+      artworkId: i.artworkId,
+      titleHe: i.titleHe,
+      titleEn: i.titleEn,
+      priceMinor: i.priceMinor,
+      saleStatus: saleOf.get(i.artworkId) ?? "",
+      inNotice:
+        c.status === "ACCEPTED" || c.status === "CLOSED"
+          ? mine
+          : i.cancellation === null && (!requested || requested.has(i.id)),
+      cancelledBy: i.cancellation
+        ? { id: i.cancellation.id, number: i.cancellation.number }
+        : null,
+      returnStatus: mine ? (i.cancellation?.returnStatus ?? null) : null,
+    };
+  });
+  const assessment =
+    order && c.status === "RECEIVED"
+      ? await assessFor(db, c, order, {
+          grantFourMonths: c.eligibleGroup !== "NONE",
+          orderItemIds: c.requestedItemIds,
+        })
+      : null;
+  const policy = await getSetting("cancellation_policy", db);
+  const preview: AcceptPreview | null =
+    order && assessment
+      ? {
+          currency: order.currency,
+          paidMinor: assessment.paidMinor,
+          alreadyRefundedMinor: assessment.alreadyRefundedMinor,
+          orderItemsMinor: stateRows.reduce((s, i) => s + i.priceMinor, 0),
+          activeItemIds: stateRows
+            .filter((i) => i.cancellation === null)
+            .map((i) => i.id),
+          fee: {
+            regime: regimeFor(order.shipCountry) ?? c.regime,
+            reason: c.reason ?? "OTHER",
+            policy: policy.changeOfMindFee,
+            ilsPerUsd: order.fxIlsPerUnit ? Number(order.fxIlsPerUnit) : null,
+            alreadyWithheldMinor: assessment.feesWithheldMinor,
+          },
+        }
+      : null;
   return {
     cancellation: c,
     idNumberMasked: maskedFromLast3(c.idNumberLast3),
@@ -1227,18 +1597,44 @@ export async function getCancellationDetail(
     related,
     refund: refund ?? null,
     shipmentStatus: shipment?.status ?? null,
-    assessment:
-      order && c.status === "RECEIVED"
-        ? await assessFor(db, c, order, {
-            grantFourMonths: c.eligibleGroup !== "NONE",
-          })
-        : null,
-    artworks: artworkRows.rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      saleStatus: r.sale_status,
-    })),
+    assessment,
+    items,
+    preview,
   };
+}
+
+/**
+ * The buyer's review step (public `/cancel`): when the notice names an order number and the name
+ * or email matches that order (the auto-match rule), the works still active, so the buyer can
+ * choose which to cancel. Empty for an order with a single work, or when nothing matches. Read only.
+ */
+export async function previewCancellableItems(
+  notice: Pick<CancellationNotice, "orderNumber" | "email" | "fullName">,
+  locale: Locale,
+  db: DbOrTx = defaultDb,
+): Promise<{ id: string; title: string }[]> {
+  if (!notice.orderNumber) return [];
+  const [order] = await db
+    .select()
+    .from(orders)
+    .where(eq(orders.number, notice.orderNumber));
+  if (!order || (order.status !== "PAID" && order.status !== "COMPLETED")) {
+    return [];
+  }
+  if (
+    !identityMatches(
+      { email: notice.email ?? null, fullName: notice.fullName },
+      order,
+    )
+  ) {
+    return [];
+  }
+  const active = await activeOrderItems(db, order.id);
+  if (active.length < 2) return [];
+  return active.map((i) => ({
+    id: i.id,
+    title: locale === "he" ? i.titleHe : i.titleEn,
+  }));
 }
 
 /** Open notices whose refund deadline is near or past (daily alerts, dashboard). */

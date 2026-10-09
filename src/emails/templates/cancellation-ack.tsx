@@ -63,6 +63,9 @@ export const cancellationAck: EmailTemplate<Props> = {
                     },
                   ]
                 : []),
+              ...(p.works?.length
+                ? [{ label: t("labels.works"), value: p.works.join(" · ") }]
+                : []),
               { label: t("labels.channel"), value: t(`channel.${p.channel}`) },
               { label: t("labels.receivedAt"), value: received },
               { label: t("labels.refundDueAt"), value: due },

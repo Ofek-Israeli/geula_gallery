@@ -40,7 +40,8 @@
     "insurance": "Insurance",
     "total": "Total",
     "method": "Delivery",
-    "destination": "Destination"
+    "destination": "Destination",
+    "cancelled": "Cancelled ({number})"
   },
   "paid": {
     "title": "Your order is confirmed",

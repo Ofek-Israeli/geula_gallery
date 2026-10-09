@@ -333,7 +333,17 @@ export default async function OrderPage({
         <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
           {view.items.map((i) => (
             <div key={i.artworkId} className="contents">
-              <dt>{i.title}</dt>
+              <dt>
+                {i.title}
+                {i.cancelledBy ? (
+                  <span
+                    className="ms-2 text-sm text-ink-muted"
+                    data-testid="item-cancelled"
+                  >
+                    {t("summary.cancelled", { number: i.cancelledBy })}
+                  </span>
+                ) : null}
+              </dt>
               <dd>
                 <Price
                   amountMinor={i.priceMinor}

@@ -4,7 +4,8 @@
  * - `testAdmin()`: an `AdminContext` for services that require one (integration tests only).
  * - `validIsraeliId()`: a random 9-digit ID with a correct check digit (never a real person's;
  *   generated per run, never committed).
- * - `paidTestOrder()`: a real WEB purchase driven through checkout → mock pay → finalize.
+ * - `paidTestOrder()`: a real WEB purchase driven through checkout → mock pay → finalize;
+ *   `paidCartTestOrder()` the same for several works in one order.
  * - `notice()`: a cancellation notice as the public form would submit it.
  *
  * App modules are imported lazily so Playwright specs can import `validIsraeliId` safely.
@@ -63,6 +64,57 @@ export async function paidTestOrder(
     .where(eq(schema.orders.id, h.orderId));
   if (!order) throw new Error("paidTestOrder: order");
   return { order, artwork: art, attemptId: h.attemptId, input: h.input };
+}
+
+/**
+ * A paid cart order (several works, one per price, IL pickup by default) through checkout → mock
+ * pay → finalize. `items` are the order items in the same order as `prices`.
+ */
+export async function paidCartTestOrder(
+  prices: readonly number[] = [100_000, 200_000, 300_000],
+  opts: CheckoutOptions = {},
+) {
+  const [{ db }, schema, { eq }, commerce, { finalizeAttempt }] =
+    await Promise.all([
+      import("@/server/db/client"),
+      import("@/server/db/schema"),
+      import("drizzle-orm"),
+      import("./commerce"),
+      import("@/server/payments/finalize"),
+    ]);
+  const artworks = [];
+  for (const p of prices) {
+    artworks.push(
+      await commerce.buyableArtwork(db, {
+        priceIlsMinor: p,
+        priceUsdMinor: Math.round(p / 4),
+      }),
+    );
+  }
+  const h = await commerce.heldCartOrder(
+    artworks.map((a) => a.id),
+    opts,
+  );
+  await commerce.clickMockPay(h.ref, "pay");
+  const { result } = await finalizeAttempt(h.attemptId, { trigger: "return" });
+  if (result.outcome !== "paid") {
+    throw new Error(`paidCartTestOrder: finalize → ${result.outcome}`);
+  }
+  const [order] = await db
+    .select()
+    .from(schema.orders)
+    .where(eq(schema.orders.id, h.orderId));
+  if (!order) throw new Error("paidCartTestOrder: order");
+  const rows = await db
+    .select()
+    .from(schema.orderItems)
+    .where(eq(schema.orderItems.orderId, order.id));
+  const items = artworks.map((a) => {
+    const item = rows.find((r) => r.artworkId === a.id);
+    if (!item) throw new Error("paidCartTestOrder: item");
+    return item;
+  });
+  return { order, artworks, items, attemptId: h.attemptId };
 }
 
 /** A notice as the public form submits it (validated shape). */

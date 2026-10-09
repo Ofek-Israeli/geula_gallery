@@ -16,6 +16,7 @@ import {
 } from "@/server/db/schema";
 import type { AdminContext } from "@/server/domain/admin";
 import { env as defaultEnv, type Env } from "@/server/env";
+import { orderItemsWithState } from "@/server/orders/items";
 import { orderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import {
@@ -78,7 +79,10 @@ export interface FulfillmentView {
   international: boolean;
   addressLines: string[];
   buyerToken: string;
+  /** The works in the parcel (cancelled works excluded). */
   items: FulfillmentItem[];
+  /** Works of the order cancelled by the buyer (not in the parcel). */
+  removed: { title: string; cancellationNumber: string }[];
   shipment: Shipment;
   events: ShipmentEvent[];
   cancellations: { number: string; status: string; receivedAt: Date }[];
@@ -131,7 +135,7 @@ export async function getFulfillment(
     .where(eq(shipments.orderId, order.id));
   if (!shipment) return null;
 
-  const [rows, events, notices, profile, shipping, checkout] =
+  const [all, events, notices, profile, shipping, checkout, states] =
     await Promise.all([
       db
         .select({ item: orderItems, art: artworks })
@@ -163,7 +167,20 @@ export async function getFulfillment(
       getSetting("business_profile", db),
       getSetting("shipping", db),
       getSetting("checkout", db),
+      orderItemsWithState(db, order.id),
     ]);
+  const cancelledBy = new Map(
+    states.flatMap((s) =>
+      s.cancellation ? [[s.id, s.cancellation.number] as const] : [],
+    ),
+  );
+  const rows = all.filter(({ item }) => !cancelledBy.has(item.id));
+  const removed = all
+    .filter(({ item }) => cancelledBy.has(item.id))
+    .map(({ item }) => ({
+      title: locale === "he" ? item.titleHe : item.titleEn,
+      cancellationNumber: cancelledBy.get(item.id) ?? "",
+    }));
 
   const specs = rows.map(
     ({ art: a }): ArtworkShipSpec => ({
@@ -204,7 +221,7 @@ export async function getFulfillment(
   }));
 
   const statuses = notices.map((n) => n.status);
-  const block = fulfillmentBlock(order, shipment, statuses);
+  const block = fulfillmentBlock(order, shipment, statuses, rows.length);
   const saved = ((
     shipment.checklist as { items?: Record<string, boolean> } | null
   )?.items ?? {}) as Record<string, boolean>;
@@ -249,6 +266,7 @@ export async function getFulfillment(
     ].filter((l): l is string => !!l),
     buyerToken: orderAccessToken(order.id, order.accessVersion),
     items,
+    removed,
     shipment,
     events,
     cancellations: notices,
@@ -275,7 +293,9 @@ export async function getFulfillment(
           yearCreated: first?.yearCreated ?? null,
           artistName: profile.artistName.en,
         }),
-      declaredValueMinor: shipment.declaredValueMinor ?? order.itemsTotalMinor,
+      declaredValueMinor:
+        shipment.declaredValueMinor ??
+        rows.reduce((s, r) => s + r.item.priceMinor, 0),
       insuredValueMinor: shipment.insuredValueMinor ?? 0,
     },
     exportThresholdUsd: shipping.thresholds.exportDeclarationUsd,

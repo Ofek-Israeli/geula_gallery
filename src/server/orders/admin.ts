@@ -13,7 +13,6 @@ import {
   auditLog,
   emailMessages,
   type Order,
-  orderItems,
   orders,
   type PaymentAttempt,
   paymentAttempts,
@@ -30,6 +29,10 @@ import { type ServiceResult, withEffects } from "@/server/domain/effects";
 import { ConflictError, NotFoundError } from "@/server/domain/errors";
 import type { OrderStatus, RefundStatus } from "@/server/domain/state-machines";
 import { transition } from "@/server/domain/transition";
+import {
+  type OrderItemState,
+  orderItemsWithState,
+} from "@/server/orders/items";
 import { enqueue } from "@/server/outbox/enqueue";
 import { dedupeKeys } from "@/server/outbox/types";
 import {
@@ -133,7 +136,8 @@ export interface AdminOrderDetail {
   order: Order;
   /** Buyer order page token, for "open as buyer" and the buyer printables. */
   buyerToken: string;
-  items: (typeof orderItems.$inferSelect)[];
+  /** Every work, with the accepted cancellation that covers it (if any). */
+  items: OrderItemState[];
   attempts: PaymentAttempt[];
   refunds: Refund[];
   taxDocuments: TaxDocument[];
@@ -171,11 +175,7 @@ export async function getAdminOrder(
   const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
   if (!order) return null;
   const [items, attempts, refundRows, docs, [shipment], emails, alerts] = [
-    await db
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, order.id))
-      .orderBy(asc(orderItems.createdAt)),
+    await orderItemsWithState(db, order.id),
     await db
       .select()
       .from(paymentAttempts)

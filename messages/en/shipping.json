@@ -90,7 +90,8 @@
       "packaging": "Packaging: {type}",
       "suggested": "Suggested parcel: {l}×{w}×{h} cm, {kg} kg",
       "rollable": "Can be rolled",
-      "coa": "With a certificate of authenticity"
+      "coa": "With a certificate of authenticity",
+      "removed": "Cancelled by the buyer – not in this parcel:"
     },
     "pack": {
       "title": "1. Pack",

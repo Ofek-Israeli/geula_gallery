@@ -104,6 +104,17 @@ export default async function AdminCancellationsPage({
                           <Badge>{t("duplicateBadge")}</Badge>
                         </span>
                       ) : null}
+                      {r.itemCount !== null &&
+                      r.itemCount < r.orderItemCount ? (
+                        <span className="ms-2" data-testid="partial-badge">
+                          <Badge>
+                            {t("partialBadge", {
+                              n: r.itemCount,
+                              m: r.orderItemCount,
+                            })}
+                          </Badge>
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-2 py-2">{r.fullName}</td>
                     <td className="px-2 py-2">

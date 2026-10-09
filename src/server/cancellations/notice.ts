@@ -24,7 +24,8 @@ import { appKey } from "@/server/security/keys";
  * Required: full name, plus the ID/passport number **or** the order number. Everything else is
  * optional. The ID never travels in a URL: the form is a POST, and the review payload that carries
  * it between the two steps is AES-256-GCM sealed (confidential and authenticated) with a dedicated
- * HKDF key (`cancel-review`) and expires after two hours.
+ * HKDF key (`cancel-review`) and expires after two hours. Version 2 of the payload also carries the
+ * works the review step offered (order item ids and titles), so the confirm step accepts only those.
  */
 export const CANCELLATION_REASONS = [
   "CHANGE_OF_MIND",
@@ -116,16 +117,27 @@ export function displayNotice(n: CancellationNotice): NoticeDisplay {
 export const REVIEW_TTL_SECONDS = 2 * 60 * 60;
 const REVIEW_AAD = "cancellation-review:v1";
 
+/** A work offered on the review step (an active order item of the matched order). */
+export interface ReviewItem {
+  id: string;
+  title: string;
+}
+
 interface SealedBody {
-  v: 1;
+  v: 2;
   exp: number;
   locale: Locale;
   notice: CancellationNotice;
+  items: ReviewItem[];
 }
 
 const sealedBodySchema = z.object({
-  v: z.literal(1),
+  v: z.union([z.literal(1), z.literal(2)]),
   exp: z.number().int(),
+  items: z
+    .array(z.object({ id: z.uuid(), title: z.string().max(300) }))
+    .max(50)
+    .default([]),
   locale: localeSchema,
   notice: z.object({
     fullName: z.string().min(1).max(120),
@@ -145,17 +157,19 @@ const sealedBodySchema = z.object({
   }),
 });
 
-/** Seals the validated notice for the hidden field of the review step. */
+/** Seals the validated notice (and the works offered) for the hidden field of the review step. */
 export function sealReview(
   notice: CancellationNotice,
   locale: Locale,
   now: Date = new Date(),
+  items: readonly ReviewItem[] = [],
 ): string {
   const body: SealedBody = {
-    v: 1,
+    v: 2,
     exp: Math.floor(now.getTime() / 1000) + REVIEW_TTL_SECONDS,
     locale,
     notice,
+    items: [...items],
   };
   return encryptAesGcm(
     appKey("cancel-review"),
@@ -164,11 +178,11 @@ export function sealReview(
   );
 }
 
-/** Opens a sealed review payload; null when forged, tampered with or expired. */
+/** Opens a sealed review payload (v1 or v2); null when forged, tampered with or expired. */
 export function openReview(
   token: string | null | undefined,
   now: Date = new Date(),
-): { notice: CancellationNotice; locale: Locale } | null {
+): { notice: CancellationNotice; locale: Locale; items: ReviewItem[] } | null {
   if (!token || token.length > 8192) return null;
   try {
     const raw = JSON.parse(
@@ -176,7 +190,11 @@ export function openReview(
     );
     const body = sealedBodySchema.parse(raw);
     if (body.exp < Math.floor(now.getTime() / 1000)) return null;
-    return { notice: body.notice as CancellationNotice, locale: body.locale };
+    return {
+      notice: body.notice as CancellationNotice,
+      locale: body.locale,
+      items: body.items,
+    };
   } catch {
     return null;
   }

@@ -95,6 +95,19 @@ describe("state machines (spec §3.6)", () => {
       true,
     );
     expect(canTransition("shipment", "PACKED", "OUT_FOR_DELIVERY")).toBe(true);
+    // A partial cancellation before dispatch: the remaining works are packed again.
+    for (const from of [
+      "PACKED",
+      "LABEL_CREATED",
+      "PICKUP_SCHEDULED",
+    ] as const) {
+      expect(canTransition("shipment", from, "AWAITING_FULFILLMENT")).toBe(
+        true,
+      );
+    }
+    expect(
+      canTransition("shipment", "IN_TRANSIT", "AWAITING_FULFILLMENT"),
+    ).toBe(false);
     expect([...shipmentMachine.final].sort()).toEqual(
       ["CANCELLED", "COLLECTED", "DELIVERED", "RETURNED"].sort(),
     );

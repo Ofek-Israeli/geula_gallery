@@ -230,22 +230,31 @@ export const shipmentMachine = machine<ShipmentStatus>(
   {
     AWAITING_FULFILLMENT: ["PACKED", "READY_FOR_PICKUP", "CANCELLED"],
     // Carrier label, manual carrier (LABEL_CREATED / IN_TRANSIT), artist delivery (OUT_FOR_DELIVERY).
+    // AWAITING_FULFILLMENT from PACKED / LABEL_CREATED / PICKUP_SCHEDULED: a work of the parcel was
+    // cancelled before dispatch, so the rest is packed again (the unused label is discarded).
     PACKED: [
       "LABEL_REQUESTED",
       "LABEL_CREATED",
       "IN_TRANSIT",
       "OUT_FOR_DELIVERY",
+      "AWAITING_FULFILLMENT",
       "CANCELLED",
     ],
     // Claim protocol (spec §5.5): back to PACKED on a clear refusal; LABEL_UNKNOWN on a timeout.
     LABEL_REQUESTED: ["LABEL_CREATED", "PACKED", "LABEL_UNKNOWN"],
     // LABEL_REQUESTED again only after the admin confirms no label exists.
     LABEL_UNKNOWN: ["LABEL_CREATED", "LABEL_REQUESTED"],
-    LABEL_CREATED: [...forwardFrom("LABEL_CREATED"), "EXCEPTION", "CANCELLED"],
+    LABEL_CREATED: [
+      ...forwardFrom("LABEL_CREATED"),
+      "EXCEPTION",
+      "AWAITING_FULFILLMENT",
+      "CANCELLED",
+    ],
     PICKUP_SCHEDULED: [
       ...forwardFrom("PICKUP_SCHEDULED"),
       "LABEL_CREATED",
       "EXCEPTION",
+      "AWAITING_FULFILLMENT",
       "CANCELLED",
     ],
     IN_TRANSIT: [...forwardFrom("IN_TRANSIT"), "EXCEPTION"],

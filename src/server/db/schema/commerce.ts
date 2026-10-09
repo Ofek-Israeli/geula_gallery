@@ -198,6 +198,8 @@ export const orderItems = pgTable(
   },
   (t) => [
     unique("order_items_order_artwork_uq").on(t.orderId, t.artworkId),
+    // Target of `cancellation_items`' composite foreign key (the item stays in its order).
+    unique("order_items_id_order_uq").on(t.id, t.orderId),
     check(
       "order_items_amounts",
       sql`${t.priceMinor} >= 0 AND (${t.declaredValueMinor} IS NULL OR ${t.declaredValueMinor} >= 0)`,

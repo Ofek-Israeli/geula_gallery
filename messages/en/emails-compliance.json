@@ -24,7 +24,8 @@
     "refundDueAt": "Refund due by",
     "reason": "Reason",
     "message": "Message",
-    "eligibleGroup": "Eligibility declared"
+    "eligibleGroup": "Eligibility declared",
+    "works": "Works to cancel"
   },
   "channel": {
     "WEB": "Online form",
@@ -73,7 +74,8 @@
     "packTitle": "Packing",
     "pack": "Please pack the work in its original packaging or similar protective packaging, with nothing touching the paint surface, and send it with tracking. Reply to this email with the tracking number.",
     "refund": "Refund amount: {amount}. The refund goes back to the original payment method.",
-    "contact": "Reply to this email to arrange a collection or with any question."
+    "contact": "Reply to this email to arrange a collection or with any question.",
+    "worksTitle": "The works to send back"
   },
   "adminAlert": {
     "subject": "[{severity}] Alert: {kind}",

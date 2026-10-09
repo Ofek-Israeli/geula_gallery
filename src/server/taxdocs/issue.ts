@@ -5,6 +5,7 @@ import type { Locale } from "@/lib/locale";
 import { raiseAlert } from "@/server/alerts/service";
 import { type Db, db as defaultDb, type Tx } from "@/server/db/client";
 import {
+  cancellations,
   orderItems,
   orders,
   outboxJobs,
@@ -31,6 +32,7 @@ import {
   ProviderRejectedError,
 } from "@/server/integrations/http";
 import { log } from "@/server/log";
+import { itemsOfCancellation } from "@/server/orders/items";
 import { enqueueEmail } from "@/server/outbox/enqueue";
 import { dedupeKeys } from "@/server/outbox/types";
 import type { GatewayDocumentSpec } from "@/server/payments/types";
@@ -106,9 +108,43 @@ function ctxOf(deps: TaxDocDeps): Ctx {
 }
 
 const LINE_TEXT = {
-  he: { shipping: "משלוח", insurance: "ביטוח משלוח", order: "הזמנה" },
-  en: { shipping: "Shipping", insurance: "Shipping insurance", order: "Order" },
+  he: {
+    shipping: "משלוח",
+    insurance: "ביטוח משלוח",
+    order: "הזמנה",
+    cancellation: "ביטול עסקה",
+  },
+  en: {
+    shipping: "Shipping",
+    insurance: "Shipping insurance",
+    order: "Order",
+    cancellation: "Cancellation",
+  },
 } as const;
+
+/** The credit note's text (provider remarks / line): a cancellation names its number and works. */
+const CREDIT_NOTE_TEXT_MAX = 250;
+
+async function creditNoteText(
+  c: Ctx,
+  refund: { reason: string; cancellationId: string | null },
+  locale: Locale,
+): Promise<string> {
+  if (!refund.cancellationId) return refund.reason;
+  const [notice] = await c.db
+    .select({ number: cancellations.number })
+    .from(cancellations)
+    .where(eq(cancellations.id, refund.cancellationId));
+  if (!notice) return refund.reason;
+  const works = await itemsOfCancellation(c.db, refund.cancellationId);
+  const titles = works.map((w) => (locale === "he" ? w.titleHe : w.titleEn));
+  const text = `${LINE_TEXT[locale].cancellation} ${notice.number}${
+    titles.length > 0 ? `: ${titles.join(", ")}` : ""
+  }`;
+  return text.length > CREDIT_NOTE_TEXT_MAX
+    ? `${text.slice(0, CREDIT_NOTE_TEXT_MAX - 1)}…`
+    : text;
+}
 
 function paymentTypeOf(a: PaymentAttempt): TaxPaymentType {
   if (a.provider === "PAYPAL") return "paypal";
@@ -498,6 +534,7 @@ export async function issueCreditNoteForRefund(
     return withEffects({ kind: "needs_manual", taxDocumentId: row.id });
   }
   const original = receipt?.providerDocId;
+  const reasonText = await creditNoteText(c, refund, order.locale);
   return runDocument(c, row, {
     issue: async (r) => {
       if (!original) {
@@ -512,7 +549,7 @@ export async function issueCreditNoteForRefund(
         amountMinor: refund.amountMinor,
         currency: refund.currency,
         language: order.locale,
-        reason: refund.reason,
+        reason: reasonText,
       });
     },
   });

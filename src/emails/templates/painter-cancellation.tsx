@@ -73,6 +73,9 @@ export const painterCancellation: EmailTemplate<Props> = {
                   },
                 ]
               : []),
+            ...(p.works?.length
+              ? [{ label: t("labels.works"), value: p.works.join(" · ") }]
+              : []),
             { label: t("labels.receivedAt"), value: received },
           ]}
         />

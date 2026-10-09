@@ -22,6 +22,13 @@ import { type DbOrTx, db as defaultDb } from "@/server/db/client";
  * 7. `paid_order_items_sold`: every item of a PAID/COMPLETED order has exactly one sale row
  *    (voided rows included: a cancellation voids, never deletes), and the sales add up to the
  *    order's items total (a cart order sells all of its works or none).
+ * 8. `cancellation_items_match_amounts`: an accepted cancellation's `items_minor` is the sum of the
+ *    prices of the works it covers.
+ * 9. `active_item_has_sale`: every work of a PAID/COMPLETED order that no cancellation covers has
+ *    an unvoided sale (only a cancelled work is ever relisted).
+ * 10. `cancellation_void_has_item`: a sale voided by a cancellation belongs to a work that
+ *    cancellation covers.
+ * 11. `order_cancellation_state`: an order CANCELLED by the buyer has every work cancelled.
  */
 export const INVARIANT_CHECKS = [
   "sold_has_one_sale",
@@ -31,12 +38,22 @@ export const INVARIANT_CHECKS = [
   "captured_attempt_has_receipt",
   "settled_refund_has_credit_note",
   "paid_order_items_sold",
+  "cancellation_items_match_amounts",
+  "active_item_has_sale",
+  "cancellation_void_has_item",
+  "order_cancellation_state",
 ] as const;
 export type InvariantCheck = (typeof INVARIANT_CHECKS)[number];
 
 export interface InvariantViolation {
   check: InvariantCheck;
-  entity: "artwork" | "order" | "payment_attempt" | "refund";
+  entity:
+    | "artwork"
+    | "order"
+    | "payment_attempt"
+    | "refund"
+    | "cancellation"
+    | "sale";
   id: string;
 }
 
@@ -164,6 +181,63 @@ export async function checkInvariants(
                OR (SELECT coalesce(sum(s.price_minor), 0) FROM sales s
                      JOIN order_items oi ON oi.id = s.order_item_id
                     WHERE oi.order_id = o.id) <> o.items_total_minor)`,
+    ),
+  );
+
+  push(
+    "cancellation_items_match_amounts",
+    "cancellation",
+    await ids(
+      db,
+      sql`SELECT c.id FROM cancellations c
+           WHERE c.status IN ('ACCEPTED', 'CLOSED') AND c.items_minor IS NOT NULL
+             AND c.items_minor <> (SELECT coalesce(sum(oi.price_minor), 0)
+                                     FROM cancellation_items ci
+                                     JOIN order_items oi ON oi.id = ci.order_item_id
+                                    WHERE ci.cancellation_id = c.id)`,
+    ),
+  );
+
+  push(
+    "active_item_has_sale",
+    "order",
+    await ids(
+      db,
+      sql`SELECT DISTINCT o.id FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id
+           WHERE o.status IN ('PAID', 'COMPLETED')
+             AND NOT EXISTS (SELECT 1 FROM cancellation_items ci WHERE ci.order_item_id = oi.id)
+             AND NOT EXISTS (SELECT 1 FROM sales s
+                              WHERE s.order_item_id = oi.id AND s.voided_at IS NULL)`,
+    ),
+  );
+
+  push(
+    "cancellation_void_has_item",
+    "sale",
+    await ids(
+      db,
+      sql`SELECT s.id FROM sales s
+           WHERE s.void_reason LIKE 'CANCELLATION:%'
+             AND NOT EXISTS (
+               SELECT 1 FROM cancellation_items ci
+                 JOIN cancellations c ON c.id = ci.cancellation_id
+                WHERE ci.order_item_id = s.order_item_id
+                  AND s.void_reason = 'CANCELLATION:' || c.number)`,
+    ),
+  );
+
+  push(
+    "order_cancellation_state",
+    "order",
+    await ids(
+      db,
+      sql`SELECT o.id FROM orders o
+           WHERE o.status = 'CANCELLED' AND o.status_reason = 'BUYER_CANCELLATION'
+             AND EXISTS (SELECT 1 FROM order_items oi
+                          WHERE oi.order_id = o.id
+                            AND NOT EXISTS (SELECT 1 FROM cancellation_items ci
+                                             WHERE ci.order_item_id = oi.id))`,
     ),
   );
 

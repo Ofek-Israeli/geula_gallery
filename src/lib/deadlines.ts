@@ -127,6 +127,11 @@ export interface ChangeOfMindFeeInput {
   ilsPerUsd?: number;
   /** `settings.cancellation_policy.changeOfMindFee`. */
   policy: "STATUTORY_MAX" | "NONE";
+  /**
+   * Fees already withheld by earlier (partial) cancellations of the same order, in `currency`: the
+   * ₪100 cap is shared by the whole order.
+   */
+  alreadyWithheldMinor?: number;
 }
 
 /** The suggested fee (the admin may only lower it), in the order's currency. */
@@ -156,5 +161,6 @@ export function changeOfMindFee(input: ChangeOfMindFeeInput): {
         Math.round(rate * 1_000_000),
     );
   }
-  return { feeMinor: Math.min(pct, cap), currency: input.currency };
+  const left = Math.max(0, cap - Math.max(0, input.alreadyWithheldMinor ?? 0));
+  return { feeMinor: Math.min(pct, left), currency: input.currency };
 }

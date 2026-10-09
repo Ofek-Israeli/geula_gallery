@@ -187,9 +187,13 @@ export interface EmailTemplateProps {
     receivedAt: string;
     refundDueAt: string;
     message?: string;
+    /** The works the buyer chose to cancel (absent = the whole order). */
+    works?: string[];
   };
   "return-instructions": OrderRef & {
     cancellationNumber: string;
+    /** The cancelled works to send back. */
+    works?: string[];
     returnAddress: string;
     instructions?: string;
     refundAmountMinor: number;
@@ -231,6 +235,8 @@ export interface EmailTemplateProps {
     receivedAt: string;
     refundDueAt: string;
     possibleDuplicate: boolean;
+    /** The works the buyer chose to cancel (absent = the whole order). */
+    works?: string[];
   };
   "admin-alert": {
     severity: "INFO" | "WARNING" | "CRITICAL";

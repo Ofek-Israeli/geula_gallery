@@ -36,6 +36,12 @@ export const returnInstructions: EmailTemplate<Props> = {
             number: p.orderNumber,
           })}
         </P>
+        {p.works?.length ? (
+          <>
+            <Subtitle>{t("worksTitle")}</Subtitle>
+            <P>{p.works.join(" · ")}</P>
+          </>
+        ) : null}
         <Subtitle>{t("addressTitle")}</Subtitle>
         <P>
           <strong>{p.returnAddress}</strong>

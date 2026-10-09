@@ -13,6 +13,7 @@ import {
 } from "@/server/db/schema";
 import type { AdminContext } from "@/server/domain/admin";
 import { commercialInvoiceNumber } from "@/server/domain/ids";
+import { activeOrderItems } from "@/server/orders/items";
 import { getSetting } from "@/server/settings";
 import {
   customsDescriptionEn,
@@ -104,12 +105,18 @@ async function load(db: DbOrTx, orderId: string) {
     .select()
     .from(shipments)
     .where(eq(shipments.orderId, order.id));
-  const rows = await db
-    .select({ item: orderItems, art: artworks })
-    .from(orderItems)
-    .innerJoin(artworks, eq(artworks.id, orderItems.artworkId))
-    .where(eq(orderItems.orderId, order.id))
-    .orderBy(asc(orderItems.createdAt));
+  // The parcel's works: a work the buyer cancelled is not packed, declared or invoiced.
+  const active = new Set(
+    (await activeOrderItems(db, order.id)).map((i) => i.id),
+  );
+  const rows = (
+    await db
+      .select({ item: orderItems, art: artworks })
+      .from(orderItems)
+      .innerJoin(artworks, eq(artworks.id, orderItems.artworkId))
+      .where(eq(orderItems.orderId, order.id))
+      .orderBy(asc(orderItems.createdAt))
+  ).filter((r) => active.has(r.item.id));
   const profile = await getSetting("business_profile", db);
   return { order, shipment: shipment ?? null, rows, profile };
 }

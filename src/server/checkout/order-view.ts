@@ -5,6 +5,8 @@ import type { Currency } from "@/lib/money";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import {
   artworks,
+  cancellationItems,
+  cancellations,
   orderItems,
   orders,
   paymentAttempts,
@@ -50,6 +52,8 @@ export interface BuyerOrderView {
     title: string;
     slug: string | null;
     priceMinor: number;
+    /** The buyer's accepted cancellation number when this work was cancelled. */
+    cancelledBy: string | null;
   }[];
   attempts: {
     seq: number;
@@ -110,6 +114,7 @@ export async function getBuyerOrder(
   const items = await db
     .select({
       artworkId: orderItems.artworkId,
+      cancelledBy: cancellations.number,
       titleHe: orderItems.titleHe,
       titleEn: orderItems.titleEn,
       priceMinor: orderItems.priceMinor,
@@ -119,6 +124,14 @@ export async function getBuyerOrder(
     })
     .from(orderItems)
     .leftJoin(artworks, eq(artworks.id, orderItems.artworkId))
+    .leftJoin(
+      cancellationItems,
+      eq(cancellationItems.orderItemId, orderItems.id),
+    )
+    .leftJoin(
+      cancellations,
+      eq(cancellations.id, cancellationItems.cancellationId),
+    )
     .where(eq(orderItems.orderId, order.id))
     .orderBy(asc(orderItems.titleEn), asc(orderItems.id));
   const attempts = await db
@@ -203,6 +216,7 @@ export async function getBuyerOrder(
       title: locale === "he" ? i.titleHe : i.titleEn,
       slug: i.slug,
       priceMinor: i.priceMinor,
+      cancelledBy: i.cancelledBy ?? null,
     })),
     attempts: attempts.map((a) => ({
       seq: a.seq,

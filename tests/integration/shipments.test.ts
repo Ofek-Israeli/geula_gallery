@@ -488,13 +488,23 @@ describe("label claim protocol", () => {
 
 describe("cancellation block", () => {
   async function notice(orderId: string, status: "RECEIVED" | "ACCEPTED") {
-    await db.insert(cancellations).values({
-      number: `C-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
-      orderId,
-      status,
-      fullName: "Test Buyer",
-      ...(status === "ACCEPTED" ? {} : {}),
-    });
+    const [row] = await db
+      .insert(cancellations)
+      .values({
+        number: `C-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+        orderId,
+        status,
+        fullName: "Test Buyer",
+      })
+      .returning({ id: cancellations.id });
+    if (status === "ACCEPTED" && row) {
+      // An accepted notice covers its works (here: every work of the order).
+      await execSql(
+        `INSERT INTO cancellation_items (order_item_id, cancellation_id, order_id)
+         SELECT id, $1, order_id FROM order_items WHERE order_id = $2`,
+        [row.id, orderId],
+      );
+    }
   }
 
   it("a RECEIVED notice blocks until overridden with a reason (audited)", async () => {

@@ -115,20 +115,36 @@ export const matchAction = adminAction(
   { name: "cancellations.match" },
 );
 
+/** Repeated `orderItemId` checkboxes (one value arrives as a string). */
+const itemIdsSchema = z.preprocess(
+  (v) => (v === undefined ? undefined : Array.isArray(v) ? v : [v]),
+  z.array(z.uuid()).max(50).optional(),
+);
+
 export const acceptAction = adminAction(
   id.extend({
+    orderItemId: itemIdsSchema,
+    /** Present when the form listed the works (then at least one must be ticked). */
+    itemsShown: checkboxSchema,
     feeMinor: feeSchema,
     grantFourMonths: checkboxSchema,
     note: optionalText(500),
   }),
-  async (input, ctx) =>
-    run(() =>
+  async (input, ctx) => {
+    if (input.itemsShown && !input.orderItemId?.length) {
+      throw new ActionFailure("NO_ITEMS_CHOSEN");
+    }
+    return run(() =>
       acceptCancellation(ctx, input.cancellationId, {
+        ...(input.orderItemId?.length
+          ? { orderItemIds: input.orderItemId }
+          : {}),
         ...(input.feeMinor !== undefined ? { feeMinor: input.feeMinor } : {}),
         grantFourMonths: input.grantFourMonths,
         ...(input.note ? { note: input.note } : {}),
       }),
-    ),
+    );
+  },
   { name: "cancellations.accept", fresh: true },
 );
 
@@ -172,13 +188,19 @@ export const returnReceivedAction = adminAction(
 
 export const inspectionAction = adminAction(
   id.extend({
-    result: z.enum(["ok", "damaged"]),
+    /** One work: ok / damaged. Several works: the damaged ones are ticked (`damagedItemId`). */
+    result: z.enum(["ok", "damaged"]).optional(),
+    damagedItemId: itemIdsSchema,
+    perItem: checkboxSchema,
     notes: optionalText(1000),
   }),
   async (input, ctx) =>
     run(() =>
       recordInspection(ctx, input.cancellationId, {
-        damaged: input.result === "damaged",
+        damaged: input.perItem
+          ? (input.damagedItemId?.length ?? 0) > 0
+          : input.result === "damaged",
+        ...(input.perItem ? { damagedItemIds: input.damagedItemId ?? [] } : {}),
         ...(input.notes ? { notes: input.notes } : {}),
       }),
     ),

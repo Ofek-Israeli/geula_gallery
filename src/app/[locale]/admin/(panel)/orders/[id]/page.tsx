@@ -173,7 +173,18 @@ export default async function AdminOrderPage({
         <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
           {detail.items.map((i) => (
             <div key={i.id} className="contents">
-              <dt>{locale === "he" ? i.titleHe : i.titleEn}</dt>
+              <dt>
+                {locale === "he" ? i.titleHe : i.titleEn}
+                {i.cancellation ? (
+                  <span className="ms-2" data-testid="item-cancelled">
+                    <Badge tone="danger">
+                      {t("detail.itemCancelled", {
+                        number: i.cancellation.number,
+                      })}
+                    </Badge>
+                  </span>
+                ) : null}
+              </dt>
               <dd className="text-end">{money(i.priceMinor)}</dd>
             </div>
           ))}

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq, inArray, lte, sql } from "drizzle-orm";
 import { raiseAlert } from "@/server/alerts/service";
 import { audit } from "@/server/audit";
+import { cancelOrderIfFullyCancelled } from "@/server/cancellations/settlement";
 import {
   type Db,
   type DbOrTx,
@@ -801,9 +802,10 @@ export async function retryRefund(
 
 /**
  * The `REFUND_SETTLED` job (spec §5.4): in order → attempt → refund lock order, a NEEDS_REFUND
- * attempt → REFUNDED; a cancellation refund → order CANCELLED (from PAID or COMPLETED); the credit
- * note job when the attempt had a receipt job; the `refund-issued` email; audit. Idempotent: every
- * step is conditional, so a retried job does nothing twice.
+ * attempt → REFUNDED; a cancellation refund → order CANCELLED once every work of the order is
+ * cancelled and settled (`cancelOrderIfFullyCancelled`); the credit note job when the attempt had
+ * a receipt job; the `refund-issued` email; audit. Idempotent: every step is conditional, so a
+ * retried job does nothing twice.
  */
 export async function settleRefund(
   refundId: string,
@@ -856,19 +858,10 @@ export async function settleRefund(
           );
         }
       }
-      if (
-        refund.cancellationId &&
-        (order.status === "PAID" || order.status === "COMPLETED")
-      ) {
-        await transition(
-          tx,
-          "order",
-          order.id,
-          ["PAID", "COMPLETED"],
-          "CANCELLED",
-          { statusReason: "BUYER_CANCELLATION", cancelledAt: new Date() },
-          "system",
-        );
+      // Per-work cancellation: the order is CANCELLED only once every work is cancelled and
+      // every such refund settled (a partial cancellation leaves it PAID; the rest ships).
+      if (refund.cancellationId) {
+        await cancelOrderIfFullyCancelled(tx, order.id);
       }
       const [receiptJob] = await tx
         .select({ n: count() })

@@ -64,7 +64,10 @@
     "intro": "Your notice has not been sent yet. Check the details and select \"Confirm cancellation\".",
     "confirm": "Confirm cancellation",
     "edit": "Back to edit",
-    "pending": "Sending…"
+    "pending": "Sending…",
+    "works": "Which works do you want to cancel?",
+    "worksHint": "All the works of the order are ticked. Untick the ones you want to keep: only the ticked works are cancelled and refunded.",
+    "chooseWorks": "Tick at least one work."
   },
   "ack": {
     "title": "Your cancellation notice was received",
@@ -89,7 +92,8 @@
     "eligibleGroup": "Eligibility declared",
     "channel": "Channel",
     "receivedAt": "Received",
-    "refundDueAt": "Refund due by"
+    "refundDueAt": "Refund due by",
+    "works": "Works to cancel"
   },
   "reason": {
     "CHANGE_OF_MIND": "Change of mind",
@@ -215,7 +219,7 @@
       "REFUND_NOT_SETTLED": "The refund has not settled yet.",
       "RETURN_OPEN": "The return is not complete.",
       "ORDER_NOT_CANCELLED": "The order is not cancelled yet (the refund has not settled).",
-      "NOTHING_TO_RELIST": "No active sale for this order.",
+      "NOTHING_TO_RELIST": "No active sale for this notice's works.",
       "REASON_REQUIRED": "Choose a reason.",
       "ALREADY_MATCHED": "The notice is matched to another order.",
       "SELF_DUPLICATE": "A notice cannot duplicate itself.",
@@ -225,8 +229,25 @@
       "ILLEGAL_TRANSITION": "Not possible in the current state.",
       "REFUND_EXCEEDS_CAPTURED": "The amount exceeds what was captured.",
       "INVALID_INPUT": "Check the values.",
-      "generic": "The action failed."
-    }
+      "generic": "The action failed.",
+      "NO_ITEMS_CHOSEN": "Tick at least one work.",
+      "NO_ITEMS": "Every work of this notice was already cancelled.",
+      "ITEM_NOT_ACTIVE": "A ticked work is no longer active in this order.",
+      "ITEM_NOT_IN_NOTICE": "That work is not part of this cancellation.",
+      "LABEL_IN_FLIGHT": "A shipping label request has an unknown outcome – resolve it on the fulfillment screen."
+    },
+    "partialBadge": "Partial {n}/{m}",
+    "worksToCancel": "Works to cancel",
+    "previewWorks": "Works refunded",
+    "previewShipping": "Shipping and insurance refunded",
+    "previewShippingKept": "Not refunded – other works still ship",
+    "acceptConfirmItems": "{count, plural, =0 {Tick at least one work.} one {Cancel 1 work? If it has not shipped, the refund is made now and the remaining works are repacked.} other {Cancel # works? If they have not shipped, the refund is made now and any remaining works are repacked.}}",
+    "inThisNotice": "In this notice",
+    "cancelledBy": "Cancelled ({number})",
+    "damagedWorks": "Damaged works (leave unticked if fine)",
+    "inspectionResult": "Inspection result",
+    "inspectSave": "Save inspection",
+    "relistMixed": "Relist (damaged works: not for sale)"
   },
   "settings": {
     "title": "Cancellation settings",

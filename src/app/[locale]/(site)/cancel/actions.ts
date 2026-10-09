@@ -8,10 +8,12 @@ import {
   displayNotice,
   type NoticeDisplay,
   openReview,
+  type ReviewItem,
   sealReview,
 } from "@/server/cancellations/notice";
 import {
   type AckSnapshot,
+  previewCancellableItems,
   recordCancellationNotice,
 } from "@/server/cancellations/service";
 import { withEffects } from "@/server/domain/effects";
@@ -22,7 +24,9 @@ import { publicAction } from "@/server/next/actions";
  * without JavaScript (React re-renders the page with the returned state): `review` validates the
  * form and returns a sealed payload plus the masked review; `confirm` opens the payload and
  * **always** stores the notice; `edit` goes back to the form (the ID number is not echoed back).
- * Nothing is ever put in the URL. Limits: honeypot, minimum form age, 20 per hour per IP.
+ * When the order number and the name or email match an order with several works, the review step
+ * lists them as checkboxes (all ticked): the buyer may cancel only some. Nothing is ever put in the
+ * URL. Limits: honeypot, minimum form age, 20 per hour per IP.
  */
 export type CancelFormValues = Partial<
   Record<
@@ -46,7 +50,16 @@ export type CancelFlowState =
       errors?: Record<string, string>;
       banner?: "expired" | "idAgain";
     }
-  | { step: "review"; token: string; display: NoticeDisplay }
+  | {
+      step: "review";
+      token: string;
+      display: NoticeDisplay;
+      /** The order's works to choose from (2 or more), else empty. */
+      items: ReviewItem[];
+      /** Ticked on the last submit (all by default). */
+      checked?: string[];
+      error?: "chooseWorks";
+    }
   | { step: "ack"; ack: AckSnapshot };
 
 const VALUE_KEYS = [
@@ -117,10 +130,12 @@ export const cancelFlowAction = publicAction(
           errors: errorCodes(parsed.error),
         });
       }
+      const items = await previewCancellableItems(parsed.data, locale);
       return withEffects<CancelFlowState>({
         step: "review",
-        token: sealReview(parsed.data, locale),
+        token: sealReview(parsed.data, locale, new Date(), items),
         display: displayNotice(parsed.data),
+        items,
       });
     }
 
@@ -139,11 +154,31 @@ export const cancelFlowAction = publicAction(
         ...(opened.notice.idNumber ? { banner: "idAgain" as const } : {}),
       });
     }
+    // Only works the review step offered; every work ticked = the whole order.
+    const raw = input.orderItemId;
+    const ticked = new Set(
+      (Array.isArray(raw) ? raw : raw === undefined ? [] : [raw]).filter(
+        (v): v is string => typeof v === "string",
+      ),
+    );
+    const chosen = opened.items.filter((i) => ticked.has(i.id));
+    if (opened.items.length > 1 && chosen.length === 0) {
+      return withEffects<CancelFlowState>({
+        step: "review",
+        token: input.token as string,
+        display: displayNotice(opened.notice),
+        items: opened.items,
+        checked: [],
+        error: "chooseWorks",
+      });
+    }
+    const partial = chosen.length > 0 && chosen.length < opened.items.length;
     const { result, effects } = await recordCancellationNotice(opened.notice, {
       locale: opened.locale,
       channel: "WEB",
       actor: "anonymous",
       ipHash: meta.ipHash,
+      ...(partial ? { requestedItems: chosen } : {}),
     });
     return {
       result: { step: "ack", ack: result.ack } as CancelFlowState,

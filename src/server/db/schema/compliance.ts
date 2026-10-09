@@ -5,17 +5,19 @@ import {
   boolean,
   char,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
   pgTable,
   text,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { artworks } from "./catalog";
 import { sqlInList, timestamps, tstz } from "./columns";
-import { orders, refunds } from "./commerce";
+import { orderItems, orders, refunds } from "./commerce";
 import {
   cancellationChannelEnum,
   cancellationReasonEnum,
@@ -75,6 +77,12 @@ export const buyerRequests = pgTable(
 /**
  * A legal cancellation notice. There is deliberately NO unique index on `order_id`: a second notice
  * (double submission, web then phone) must never fail (spec §3.3).
+ *
+ * Per-work cancellation: `requested_item_ids` names the works the buyer chose (null = every work of
+ * the order still active). What was actually cancelled is `cancellation_items` (rows written on
+ * acceptance). The refund base is `items_minor` (Σ the cancelled works' prices) plus
+ * `shipping_refund_minor` (shipping and insurance, refunded only by the cancellation that leaves no
+ * active work — at most one per order).
  */
 export const cancellations = pgTable(
   "cancellations",
@@ -100,6 +108,8 @@ export const cancellations = pgTable(
     phone: text(),
     message: text(),
     eligibleGroup: eligibleGroupEnum().notNull().default("NONE"),
+    /** `order_items.id`s the buyer named; null = the whole order. */
+    requestedItemIds: uuid().array(),
 
     // Duplicates
     duplicateOfId: uuid().references((): AnyPgColumn => cancellations.id, {
@@ -119,6 +129,10 @@ export const cancellations = pgTable(
     withinWindow: boolean(),
     feeMinor: integer(),
     refundAmountMinor: integer(),
+    /** Σ of the cancelled works' prices (order currency). */
+    itemsMinor: integer(),
+    /** Shipping + insurance refunded: only by the cancellation that leaves no active work. */
+    shippingRefundMinor: integer().notNull().default(0),
     refundId: uuid().references((): AnyPgColumn => refunds.id, {
       onDelete: "restrict",
     }),
@@ -150,6 +164,14 @@ export const cancellations = pgTable(
       sql`(${t.feeMinor} IS NULL OR ${t.feeMinor} >= 0) AND (${t.refundAmountMinor} IS NULL OR ${t.refundAmountMinor} >= 0)`,
     ),
     check(
+      "cancellations_item_amounts_nonnegative",
+      sql`(${t.itemsMinor} IS NULL OR ${t.itemsMinor} >= 0) AND ${t.shippingRefundMinor} >= 0`,
+    ),
+    check(
+      "cancellations_refund_within_base",
+      sql`${t.refundAmountMinor} IS NULL OR ${t.itemsMinor} IS NULL OR ${t.refundAmountMinor} + coalesce(${t.feeMinor}, 0) <= ${t.itemsMinor} + ${t.shippingRefundMinor}`,
+    ),
+    check(
       "cancellations_id_last3_format",
       sql`${t.idNumberLast3} IS NULL OR ${t.idNumberLast3} ~ '^[0-9A-Za-z]{1,3}$'`,
     ),
@@ -157,8 +179,46 @@ export const cancellations = pgTable(
       "cancellations_not_self_duplicate",
       sql`${t.duplicateOfId} IS NULL OR ${t.duplicateOfId} <> ${t.id}`,
     ),
+    unique("cancellations_id_order_uq").on(t.id, t.orderId),
+    // Shipping is refunded once per order (by the cancellation that leaves no active work).
+    uniqueIndex("cancellations_one_shipping_refund_idx")
+      .on(t.orderId)
+      .where(
+        sql`${t.shippingRefundMinor} > 0 AND ${t.status} IN ('ACCEPTED', 'CLOSED')`,
+      ),
     index("cancellations_order_idx").on(t.orderId),
     index("cancellations_status_due_idx").on(t.status, t.refundDueAt),
+  ],
+);
+
+/**
+ * The works an accepted cancellation covers (one row per order item, written on acceptance). The
+ * primary key on `order_item_id` is what stops a work from being cancelled twice; the composite
+ * foreign keys keep the item inside the notice's order. `return_status` follows each work's return
+ * and inspection (a damaged work is relisted as NOT_FOR_SALE, the others as AVAILABLE).
+ */
+export const cancellationItems = pgTable(
+  "cancellation_items",
+  {
+    orderItemId: uuid().primaryKey(),
+    cancellationId: uuid().notNull(),
+    orderId: uuid().notNull(),
+    returnStatus: returnStatusEnum().notNull().default("NOT_APPLICABLE"),
+    ...timestamps,
+  },
+  (t) => [
+    foreignKey({
+      name: "cancellation_items_cancellation_fk",
+      columns: [t.cancellationId, t.orderId],
+      foreignColumns: [cancellations.id, cancellations.orderId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "cancellation_items_order_item_fk",
+      columns: [t.orderItemId, t.orderId],
+      foreignColumns: [orderItems.id, orderItems.orderId],
+    }).onDelete("restrict"),
+    index("cancellation_items_cancellation_idx").on(t.cancellationId),
+    index("cancellation_items_order_idx").on(t.orderId),
   ],
 );
 
@@ -166,3 +226,4 @@ export type BuyerRequest = typeof buyerRequests.$inferSelect;
 export type NewBuyerRequest = typeof buyerRequests.$inferInsert;
 export type Cancellation = typeof cancellations.$inferSelect;
 export type NewCancellation = typeof cancellations.$inferInsert;
+export type CancellationItem = typeof cancellationItems.$inferSelect;

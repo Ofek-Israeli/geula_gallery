@@ -82,7 +82,8 @@
     "manualReference": "Reference: {reference}",
     "failureConfirmed": "Confirmed in the provider dashboard",
     "requestedBy": "Requested by {actor}",
-    "orderCreated": "The order was created and the payment link was emailed to the buyer."
+    "orderCreated": "The order was created and the payment link was emailed to the buyer.",
+    "itemCancelled": "Cancelled ({number})"
   },
   "tracking": {
     "title": "Manual tracking",

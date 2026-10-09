@@ -9,13 +9,13 @@ import { Select } from "@/components/ui/Select";
 import { Link } from "@/i18n/navigation";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
-import { formatMoney, toDecimalString } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { paths } from "@/lib/routes";
 import { getCancellationDetail } from "@/server/cancellations/service";
 import { requireAdmin } from "@/server/next/guards";
+import { AcceptCancellationForm } from "../AcceptCancellationForm";
 import { AdminActionForm } from "../AdminActionForm";
 import {
-  acceptAction,
   closeAction,
   duplicateAction,
   inspectionAction,
@@ -60,7 +60,9 @@ function Row({
 /**
  * `/admin/cancellations/[id]` (spec §5.7 steps 5–9, §6.10): the notice (masked ID), matching, the
  * conversation source, the window and fee, "Refund due by <date>" from the notice, and the
- * decision flow (accept / reject / duplicate → return → inspection → close → relist).
+ * decision flow (accept / reject / duplicate → return → inspection → close → relist). Per work: the
+ * works table shows which works the notice names and which are already cancelled; the accept form
+ * chooses the works (live amounts); inspection and relisting are per work.
  */
 export default async function CancellationDetailPage({
   params,
@@ -86,6 +88,25 @@ export default async function CancellationDetailPage({
     o && minor !== null && minor !== undefined
       ? formatMoney(minor, o.currency, locale)
       : "—";
+  const title = (i: { titleHe: string; titleEn: string }) =>
+    locale === "he" ? i.titleHe : i.titleEn;
+  const noticeItems = d.items.filter((i) => i.inNotice);
+  const settled = d.refund
+    ? d.refund.status === "SUCCEEDED" || d.refund.status === "MANUAL_DONE"
+    : (c.refundAmountMinor ?? 0) === 0;
+  const returnFinal = [
+    "NOT_APPLICABLE",
+    "INSPECTED_OK",
+    "INSPECTED_DAMAGED",
+  ].includes(c.returnStatus);
+  const canRelist =
+    (c.status === "ACCEPTED" || c.status === "CLOSED") &&
+    settled &&
+    returnFinal &&
+    noticeItems.some((i) => i.saleStatus === "SOLD");
+  const damagedCount = noticeItems.filter(
+    (i) => i.returnStatus === "INSPECTED_DAMAGED",
+  ).length;
 
   return (
     <div
@@ -250,37 +271,29 @@ export default async function CancellationDetailPage({
                   })
                 : t("conversationNo")}
             </Row>
-            <Row label={t("artworks")}>
-              {d.artworks
-                .map(
-                  (w) =>
-                    `${w.title} (${label(`admin-catalog.status.${w.saleStatus}`, w.saleStatus)})`,
-                )
-                .join(", ")}
-            </Row>
             {a ? (
-              <>
-                <Row label={t("window")}>
-                  {a.window.beforeDelivery
-                    ? t("windowBeforeDelivery")
-                    : `${a.window.length === "4_MONTHS" ? t("length4m") : t("length14")} · ${t(
-                        "windowEnds",
-                        {
-                          date: formatDate(a.window.end ?? new Date(), locale),
-                        },
-                      )} · ${a.withinWindow ? t("within") : t("outside")}`}
-                </Row>
-                <Row label={t("fee")}>
-                  <span data-testid="suggested-fee">
-                    {money(a.suggestedFeeMinor)}
-                  </span>
-                </Row>
-                <Row label={t("refundAmount")}>
-                  {money(a.refundAmountMinor)}
-                </Row>
-              </>
+              <Row label={t("window")}>
+                {a.window.beforeDelivery
+                  ? t("windowBeforeDelivery")
+                  : `${a.window.length === "4_MONTHS" ? t("length4m") : t("length14")} · ${t(
+                      "windowEnds",
+                      {
+                        date: formatDate(a.window.end ?? new Date(), locale),
+                      },
+                    )} · ${a.withinWindow ? t("within") : t("outside")}`}
+              </Row>
             ) : (
               <>
+                {c.itemsMinor !== null ? (
+                  <Row label={t("previewWorks")}>{money(c.itemsMinor)}</Row>
+                ) : null}
+                {c.itemsMinor !== null ? (
+                  <Row label={t("previewShipping")}>
+                    {c.shippingRefundMinor > 0
+                      ? money(c.shippingRefundMinor)
+                      : t("previewShippingKept")}
+                  </Row>
+                ) : null}
                 {c.feeMinor !== null ? (
                   <Row label={t("fee")}>{money(c.feeMinor)}</Row>
                 ) : null}
@@ -293,6 +306,46 @@ export default async function CancellationDetailPage({
             )}
           </dl>
         )}
+        {o && d.items.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <h3 className="font-semibold">{t("artworks")}</h3>
+            <ul
+              className="flex flex-col gap-1"
+              data-testid="cancellation-items"
+            >
+              {d.items.map((i) => (
+                <li
+                  key={i.orderItemId}
+                  className="flex flex-wrap items-center gap-2"
+                  data-testid="cancellation-item"
+                  data-in-notice={i.inNotice ? "true" : "false"}
+                >
+                  <span className={i.inNotice ? "font-semibold" : undefined}>
+                    {title(i)}
+                  </span>
+                  <span className="text-ink-muted">
+                    {money(i.priceMinor)} ·{" "}
+                    {label(
+                      `admin-catalog.status.${i.saleStatus}`,
+                      i.saleStatus,
+                    )}
+                  </span>
+                  {i.inNotice && c.status === "RECEIVED" ? (
+                    <Badge tone="hold">{t("inThisNotice")}</Badge>
+                  ) : null}
+                  {i.cancelledBy ? (
+                    <Badge tone="danger">
+                      {t("cancelledBy", { number: i.cancelledBy.number })}
+                    </Badge>
+                  ) : null}
+                  {i.returnStatus && i.returnStatus !== "NOT_APPLICABLE" ? (
+                    <Badge>{tc(`returnStatus.${i.returnStatus}`)}</Badge>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {a?.conversationUncertain && c.status === "RECEIVED" ? (
           <p className="rounded-sm border border-hold p-2 text-sm text-hold">
             {t("conversationHint")}
@@ -303,39 +356,21 @@ export default async function CancellationDetailPage({
       {c.status === "RECEIVED" ? (
         <section className="flex flex-col gap-6">
           <h2 className="text-xl">{t("decision")}</h2>
-          {o && a ? (
-            <AdminActionForm
-              action={acceptAction}
+          {o && a && d.preview ? (
+            <AcceptCancellationForm
               locale={locale}
               cancellationId={c.id}
-              submitLabel={t("accept")}
-              variant="primary"
-              confirm={t("acceptConfirm")}
-              testId="accept-cancellation"
-            >
-              <Field id="a-fee" label={t("feeInput")} hint={t("feeHint")}>
-                {(f) => (
-                  <Input
-                    {...f}
-                    name="feeMinor"
-                    dir="ltr"
-                    inputMode="decimal"
-                    defaultValue={toDecimalString(a.suggestedFeeMinor)}
-                  />
-                )}
-              </Field>
-              {c.eligibleGroup !== "NONE" ? (
-                <Checkbox
-                  id="a-grant"
-                  name="grantFourMonths"
-                  label={t("grant4m")}
-                  defaultChecked
-                />
-              ) : null}
-              <Field id="a-note" label={t("note")}>
-                {(f) => <Input {...f} name="note" />}
-              </Field>
-            </AdminActionForm>
+              items={d.items
+                .filter((i) => i.cancelledBy === null)
+                .map((i) => ({
+                  id: i.orderItemId,
+                  title: title(i),
+                  priceMinor: i.priceMinor,
+                  checked: i.inNotice,
+                }))}
+              preview={d.preview}
+              eligible={c.eligibleGroup !== "NONE"}
+            />
           ) : null}
           <AdminActionForm
             action={rejectAction}
@@ -424,21 +459,39 @@ export default async function CancellationDetailPage({
                   action={inspectionAction}
                   locale={locale}
                   cancellationId={c.id}
-                  submitLabel={t("inspectOk")}
+                  submitLabel={t("inspectSave")}
                   testId="inspection"
                 >
-                  <Field id="in-res" label={t("inspectionNotes")}>
-                    {(f) => (
-                      <Select
-                        {...f}
-                        name="result"
-                        options={[
-                          { value: "ok", label: t("inspectOk") },
-                          { value: "damaged", label: t("inspectDamaged") },
-                        ]}
-                      />
-                    )}
-                  </Field>
+                  {noticeItems.length > 1 ? (
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="mbe-2 font-semibold">
+                        {t("damagedWorks")}
+                      </legend>
+                      <input type="hidden" name="perItem" value="on" />
+                      {noticeItems.map((i) => (
+                        <Checkbox
+                          key={i.orderItemId}
+                          id={`in-${i.orderItemId}`}
+                          name="damagedItemId"
+                          value={i.orderItemId}
+                          label={title(i)}
+                        />
+                      ))}
+                    </fieldset>
+                  ) : (
+                    <Field id="in-res" label={t("inspectionResult")}>
+                      {(f) => (
+                        <Select
+                          {...f}
+                          name="result"
+                          options={[
+                            { value: "ok", label: t("inspectOk") },
+                            { value: "damaged", label: t("inspectDamaged") },
+                          ]}
+                        />
+                      )}
+                    </Field>
+                  )}
                   <Field id="in-notes" label={t("inspectionNotes")}>
                     {(f) => <Input {...f} name="notes" />}
                   </Field>
@@ -457,16 +510,17 @@ export default async function CancellationDetailPage({
                 testId="close-cancellation"
               />
             ) : null}
-            {o?.status === "CANCELLED" &&
-            d.artworks.some((w) => w.saleStatus === "SOLD") ? (
+            {canRelist ? (
               <AdminActionForm
                 action={relistAction}
                 locale={locale}
                 cancellationId={c.id}
                 submitLabel={
-                  c.returnStatus === "INSPECTED_DAMAGED"
-                    ? t("markDamaged")
-                    : t("relist")
+                  damagedCount === 0
+                    ? t("relist")
+                    : damagedCount === noticeItems.length
+                      ? t("markDamaged")
+                      : t("relistMixed")
                 }
                 testId="relist"
               />

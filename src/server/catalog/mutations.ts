@@ -16,6 +16,7 @@ import {
   type Artwork,
   artworkImages,
   artworks,
+  cancellationItems,
   cancellations,
   orderItems,
   refunds,
@@ -987,7 +988,12 @@ const OPEN_REFUND_STATUSES = [
   "MANUAL_REQUIRED",
 ] as const;
 
-/** Why a SOLD work cannot be relisted (or marked damaged) yet; null when it can. */
+/**
+ * Why a SOLD work cannot be relisted (or marked damaged) yet; null when it can. Per work: when an
+ * accepted cancellation covers the sale's order item, that cancellation's refund must have settled
+ * (or been 0) and that work's return be final — the order may still be PAID for its other works.
+ * Otherwise the whole order must be CANCELLED with its refunds settled and returns final.
+ */
 async function soldWorkBlocker(
   tx: Tx,
   saleRow: typeof sales.$inferSelect,
@@ -995,6 +1001,36 @@ async function soldWorkBlocker(
 ): Promise<string | null> {
   if (saleRow.channel !== "ONLINE" || !saleRow.orderId) return null;
   const order = await lockOrder(tx, saleRow.orderId);
+  const ok = new Set<string>(
+    allowDamaged
+      ? ["NOT_APPLICABLE", "INSPECTED_OK", "INSPECTED_DAMAGED"]
+      : ["NOT_APPLICABLE", "INSPECTED_OK"],
+  );
+  const [covering] = saleRow.orderItemId
+    ? await tx
+        .select({
+          refundId: cancellations.refundId,
+          refundAmountMinor: cancellations.refundAmountMinor,
+          refundStatus: refunds.status,
+          returnStatus: cancellationItems.returnStatus,
+        })
+        .from(cancellationItems)
+        .innerJoin(
+          cancellations,
+          eq(cancellations.id, cancellationItems.cancellationId),
+        )
+        .leftJoin(refunds, eq(refunds.id, cancellations.refundId))
+        .where(eq(cancellationItems.orderItemId, saleRow.orderItemId))
+    : [];
+  if (covering) {
+    const settled = covering.refundId
+      ? covering.refundStatus === "SUCCEEDED" ||
+        covering.refundStatus === "MANUAL_DONE"
+      : (covering.refundAmountMinor ?? 0) === 0;
+    if (!settled) return "REFUND_NOT_SETTLED";
+    if (!ok.has(covering.returnStatus)) return "RETURN_PENDING";
+    return null;
+  }
   if (order?.status !== "CANCELLED") return "ORDER_NOT_CANCELLED";
   const rows = await tx
     .select({
@@ -1021,11 +1057,6 @@ async function soldWorkBlocker(
         ne(cancellations.status, "REJECTED"),
       ),
     );
-  const ok = new Set<string>(
-    allowDamaged
-      ? ["NOT_APPLICABLE", "INSPECTED_OK", "INSPECTED_DAMAGED"]
-      : ["NOT_APPLICABLE", "INSPECTED_OK"],
-  );
   if (returns.some((r) => !ok.has(r.returnStatus))) return "RETURN_PENDING";
   return null;
 }

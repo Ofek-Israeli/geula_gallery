@@ -40,7 +40,8 @@
     "insurance": "ביטוח",
     "total": "סה״כ",
     "method": "מסירה",
-    "destination": "יעד"
+    "destination": "יעד",
+    "cancelled": "בוטלה ({number})"
   },
   "paid": {
     "title": "ההזמנה אושרה",
