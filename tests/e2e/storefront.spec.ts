@@ -157,9 +157,10 @@ test.describe("status, strip and archive", () => {
     await expect(
       page.getByRole("link", { name: "שאלה על יצירות דומות" }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "בקשה להזמנת יצירה" }),
-    ).toBeVisible();
+    // The painter takes no commissions: a sold work offers similar works only.
+    await expect(page.getByRole("link", { name: /הזמנת יצירה/ })).toHaveCount(
+      0,
+    );
   });
 });
 
@@ -384,14 +385,11 @@ test.describe("about and contact", () => {
     });
   }
 
-  test("the commission topic puts the commission section first", async ({
-    page,
-  }) => {
-    await page.goto("/en/contact?topic=commission");
-    const headings = await page
-      .getByRole("heading", { level: 2 })
-      .allTextContents();
-    expect(headings[0]).toBe("Commissions");
+  test("the site never offers commissions", async ({ page }) => {
+    for (const path of ["/en", "/en/contact", "/en/contact?topic=commission"]) {
+      await page.goto(path);
+      await expect(page.getByText(/commission/i)).toHaveCount(0);
+    }
   });
 });
 

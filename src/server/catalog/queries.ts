@@ -365,6 +365,20 @@ export async function getFeaturedArtwork(
   return row ? cardDto(row, locale, new Date()) : null;
 }
 
+/** The painting behind the home page's quote and the site footer. */
+export const HERO_ARTWORK_SLUG = "by-the-lake";
+
+/** The hero painting, else the featured available work (a catalog without it still opens). */
+export async function getHeroArtwork(
+  locale: Locale,
+  db: DbOrTx = defaultDb,
+): Promise<ArtworkCardDTO | null> {
+  return (
+    (await getArtworkCard(locale, HERO_ARTWORK_SLUG, db)) ??
+    (await getFeaturedArtwork(locale, db))
+  );
+}
+
 /** One published work as a card, whatever its sale status (the home hero names a fixed work). */
 export async function getArtworkCard(
   locale: Locale,

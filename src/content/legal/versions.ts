@@ -6,7 +6,7 @@
  */
 export const LEGAL_VERSIONS = {
   terms: "2026-10-01-draft",
-  returns: "2026-10-01-draft",
+  returns: "2026-10-09-draft",
   privacy: "2026-10-01-draft",
   /** DAP duties notice acknowledged by international buyers. */
   dutiesNotice: "2026-10-01-draft",

@@ -24,7 +24,7 @@ export const BUY_BOX_ID = "buy-box";
  *   status in text;
  * - Buy now (→ checkout) when buyable, and "Add to cart" (several works, one checkout); Ask; "Make
  *   an offer" when the work accepts offers (Tier B);
- *   sold works offer "similar works" and "commission";
+ *   sold works offer "similar works" (the painter takes no commissions);
  * - "Delivery in Israel from ₪X · free studio pickup" and per-zone estimates, linking to the
  *   shipping page; the DAP note;
  * - the trust row, with "insured" only when the cheapest Israeli quote includes insurance.
@@ -140,20 +140,12 @@ export function LiveBuyBox({
           </Link>
         ) : null}
         {state.kind === "sold" ? (
-          <>
-            <Link
-              href={paths.artworkRequest(slug, "question")}
-              className={buttonClasses("secondary")}
-            >
-              {t("buy.askSimilar")}
-            </Link>
-            <Link
-              href={paths.contact("commission")}
-              className={buttonClasses("ghost")}
-            >
-              {t("buy.commission")}
-            </Link>
-          </>
+          <Link
+            href={paths.artworkRequest(slug, "question")}
+            className={buttonClasses("secondary")}
+          >
+            {t("buy.askSimilar")}
+          </Link>
         ) : (
           <Link href={ask} className={buttonClasses("secondary")}>
             {t("buy.ask")}

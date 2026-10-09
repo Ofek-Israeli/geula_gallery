@@ -2017,15 +2017,33 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
 - **Opening band.** The painter chose to open the home page like alonyaffe.co.il, in place of
   spec §6.2's featured split:
   - `QuoteHero` is a full-bleed band (`mx-[calc(50%-50vw)]`; `body` has `overflow-x: clip`).
-  - The background is a fixed work, `HOME_HERO_SLUG = "by-the-lake"`, read with
-    `getArtworkCard(locale, slug)`; when it is missing, the featured available work is used.
+  - The background is a fixed work, `HERO_ARTWORK_SLUG = "by-the-lake"`, read with
+    `getHeroArtwork(locale)` (`getArtworkCard` by slug); when it is missing, the featured available
+    work is used. The public site footer uses the same painting as a dark band (its lower part,
+    lazy, `ink/70` overlay, light text); the checkout keeps the plain light footer.
   - The image is the LCP: `fetchPriority="high"` and `alt=""`, with an `ink/65` overlay.
-  - The quote is Kandinsky's "Colour is a power which directly influences the soul." Its quote
-    marks are in the messages: straight in Hebrew, curly in English.
+  - The quote is Georgia O'Keeffe's "I found that I could say things with color and shapes that I
+    couldn't say in any other way—things I had no words for." Its quote marks are in the
+    messages: straight in Hebrew, curly in English.
   - A caption links to the painting.
 - **Bio.** `ArtistBio` holds the painter's biography in `catalog.bio`: the Hebrew is verbatim,
   and the English is a translation.
   - On the home page it is the `<h1>`; on `/about` it is an `<h2>` under "About the artist".
   - It lives in messages until a `site_content` editor exists.
 - **Removed:** the old title, the intro, the "Featured work" box and the about snippet. The works
-  grid, the series and the commissions box are unchanged.
+  grid and the series are unchanged; the commissions box was removed later (see "No
+  commissions").
+
+### No commissions
+
+- The painter does not take commissions, so the site never offers them. The following were
+  removed:
+  - the home page's commissions box;
+  - the contact page's commissions section, its `?topic=commission` handling and the form's topic
+    menu (the form always stores topic GENERAL);
+  - the "Request a commission" link on sold works;
+  - commissions in the sold-archive intro and in the "sold" reply template;
+  - the "Commissions" section of the returns policy. A neutral "Exceptions" paragraph keeps the
+    s.14C(d) and s.2(b2) reference without mentioning commissions, and `LEGAL_VERSIONS.returns`
+    was bumped to `2026-10-09-draft`.
+- The database keeps the COMMISSION topic value so that older rows still load.

@@ -16,17 +16,11 @@ import { submitContactAction } from "./actions";
 import { ContactForm } from "./ContactForm";
 
 /**
- * `/contact` (spec §6.2): general questions and commissions (`?topic=commission` puts the
- * commission section first and preselects the form's topic), email and phone isolated LTR, the
- * contact form (spec §5.8: a `buyer_requests` QUESTION with topic GENERAL / COMMISSION, the s.11
- * notice, honeypot, 5/h/IP, `request-ack` + `painter-new-request`), the cancellation route, and the
- * Person JSON-LD.
+ * `/contact` (spec §6.2): general questions (the painter takes no commissions), email and phone
+ * isolated LTR, the contact form (spec §5.8: a `buyer_requests` QUESTION with topic GENERAL, the
+ * s.11 notice, honeypot, 5/h/IP, `request-ack` + `painter-new-request`), the cancellation route,
+ * and the Person JSON-LD.
  */
-function topicOf(v: string | string[] | undefined): "general" | "commission" {
-  return (Array.isArray(v) ? v[0] : v) === "commission"
-    ? "commission"
-    : "general";
-}
 
 export async function generateMetadata({
   params,
@@ -44,11 +38,9 @@ export async function generateMetadata({
 
 export default async function ContactPage({
   params,
-  searchParams,
 }: PageProps<"/[locale]/contact">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const topic = topicOf((await searchParams).topic);
   const [t, ta, profile] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.contact" }),
     getTranslations({ locale, namespace: "catalog.about" }),
@@ -62,15 +54,7 @@ export default async function ContactPage({
       subject: t("subjectGeneral"),
       extra: t("workQuestion"),
     },
-    {
-      id: "commission",
-      title: t("commissionTitle"),
-      body: t("commissionBody"),
-      subject: t("subjectCommission"),
-      extra: null,
-    },
   ];
-  if (topic === "commission") sections.reverse();
 
   return (
     <div className="flex max-w-3xl flex-col gap-10">
@@ -122,7 +106,6 @@ export default async function ContactPage({
         <ContactForm
           action={submitContactAction}
           locale={locale}
-          topic={topic === "commission" ? "COMMISSION" : "GENERAL"}
           formStart={issueFormStartToken()}
         />
         <PrivacyNotice>{t("privacy")}</PrivacyNotice>

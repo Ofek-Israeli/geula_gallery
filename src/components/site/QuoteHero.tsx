@@ -6,9 +6,9 @@ import { paths } from "@/lib/routes";
 
 /**
  * The home page's opening band: a painting as a dimmed full-width background with a quote about
- * colour on top, and a small caption that names and links the painting. The band breaks out of
- * the `<main>` container (`mx-[calc(50%-50vw)]`, direction-agnostic; `body` clips the overflow)
- * and sits flush under the header. The painting is the page's LCP image. It is decorative here
+ * painting on top (Georgia O'Keeffe), and a small caption that names and links the painting. The
+ * band breaks out of the `<main>` container (`mx-[calc(50%-50vw)]`, direction-agnostic; `body`
+ * clips the overflow) and sits flush under the header. The painting is the page's LCP image. It is decorative here
  * (`alt=""`): the caption link names the work. The overlay keeps the light text above 4.5:1 over
  * any part of the painting. The quote marks are in the messages (Hebrew uses straight quotes,
  * which follow the RTL run; English uses curly ones).
@@ -40,9 +40,7 @@ export function QuoteHero({ work }: { work: ArtworkCardDTO | null }) {
         <blockquote className="font-serif text-3xl leading-snug text-balance md:text-5xl">
           <p>{t("quote.text")}</p>
         </blockquote>
-        <figcaption className="text-lg">
-          — {t("quote.author")}, <cite>{t("quote.source")}</cite>
-        </figcaption>
+        <figcaption className="text-lg">— {t("quote.author")}</figcaption>
       </figure>
       {work ? (
         <p className="absolute bottom-3 inset-e-4 text-sm text-paper">

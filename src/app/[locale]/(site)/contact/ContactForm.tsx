@@ -6,7 +6,6 @@ import { ErrorSummary } from "@/components/ui/ErrorSummary";
 import { Field } from "@/components/ui/Field";
 import { HoneypotField } from "@/components/ui/HoneypotField";
 import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { Textarea } from "@/components/ui/Textarea";
 import { FORM_START_FIELD, LOCALE_FIELD } from "@/lib/forms";
@@ -23,26 +22,22 @@ type State =
     }
   | null;
 
-const FIELDS = ["topic", "name", "email", "phone", "message"] as const;
+const FIELDS = ["name", "email", "phone", "message"] as const;
 
 /**
- * The contact form (spec §5.8): a general question or a commission enquiry. A plain POST before
- * hydration (Server Action with progressive enhancement); after a success it shows the
- * acknowledgement in place.
+ * The contact form (spec §5.8): a general question. A plain POST before hydration (Server Action
+ * with progressive enhancement); after a success it shows the acknowledgement in place.
  */
 export function ContactForm({
   action,
   locale,
-  topic,
   formStart,
 }: {
   action: (prev: State, payload: FormData) => Promise<State>;
   locale: Locale;
-  topic: "GENERAL" | "COMMISSION";
   formStart: string;
 }) {
   const t = useTranslations("requests");
-  const tc = useTranslations("catalog.contact");
   const [state, formAction] = useActionState(action, null);
   const thanksRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -66,8 +61,7 @@ export function ContactForm({
 
   const fieldErrors = state && !state.ok ? (state.error.fieldErrors ?? {}) : {};
   const err = (name: string) => fieldErrors[name]?.[0];
-  const label = (f: (typeof FIELDS)[number]) =>
-    f === "topic" ? tc("topic") : t(`fields.${f}`);
+  const label = (f: (typeof FIELDS)[number]) => t(`fields.${f}`);
   const errors =
     state && !state.ok
       ? state.error.code === "INVALID_INPUT"
@@ -95,19 +89,6 @@ export function ContactForm({
       <input type="hidden" name={LOCALE_FIELD} value={locale} />
       <input type="hidden" name={FORM_START_FIELD} value={formStart} />
       <HoneypotField />
-      <Field id="contact-topic" label={tc("topic")} error={err("topic")}>
-        {(c) => (
-          <Select
-            {...c}
-            name="topic"
-            defaultValue={topic}
-            options={[
-              { value: "GENERAL", label: tc("topicGeneral") },
-              { value: "COMMISSION", label: tc("topicCommission") },
-            ]}
-          />
-        )}
-      </Field>
       <Field
         id="contact-name"
         label={t("fields.name")}
@@ -130,7 +111,6 @@ export function ContactForm({
       <Field
         id="contact-message"
         label={t("fields.message")}
-        hint={tc("messageHint")}
         required
         error={err("message")}
       >

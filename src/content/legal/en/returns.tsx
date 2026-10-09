@@ -61,12 +61,11 @@ export const returns: LegalDocModule = {
         lawyer: who pays the return shipping.]
       </P>
 
-      <H2>Commissions</H2>
+      <H2>Exceptions</H2>
       <P>
-        A work made specially to the buyer's specification (a commission) may be
-        excluded from cancellation under s.14C(d) of the law, subject to the
-        law's qualifications (including s.2(b2)). Works from the collection on
-        this site are not commissions.
+        The law excludes certain kinds of purchase from the right to cancel
+        (s.14C(d)), subject to its qualifications (including s.2(b2)). The
+        original works on this site are not among them.
       </P>
     </>
   ),

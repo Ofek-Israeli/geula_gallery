@@ -13,7 +13,8 @@ import { submitRequest } from "@/server/requests/service";
 
 /**
  * The contact form (spec §5.8, §6.2 `/contact`): a `buyer_requests` QUESTION without an artwork,
- * topic GENERAL or COMMISSION. Same guards as the request form: honeypot, minimum form age and
+ * topic GENERAL (the painter takes no commissions; the COMMISSION value stays in the database for
+ * older rows only). Same guards as the request form: honeypot, minimum form age and
  * 5 per hour per IP (`requestIp`); `submitRequest` stores the row and enqueues `request-ack` and
  * `painter-new-request`.
  */
@@ -25,7 +26,6 @@ const optionalPhone = z.preprocess(
 export const submitContactAction = publicAction(
   z
     .object({
-      topic: z.enum(["GENERAL", "COMMISSION"]).default("GENERAL"),
       name: personNameSchema,
       email: emailSchema,
       phone: optionalPhone,
@@ -48,7 +48,7 @@ export const submitContactAction = publicAction(
         {
           kind: "QUESTION",
           artworkSlug: null,
-          topic: input.topic,
+          topic: "GENERAL",
           name: input.name,
           email: input.email,
           phone: input.phone ?? null,

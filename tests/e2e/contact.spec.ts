@@ -9,31 +9,29 @@ import {
 } from "./support/commerce";
 
 /**
- * The contact form (spec §5.8, §6.2 `/contact`): `?topic=commission` preselects the topic; the
- * message is stored as a QUESTION without an artwork (topic COMMISSION) and acknowledged by email;
- * the s.11 privacy notice is shown with the form.
+ * The contact form (spec §5.8, §6.2 `/contact`): a general question is stored as a QUESTION without
+ * an artwork (topic GENERAL; the painter takes no commissions, so there is no topic to choose) and
+ * acknowledged by email; the s.11 privacy notice is shown with the form.
  */
 const en = messages("en", "catalog").contact;
 const er = messages("en", "requests");
 
 test.use({ extraHTTPHeaders: buyerIp(44) });
 
-test("contact form: a commission enquiry → stored request + acknowledgement", async ({
+test("contact form: a question → stored request + acknowledgement", async ({
   page,
   request,
 }) => {
   const buyer = uniqueBuyer("contact");
-  await page.goto("/en/contact?topic=commission");
+  await page.goto("/en/contact");
   const form = page.getByTestId("contact-form");
-  await expect(form.getByLabel(new RegExp(`^${en.topic}`))).toHaveValue(
-    "COMMISSION",
-  );
+  await expect(form.getByRole("combobox")).toHaveCount(0);
   await expect(page.getByText(en.privacy)).toBeVisible();
   await form.getByLabel(new RegExp(`^${er.fields.name}`)).fill(buyer.name);
   await form.getByLabel(new RegExp(`^${er.fields.email}`)).fill(buyer.email);
   await form
     .getByLabel(new RegExp(`^${er.fields.message}`))
-    .fill("A large landscape for a living room, about 120 × 80 cm.");
+    .fill("Can I visit the studio to see the landscapes?");
   await form.getByTestId("contact-submit").click();
   await expect(page.getByTestId("contact-thanks")).toContainText(buyer.email);
 
@@ -49,7 +47,7 @@ test("contact form: a commission enquiry → stored request + acknowledgement", 
   );
   expect(row).toEqual({
     kind: "QUESTION",
-    topic: "COMMISSION",
+    topic: "GENERAL",
     artwork_id: null,
     status: "NEW",
     locale: "en",
@@ -66,9 +64,6 @@ test("contact form: a commission enquiry → stored request + acknowledgement", 
 test("contact form: a missing message is reported", async ({ page }) => {
   await page.goto("/en/contact");
   const form = page.getByTestId("contact-form");
-  await expect(form.getByLabel(new RegExp(`^${en.topic}`))).toHaveValue(
-    "GENERAL",
-  );
   await form.getByLabel(new RegExp(`^${er.fields.name}`)).fill("Test Buyer");
   await form
     .getByLabel(new RegExp(`^${er.fields.email}`))

@@ -10,13 +10,11 @@ import { QuoteHero } from "@/components/site/QuoteHero";
 import { organizationJsonLd } from "@/components/site/structured-data";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
-import type { Locale } from "@/lib/locale";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
 import {
-  getArtworkCard,
   getArtworkOgImage,
-  getFeaturedArtwork,
+  getHeroArtwork,
   getPublicProfile,
   listArtworks,
   listSeries,
@@ -25,21 +23,12 @@ import { env } from "@/server/env";
 
 /**
  * Home: a quote about colour over "By the Lake" (the LCP image, `fetchPriority="high"`), the
- * artist's biography as the page's `<h1>`, available works, the series, the commissions call to
- * action, and the Organization JSON-LD (`hasMerchantReturnPolicy`, `hasShippingService`). The
- * painter chose the opening (after alonyaffe.co.il) in place of spec §6.2's featured split.
+ * artist's biography as the page's `<h1>`, available works, the series, and the Organization
+ * JSON-LD (`hasMerchantReturnPolicy`, `hasShippingService`). The painter chose the opening (after
+ * alonyaffe.co.il) in place of spec §6.2's featured split. She does not take commissions, so the
+ * site never offers them.
  */
 
-/** The painting behind the home page's quote. */
-const HOME_HERO_SLUG = "by-the-lake";
-
-/** The hero work, else the featured available one (a catalog without it still opens). */
-async function heroWork(locale: Locale) {
-  return (
-    (await getArtworkCard(locale, HOME_HERO_SLUG)) ??
-    (await getFeaturedArtwork(locale))
-  );
-}
 export async function generateMetadata({
   params,
 }: PageProps<"/[locale]">): Promise<Metadata> {
@@ -48,7 +37,7 @@ export async function generateMetadata({
   const [t, tc, hero] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.home" }),
     getTranslations({ locale, namespace: "common.meta" }),
-    heroWork(locale),
+    getHeroArtwork(locale),
   ]);
   const og = hero ? await getArtworkOgImage(hero.slug) : null;
   return pageMetadata({
@@ -66,7 +55,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   if (!isLocale(locale)) notFound();
   const [t, hero, works, series, profile] = await Promise.all([
     getTranslations({ locale, namespace: "catalog.home" }),
-    heroWork(locale),
+    getHeroArtwork(locale),
     listArtworks(locale, { view: "available", pageSize: 7 }),
     listSeries(locale),
     getPublicProfile(locale),
@@ -156,24 +145,6 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           </ul>
         </section>
       ) : null}
-
-      <section
-        aria-labelledby="commission-title"
-        className="flex flex-col gap-3 border-t border-line pt-10"
-      >
-        <h2 id="commission-title" className="text-2xl">
-          {t("commissionTitle")}
-        </h2>
-        <p className="max-w-prose text-ink-muted">{t("commissionBody")}</p>
-        <p>
-          <Link
-            href={paths.contact("commission")}
-            className={buttonClasses("secondary")}
-          >
-            {t("commissionCta")}
-          </Link>
-        </p>
-      </section>
     </div>
   );
 }

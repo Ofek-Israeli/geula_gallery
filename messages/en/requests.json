@@ -49,7 +49,7 @@
   "privacy": "We use your details only to answer your message (and, for a quote, to price the shipping and send a payment link). You are not legally required to provide them, but we cannot get back to you without them. They are kept by us and sent only through our email provider.",
   "replyTemplates": {
     "available": "Hello {name},\nThank you for your message. The work is still available and can be bought directly on its page on the site. I am happy to answer any other question.",
-    "sold": "Hello {name},\nThank you for your interest. This work has already been sold, but the gallery has similar works, and commissions are welcome.",
+    "sold": "Hello {name},\nThank you for your interest. This work has already been sold, but the gallery has similar works.",
     "quoteSoon": "Hello {name},\nThank you for your request. I am checking the shipping cost and will send a full quote with a payment link soon.",
     "moreDetails": "Hello {name},\nThank you for your message. To price the shipping, could you tell me your city and postal code?"
   },
