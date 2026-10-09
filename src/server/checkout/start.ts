@@ -407,10 +407,13 @@ export async function startCheckout(
 }
 
 /** A refusal; `artworkIds` only when specific works caused it. */
-function refused(code: string, artworkIds: readonly string[] = []) {
+function refused(
+  code: string,
+  artworkIds: readonly string[] = [],
+): StartCheckoutResult {
   return artworkIds.length > 0
-    ? ({ kind: "refused", code, artworkIds: [...artworkIds] } as const)
-    : ({ kind: "refused", code } as const);
+    ? { kind: "refused", code, artworkIds: [...artworkIds] }
+    : { kind: "refused", code };
 }
 
 /** The order with its attempt, and the orders whose lapsed holds it took over. */
