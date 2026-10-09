@@ -9,12 +9,15 @@ const linkClass =
 
 /**
  * Public header. `variant="minimal"` is the checkout chrome (no navigation), which still carries
- * the cancellation link (spec §1.2).
+ * the cancellation link (spec §1.2). The cart link appears once the cart holds a work
+ * (`cartCount`, read by the layout).
  */
 export function SiteHeader({
   variant = "full",
+  cartCount = 0,
 }: {
   variant?: "full" | "minimal";
+  cartCount?: number;
 }) {
   const t = useTranslations("common");
   return (
@@ -42,6 +45,21 @@ export function SiteHeader({
                     {t("nav.contact")}
                   </Link>
                 </li>
+                {cartCount > 0 ? (
+                  <li>
+                    <Link
+                      href="/cart"
+                      className={linkClass}
+                      aria-label={t("nav.cartCount", { count: cartCount })}
+                      data-testid="header-cart"
+                    >
+                      {t("nav.cart")}
+                      <span className="ms-1">
+                        (<bdi>{cartCount}</bdi>)
+                      </span>
+                    </Link>
+                  </li>
+                ) : null}
               </>
             ) : null}
             <li>

@@ -241,7 +241,14 @@ describe("request helpers", () => {
         orderNumber: "GG-1",
         locale: "en",
       }),
-    ).toBe("Original painting – A, B (GG-1)");
+    ).toBe("Original paintings – A, B (GG-1)");
+    expect(
+      cardcomProductName({
+        lines: [{ name: "A" }],
+        orderNumber: "GG-1",
+        locale: "en",
+      }),
+    ).toBe("Original painting – A (GG-1)");
     const long = cardcomProductName({
       lines: [{ name: "x".repeat(400) }],
       orderNumber: "GG-1",

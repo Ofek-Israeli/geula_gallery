@@ -94,6 +94,125 @@ export async function checkoutInput(
   };
 }
 
+/**
+ * A cart checkout input (`items` instead of `slug`), priced by the server quote of those works;
+ * otherwise the same defaults as `checkoutInput` (IL pickup).
+ */
+export async function cartCheckoutInput(
+  artworkIds: readonly string[],
+  opts: CheckoutOptions = {},
+): Promise<StartInput> {
+  const { getCheckoutQuote } = await import("@/server/checkout/quote");
+  const country = opts.country ?? "IL";
+  const method =
+    opts.method ?? (country === "IL" ? "LOCAL_PICKUP" : "CARRIER_TABLE");
+  const quote = await getCheckoutQuote(
+    {
+      artworkIds,
+      locale: opts.locale ?? "he",
+      country,
+      method,
+      currency: opts.currency,
+    },
+    { db: opts.db },
+  );
+  if (quote.kind !== "ok") {
+    throw new Error(`cartCheckoutInput: quote blocked (${quote.reason})`);
+  }
+  // Same buyer/consent defaults as the single-item input, built from its first work.
+  const { slug: _slug, ...base } = await singleItemDefaults(opts, quote);
+  return {
+    ...base,
+    items: quote.items.map((i) => ({
+      artworkId: i.artworkId,
+      expectedPriceMinor: i.priceMinor,
+    })),
+  } as StartInput;
+}
+
+async function singleItemDefaults(
+  opts: CheckoutOptions,
+  quote: Extract<
+    import("@/server/checkout/types").CheckoutQuote,
+    { kind: "ok" }
+  >,
+) {
+  const { LEGAL_VERSIONS } = await import("@/content/legal/versions");
+  const country = quote.country;
+  const buyer = opts.buyer ?? uniqueBuyer();
+  return {
+    slug: undefined,
+    locale: opts.locale ?? "he",
+    country,
+    method: quote.shipping.method as StartInput["method"],
+    currency: quote.currency,
+    providerId: "mock" as const,
+    buyer: { name: buyer.name, email: buyer.email, phone: "+97230000000" },
+    shipTo:
+      quote.shipping.method === "LOCAL_PICKUP"
+        ? null
+        : {
+            name: "Test Buyer",
+            line1: "1 Test Street",
+            city: country === "IL" ? "Tel Aviv" : "Springfield",
+            postalCode: "12345",
+            country,
+            phone: "+97230000000",
+          },
+    expectedTotalMinor: quote.totalMinor,
+    clientRequestId: opts.clientRequestId ?? randomUUID(),
+    consents: {
+      termsVersion: LEGAL_VERSIONS.terms,
+      returnsVersion: LEGAL_VERSIONS.returns,
+      privacyVersion: LEGAL_VERSIONS.privacy,
+      ageConfirmed: true as const,
+      ...(country === "IL"
+        ? {}
+        : { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }),
+      receiptEmailConsent: true,
+    },
+    ipHash: opts.ipHash === undefined ? `ip-${randomUUID()}` : opts.ipHash,
+  };
+}
+
+/** `startCheckout` for a cart; returns the result and the input used. */
+export async function startCartCheckout(
+  artworkIds: readonly string[],
+  opts: CheckoutOptions = {},
+): Promise<{ result: StartResult; input: StartInput }> {
+  const { startCheckout } = await import("@/server/checkout/start");
+  const input = await cartCheckoutInput(artworkIds, opts);
+  const { result } = await startCheckout(input, { db: opts.db });
+  return { result, input };
+}
+
+/** A held cart order with its first attempt and mock payment ref. */
+export async function heldCartOrder(
+  artworkIds: readonly string[],
+  opts: CheckoutOptions = {},
+): Promise<{
+  orderId: string;
+  attemptId: string;
+  ref: string;
+  input: StartInput;
+}> {
+  const { result, input } = await startCartCheckout(artworkIds, opts);
+  if (result.kind !== "redirect") {
+    throw new Error(
+      `heldCartOrder: checkout did not redirect (${result.kind})`,
+    );
+  }
+  const { latestAttempt } = await attemptHelpers();
+  const attempt = await latestAttempt(result.orderId);
+  if (!attempt.providerRef) throw new Error("heldCartOrder: no provider ref");
+  return {
+    orderId: result.orderId,
+    attemptId: attempt.id,
+    ref: attempt.providerRef,
+    input,
+  };
+}
+
 /** `startCheckout` with a valid input; returns the result and the input used. */
 export async function startTestCheckout(
   slug: string,

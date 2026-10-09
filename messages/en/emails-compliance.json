@@ -3,7 +3,7 @@
     "subject": "Order {number} is confirmed",
     "preview": "Thank you – order {number} is paid",
     "title": "Thank you for your order",
-    "intro": "Your payment for order {number} was received and the work is yours. We will let you know when it ships or is ready for pickup.",
+    "intro": "Your payment for order {number} was received and {count, plural, one {the work is} other {the works are}} yours. We will let you know when {count, plural, one {it ships} other {they ship}} or {count, plural, one {is} other {are}} ready for pickup.",
     "paidAt": "Paid on {date} (Israel time)",
     "summaryTitle": "Order summary",
     "shipping": "Shipping",
@@ -11,7 +11,7 @@
     "total": "Total paid",
     "disclosureTitle": "Disclosure document – summary",
     "disclosureLink": "Read the full disclosure document",
-    "disclosureNote": "A printed copy of the disclosure document is also included with the work.",
+    "disclosureNote": "A printed copy of the disclosure document is also included with {count, plural, one {the work} other {the works}}.",
     "cancelLink": "Cancel the purchase with the online form"
   },
   "labels": {

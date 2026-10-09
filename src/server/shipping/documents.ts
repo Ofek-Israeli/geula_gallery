@@ -17,6 +17,7 @@ import { getSetting } from "@/server/settings";
 import {
   customsDescriptionEn,
   declaredLineValues,
+  declaredLineWeight,
   EU_CULTURAL_GOODS_STATEMENT,
   EXPORT_COMMODITY_CODE,
   HS_CODE,
@@ -198,7 +199,7 @@ export async function getCommercialInvoice(
   const currency = (shipment.declaredCurrency ?? order.currency) as Currency;
   const lineValues = declaredLineValues(
     shipment.declaredValueMinor ?? order.itemsTotalMinor,
-    rows.map(({ item }) => item.declaredValueMinor ?? item.priceMinor),
+    rows.map(({ item }) => declaredLineWeight(item, order)),
   );
   const lines = rows.map(({ art }, i) => ({
     description:

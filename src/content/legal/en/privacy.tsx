@@ -28,6 +28,11 @@ export const privacy: LegalDocModule = {
           abuse. We use no analytics, no advertising and no non-essential
           cookies.
         </li>
+        <li>
+          When you add a work to your cart, one strictly necessary cookie
+          remembers which works are in it (the works&apos; identifiers only, for
+          30 days). It holds no personal details.
+        </li>
       </UL>
       <P>
         You are not legally required to give these details, but without them we

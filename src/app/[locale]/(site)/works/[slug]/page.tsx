@@ -5,7 +5,11 @@ import { getTranslations } from "next-intl/server";
 import { ArtworkFacts } from "@/components/artwork/ArtworkFacts";
 import { ArtworkGallery } from "@/components/artwork/ArtworkGallery";
 import { useStatusText } from "@/components/artwork/ArtworkStatus";
-import { primaryAction, shownPriceMinor } from "@/components/artwork/buy-box";
+import {
+  cartNoticeOf,
+  primaryAction,
+  shownPriceMinor,
+} from "@/components/artwork/buy-box";
 import { BUY_BOX_ID, LiveBuyBox } from "@/components/artwork/LiveBuyBox";
 import { StickyBuyBar } from "@/components/artwork/StickyBuyBar";
 import { JsonLd } from "@/components/site/JsonLd";
@@ -29,6 +33,9 @@ import {
 } from "@/server/catalog/queries";
 import { env } from "@/server/env";
 
+import { readCartIds } from "@/server/next/cart";
+import { getSetting } from "@/server/settings";
+import { addToCartAction } from "../../cart/actions";
 /**
  * `/works/[slug]` (spec §6.3): breadcrumbs; the gallery (mobile scroll-snap strip with a counter,
  * desktop main image with thumbnails, lightbox); title; the live buy box (price or status, Buy
@@ -125,18 +132,23 @@ function StickyBar({
 
 export default async function ArtworkPage({
   params,
+  searchParams,
 }: PageProps<"/[locale]/works/[slug]">) {
   const { locale, slug } = await params;
   if (!isLocale(locale)) notFound();
   const data = await getArtworkPage(locale, slug);
   if (!data) notFound();
   const { artwork, shipSpec, seo } = data;
-  const [delivery, profile, t, tb] = await Promise.all([
-    getDeliveryEstimates(locale, shipSpec),
-    getPublicProfile(locale),
-    getTranslations({ locale, namespace: "artwork" }),
-    getTranslations({ locale, namespace: "common" }),
-  ]);
+  const sp = await searchParams;
+  const [delivery, profile, t, tb, cartIds, checkoutSettings] =
+    await Promise.all([
+      getDeliveryEstimates(locale, shipSpec),
+      getPublicProfile(locale),
+      getTranslations({ locale, namespace: "artwork" }),
+      getTranslations({ locale, namespace: "common" }),
+      readCartIds(),
+      getSetting("checkout"),
+    ]);
   const base = env.APP_URL;
   const credit = artwork.images[0]?.creditLine ?? artwork.creditLine;
 
@@ -225,6 +237,14 @@ export default async function ArtworkPage({
             artwork={artwork}
             estimates={delivery.zones}
             pickupFree={delivery.pickupFree}
+            cart={{
+              action: addToCartAction,
+              inCart: cartIds.includes(artwork.id),
+              notice: cartNoticeOf(
+                Array.isArray(sp.cart) ? sp.cart[0] : sp.cart,
+              ),
+              maxItems: checkoutSettings.maxCartItems,
+            }}
           />
           {artwork.description ? (
             <section

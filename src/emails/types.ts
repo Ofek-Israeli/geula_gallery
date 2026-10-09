@@ -130,8 +130,10 @@ export interface EmailTemplateProps {
     disclosure: DisclosureDoc;
     disclosureUrl: string;
   };
-  "payment-review": OrderRef;
+  /** `itemCount`: works in the order (the copy says "the work" or "the works"). */
+  "payment-review": OrderRef & { itemCount?: number };
   "purchase-not-completed": OrderRef & {
+    itemCount?: number;
     reason: NotCompletedReason;
     /** False: "you were not charged". True: a refund is on its way. */
     charged: boolean;

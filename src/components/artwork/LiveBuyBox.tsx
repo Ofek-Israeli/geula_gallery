@@ -3,11 +3,18 @@ import { buttonClasses } from "@/components/ui/Button";
 import { Price } from "@/components/ui/Price";
 import { Link } from "@/i18n/navigation";
 import type { ArtworkDetailDTO, ZoneEstimateDTO } from "@/lib/catalog";
+import { LOCALE_FIELD } from "@/lib/forms";
 import type { Locale } from "@/lib/locale";
 import { formatMoney } from "@/lib/money";
 import { paths } from "@/lib/routes";
 import { useStatusText } from "./ArtworkStatus";
-import { shownPriceMinor, trustItems, zoneIsInsured } from "./buy-box";
+import {
+  type CartNotice,
+  cartControl,
+  shownPriceMinor,
+  trustItems,
+  zoneIsInsured,
+} from "./buy-box";
 
 export const BUY_BOX_ID = "buy-box";
 
@@ -15,7 +22,8 @@ export const BUY_BOX_ID = "buy-box";
  * The live buy box (spec §6.3). Rendered per request from the DB (never cached):
  * - the ILS price for an available work (also while another buyer is checking out), and the
  *   status in text;
- * - Buy now (→ checkout) when buyable; Ask; "Make an offer" when the work accepts offers (Tier B);
+ * - Buy now (→ checkout) when buyable, and "Add to cart" (several works, one checkout); Ask; "Make
+ *   an offer" when the work accepts offers (Tier B);
  *   sold works offer "similar works" and "commission";
  * - "Delivery in Israel from ₪X · free studio pickup" and per-zone estimates, linking to the
  *   shipping page; the DAP note;
@@ -25,10 +33,18 @@ export function LiveBuyBox({
   artwork,
   estimates,
   pickupFree,
+  cart,
 }: {
   artwork: ArtworkDetailDTO;
   estimates: ZoneEstimateDTO[];
   pickupFree: boolean;
+  /** The cart control: the add action, whether the work is already in the cart, a notice. */
+  cart?: {
+    action: (formData: FormData) => Promise<void>;
+    inCart: boolean;
+    notice: CartNotice | null;
+    maxItems: number;
+  };
 }) {
   const t = useTranslations("artwork");
   const locale = useLocale() as Locale;
@@ -87,6 +103,33 @@ export function LiveBuyBox({
           >
             {t("buy.buyNow")}
           </Link>
+        ) : null}
+        {cart?.notice ? (
+          <p role="status" data-testid="cart-notice">
+            {t(`buy.cartNotice.${cart.notice}`, { max: cart.maxItems })}
+          </p>
+        ) : null}
+        {cart && cartControl(artwork, cart.inCart) === "add" ? (
+          <form action={cart.action}>
+            <input type="hidden" name={LOCALE_FIELD} value={locale} />
+            <input type="hidden" name="artworkId" value={artwork.id} />
+            <input type="hidden" name="slug" value={slug} />
+            <button
+              type="submit"
+              className={buttonClasses("secondary", "md", "w-full")}
+              data-testid="add-to-cart"
+            >
+              {t("buy.addToCart")}
+            </button>
+          </form>
+        ) : null}
+        {cart && cartControl(artwork, cart.inCart) === "in_cart" ? (
+          <p data-testid="in-cart">
+            {t("buy.inCart")} ·{" "}
+            <Link href={paths.cart()} className="underline">
+              {t("buy.viewCart")}
+            </Link>
+          </p>
         ) : null}
         {available && artwork.quoteOnly ? (
           <Link

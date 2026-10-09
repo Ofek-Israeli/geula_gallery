@@ -9,12 +9,10 @@ import { HoneypotField } from "@/components/ui/HoneypotField";
 import { Input } from "@/components/ui/Input";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SubmitButton } from "@/components/ui/SubmitButton";
-import { Link } from "@/i18n/navigation";
 import { FORM_START_FIELD, LOCALE_FIELD } from "@/lib/forms";
 import type { Locale } from "@/lib/locale";
-import { paths } from "@/lib/routes";
 import type { ActionState } from "@/server/next/actions";
-import type { CheckoutActionData } from "./actions";
+import type { CheckoutActionData } from "../_lib/start-input";
 
 type State = ActionState<CheckoutActionData>;
 
@@ -22,7 +20,10 @@ export interface CheckoutFormProps {
   action: (prev: State, formData: FormData) => Promise<State>;
   locale: Locale;
   hidden: {
-    slug: string;
+    /** "Buy now": the work's slug. The cart checkout posts `items` instead. */
+    slug?: string;
+    /** Cart lines `"<artwork id>:<price minor>"`, each posted as an `item` field. */
+    items?: string[];
     country: string;
     method: string;
     currency: string;
@@ -33,6 +34,10 @@ export interface CheckoutFormProps {
   needsAddress: boolean;
   international: boolean;
   holdMinutes: number;
+  /** Works in this checkout (the hold notice says "the work" or "the N works"). */
+  itemCount: number;
+  /** Titles by artwork id, so an error can name the works another buyer took. */
+  itemTitles?: Record<string, string>;
   providers: { id: string; label: string; description?: string }[];
   /** The rendered pre-contract disclosure (server component output). */
   disclosure: ReactNode;
@@ -122,22 +127,19 @@ export function CheckoutForm(props: CheckoutFormProps) {
         </>
       );
     } else if (d.kind === "just_reserved") {
-      banner = t("errors.just_reserved");
+      const titles = (d.artworkIds ?? [])
+        .map((id) => props.itemTitles?.[id])
+        .filter((x): x is string => Boolean(x));
+      banner =
+        props.itemCount > 1 && titles.length > 0
+          ? t("errors.just_reserved_items", {
+              titles: titles.join(", "),
+              count: titles.length,
+            })
+          : t("errors.just_reserved");
     } else if (d.kind === "refused") {
       const key = `errors.${d.code}`;
       banner = t.has(key as never) ? t(key as never) : t("errors.generic");
-    } else if (d.kind === "provider_error") {
-      banner = (
-        <>
-          {t("errors.provider_error")}{" "}
-          <Link
-            href={paths.order(d.orderNumber, d.accessToken)}
-            className="underline"
-          >
-            {t("errors.openOrder")}
-          </Link>
-        </>
-      );
     }
   }
 
@@ -152,7 +154,12 @@ export function CheckoutForm(props: CheckoutFormProps) {
     >
       <input type="hidden" name={LOCALE_FIELD} value={props.locale} />
       <input type="hidden" name={FORM_START_FIELD} value={h.formStart} />
-      <input type="hidden" name="slug" value={h.slug} />
+      {h.slug !== undefined ? (
+        <input type="hidden" name="slug" value={h.slug} />
+      ) : null}
+      {(h.items ?? []).map((item) => (
+        <input key={item} type="hidden" name="item" value={item} />
+      ))}
       <input type="hidden" name="country" value={h.country} />
       <input type="hidden" name="method" value={h.method} />
       <input type="hidden" name="currency" value={h.currency} />
@@ -348,7 +355,10 @@ export function CheckoutForm(props: CheckoutFormProps) {
 
       <p className="text-sm text-ink-muted">{t("privacy")}</p>
       <p className="font-medium">
-        {t("holdNotice", { minutes: props.holdMinutes })}
+        {t("holdNotice", {
+          minutes: props.holdMinutes,
+          count: props.itemCount,
+        })}
       </p>
       <div>
         <SubmitButton

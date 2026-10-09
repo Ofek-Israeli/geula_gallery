@@ -34,7 +34,7 @@ export const orderConfirmation: EmailTemplate<Props> = {
       >
         <Title>{t("title")}</Title>
         <Greeting ctx={ctx} name={p.buyerName} />
-        <P>{t("intro", { number: p.orderNumber })}</P>
+        <P>{t("intro", { number: p.orderNumber, count: p.items.length })}</P>
         <P muted>
           {t("paidAt", { date: formatDateTime(p.paidAt, ctx.locale) })}
         </P>
@@ -64,7 +64,7 @@ export const orderConfirmation: EmailTemplate<Props> = {
             {t("disclosureLink")}
           </Link>
         </P>
-        <P muted>{t("disclosureNote")}</P>
+        <P muted>{t("disclosureNote", { count: p.items.length })}</P>
         <P>
           <Link
             href={`${ctx.brand.cancelUrl}?order=${encodeURIComponent(p.orderNumber)}`}

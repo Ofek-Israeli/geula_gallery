@@ -45,7 +45,12 @@ export interface BuyerOrderView {
   isDemo: boolean;
   /** ISO; the live hold of an AWAITING_PAYMENT order (null when not held). */
   holdUntil: string | null;
-  items: { title: string; slug: string | null; priceMinor: number }[];
+  items: {
+    artworkId: string;
+    title: string;
+    slug: string | null;
+    priceMinor: number;
+  }[];
   attempts: {
     seq: number;
     status: AttemptStatus;
@@ -104,6 +109,7 @@ export async function getBuyerOrder(
 
   const items = await db
     .select({
+      artworkId: orderItems.artworkId,
       titleHe: orderItems.titleHe,
       titleEn: orderItems.titleEn,
       priceMinor: orderItems.priceMinor,
@@ -113,7 +119,8 @@ export async function getBuyerOrder(
     })
     .from(orderItems)
     .leftJoin(artworks, eq(artworks.id, orderItems.artworkId))
-    .where(eq(orderItems.orderId, order.id));
+    .where(eq(orderItems.orderId, order.id))
+    .orderBy(asc(orderItems.titleEn), asc(orderItems.id));
   const attempts = await db
     .select()
     .from(paymentAttempts)
@@ -192,6 +199,7 @@ export async function getBuyerOrder(
     isDemo: order.isDemo,
     holdUntil,
     items: items.map((i) => ({
+      artworkId: i.artworkId,
       title: locale === "he" ? i.titleHe : i.titleEn,
       slug: i.slug,
       priceMinor: i.priceMinor,

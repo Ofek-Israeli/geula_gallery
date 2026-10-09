@@ -16,7 +16,8 @@
     "prev": "Previous",
     "next": "Next",
     "newOrder": "+ Manual order",
-    "source": "Source"
+    "source": "Source",
+    "moreItems": "+{count, plural, one {# more} other {# more}}"
   },
   "status": {
     "AWAITING_PAYMENT": "Awaiting payment",

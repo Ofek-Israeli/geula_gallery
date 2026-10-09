@@ -9,11 +9,11 @@
     "COMPLETED": "Completed"
   },
   "holdUntil": "Reserved for you until {time}",
-  "holdLapsed": "Your reservation time is up. If the work is still free you can try again.",
+  "holdLapsed": "Your reservation time is up. If {count, plural, one {the work is} other {the works are}} still free you can try again.",
   "payNow": "Pay now",
   "provider": "Payment method",
   "release": "Release my reservation",
-  "releaseConfirm": "Release the reservation? The work becomes available to other buyers.",
+  "releaseConfirm": "Release the reservation? {count, plural, one {The work becomes} other {The works become}} available to other buyers.",
   "released": "The reservation was released.",
   "inFlight": "Your payment is being confirmed. Please wait – this page refreshes by itself.",
   "checking": "Checking your payment… this page refreshes every few seconds.",
@@ -29,7 +29,7 @@
     "expired": "The payment page expired. You were not charged.",
     "refunded": "This payment was refunded.",
     "deferred": "Your payment is being confirmed.",
-    "lost_before_capture": "Sorry – the work was sold to another buyer before your payment was taken. You were not charged.",
+    "lost_before_capture": "Sorry – {count, plural, one {the work was} other {a work in this order was}} sold to another buyer before your payment was taken. You were not charged.",
     "config_drift": "We could not verify the payment yet. We are looking into it.",
     "unknown": "We could not reach the payment provider. We will keep checking."
   },
@@ -44,15 +44,17 @@
   },
   "paid": {
     "title": "Your order is confirmed",
-    "body": "A confirmation with the disclosure document is on its way to your email. We will let you know when the work ships.",
+    "body": "A confirmation with the disclosure document is on its way to your email. We will let you know when {count, plural, one {the work ships} other {the works ship}}.",
     "cancel": "Want to cancel? Use the cancellation form"
   },
   "review": {
-    "body": "The payment provider is reviewing the payment. The work stays reserved for you meanwhile."
+    "body": "The payment provider is reviewing the payment. {count, plural, one {The work stays} other {The works stay}} reserved for you meanwhile."
   },
   "expired": {
     "body": "This reservation ended without a completed payment. You were not charged.",
-    "again": "See the work"
+    "again": "See the work",
+    "againTitle": "See “{title}”",
+    "toCart": "Add these works to my cart"
   },
   "cancelled": {
     "body": "This order was cancelled. Any payment taken is refunded in full."
@@ -77,7 +79,7 @@
     "not_payable": "This order can no longer be paid.",
     "in_flight": "A payment is being confirmed. Please wait.",
     "too_many_attempts": "Too many payment attempts for this order. Please contact us.",
-    "just_reserved": "Sorry – the work has been reserved by another buyer.",
+    "just_reserved": "Sorry – {count, plural, one {the work has} other {a work in this order has}} been reserved by another buyer.",
     "hold_count_exceeded": "This reservation cannot be renewed again. Please start a new checkout.",
     "hold_span_exceeded": "This reservation cannot be renewed again. Please start a new checkout.",
     "too_many_holds": "You already have works reserved.",

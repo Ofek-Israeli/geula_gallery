@@ -48,9 +48,12 @@ import {
   photosRequired,
 } from "./checklist";
 import {
+  CONTENTS_DESCRIPTION_MAX,
+  contentsDescriptionMulti,
   contentsDescriptionShort,
   customsDescriptionEn,
   declaredLineValues,
+  declaredLineWeight,
   declaredValueUsdMinor,
   EXPORT_COMMODITY_CODE,
   exportDeclarationRequired,
@@ -803,7 +806,7 @@ async function buildCreateRequest(
     shipment.declaredValueMinor ?? order.itemsTotalMinor;
   const lineValues = declaredLineValues(
     declaredValueMinor,
-    items.map((i) => i.declaredValueMinor ?? i.priceMinor),
+    items.map((i) => declaredLineWeight(i, order)),
   );
   return {
     orderNumber: order.number,
@@ -826,7 +829,12 @@ async function buildCreateRequest(
     exportReason: "permanent",
     invoiceNumber:
       shipment.commercialInvoiceNumber ?? commercialInvoiceNumber(order.number),
-    contentsDescriptionEn: contentsDescriptionShort(firstMedium),
+    // Several works: the admin's own text, else "Original paintings (N)".
+    contentsDescriptionEn:
+      items.length > 1
+        ? (shipment.contentsDescriptionEn?.slice(0, CONTENTS_DESCRIPTION_MAX) ??
+          contentsDescriptionMulti(items.length))
+        : contentsDescriptionShort(firstMedium),
     lineItems: items.map((i, n) => ({
       description:
         items.length === 1 && shipment.contentsDescriptionEn

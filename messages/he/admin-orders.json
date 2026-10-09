@@ -16,7 +16,8 @@
     "prev": "הקודם",
     "next": "הבא",
     "newOrder": "+ הזמנה ידנית",
-    "source": "מקור"
+    "source": "מקור",
+    "moreItems": "+{count, plural, one {עוד אחת} other {עוד #}}"
   },
   "status": {
     "AWAITING_PAYMENT": "ממתינה לתשלום",

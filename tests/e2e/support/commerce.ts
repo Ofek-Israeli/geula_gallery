@@ -6,10 +6,12 @@
  *   IP, not scaled by RATE_LIMIT_SCALE) never trip across parallel specs that share localhost.
  * - Each spec buys its own demo work: the E2E database is reset once per run, not per test.
  */
+
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
 import pg from "pg";
+import { createTranslator } from "use-intl/core";
 import { createMailbox } from "../../helpers/mailbox";
 import { E2E_SECRETS } from "../e2e-env";
 
@@ -66,6 +68,24 @@ export function messages(locale: "he" | "en", namespace: string): any {
   return JSON.parse(
     readFileSync(`messages/${locale}/${namespace}.json`, "utf8"),
   );
+}
+
+/**
+ * A message rendered like the app renders it (ICU plurals and arguments), e.g.
+ * `formatted("en", "orders", "review.body", { count: 1 })`.
+ */
+export function formatted(
+  locale: "he" | "en",
+  namespace: string,
+  key: string,
+  values: Record<string, string | number> = {},
+): string {
+  const t = createTranslator({
+    locale,
+    messages: { [namespace]: messages(locale, namespace) },
+    namespace,
+  });
+  return (t as unknown as (k: string, v: typeof values) => string)(key, values);
 }
 
 const MSG = {

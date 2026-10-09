@@ -20,6 +20,7 @@ import { getBuyerOrder } from "@/server/checkout/order-view";
 import { loadDisclosureInput } from "@/server/documents/data";
 import { ipHashFrom } from "@/server/security/ip";
 import { checkLimit } from "@/server/security/rate-limit";
+import { addOrderToCartAction } from "../../cart/actions";
 import {
   payOrderAction,
   releaseHoldAction,
@@ -71,7 +72,7 @@ export default async function OrderPage({
       <input type="hidden" name="k" value={view.accessToken} />
     </>
   );
-  const firstSlug = view.items[0]?.slug ?? null;
+  const count = view.items.length;
   const detailsNote = one(sp.details);
   // Link orders hold for days: a date, not a minutes countdown.
   const longHold =
@@ -149,7 +150,7 @@ export default async function OrderPage({
           className="border border-line p-4"
           data-testid="payment-result"
         >
-          {t(`payment.${payment}` as never)}
+          {t(`payment.${payment}` as never, { count } as never)}
         </p>
       ) : null}
       {err ? (
@@ -159,7 +160,7 @@ export default async function OrderPage({
           data-testid="order-error"
         >
           {t.has(`errors.${err}` as never)
-            ? t(`errors.${err}` as never)
+            ? t(`errors.${err}` as never, { count } as never)
             : t("errors.generic")}
         </p>
       ) : null}
@@ -191,7 +192,7 @@ export default async function OrderPage({
               )}
             </p>
           ) : (
-            <p>{t("holdLapsed")}</p>
+            <p>{t("holdLapsed", { count })}</p>
           )}
           {view.isLink && view.shippingLocked ? (
             <p>
@@ -265,7 +266,10 @@ export default async function OrderPage({
           {view.canRelease && view.holdUntil ? (
             <form action={releaseHoldAction}>
               {hidden}
-              <ConfirmButton message={t("releaseConfirm")} variant="secondary">
+              <ConfirmButton
+                message={t("releaseConfirm", { count })}
+                variant="secondary"
+              >
                 {t("release")}
               </ConfirmButton>
             </form>
@@ -273,11 +277,13 @@ export default async function OrderPage({
         </section>
       ) : null}
 
-      {view.status === "PAYMENT_REVIEW" ? <p>{t("review.body")}</p> : null}
+      {view.status === "PAYMENT_REVIEW" ? (
+        <p>{t("review.body", { count })}</p>
+      ) : null}
       {view.status === "PAID" || view.status === "COMPLETED" ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-2xl">{t("paid.title")}</h2>
-          <p>{t("paid.body")}</p>
+          <p>{t("paid.body", { count })}</p>
           <p>
             <Link href={paths.cancel(view.number)} className="underline">
               {t("paid.cancel")}
@@ -288,12 +294,30 @@ export default async function OrderPage({
       {view.status === "EXPIRED" ? (
         <section className="flex flex-col gap-2">
           <p>{t("expired.body")}</p>
-          {firstSlug ? (
-            <p>
-              <Link href={paths.artwork(firstSlug)} className="underline">
-                {t("expired.again")}
-              </Link>
-            </p>
+          <ul className="flex flex-col gap-1">
+            {view.items.map((i) =>
+              i.slug ? (
+                <li key={i.artworkId}>
+                  <Link href={paths.artwork(i.slug)} className="underline">
+                    {count > 1
+                      ? t("expired.againTitle", { title: i.title })
+                      : t("expired.again")}
+                  </Link>
+                </li>
+              ) : null,
+            )}
+          </ul>
+          {count > 1 ? (
+            <form action={addOrderToCartAction}>
+              {hidden}
+              <button
+                type="submit"
+                className={buttonClasses("secondary", "sm")}
+                data-testid="restore-to-cart"
+              >
+                {t("expired.toCart")}
+              </button>
+            </form>
           ) : null}
         </section>
       ) : null}
@@ -308,7 +332,7 @@ export default async function OrderPage({
         </h2>
         <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
           {view.items.map((i) => (
-            <div key={i.title} className="contents">
+            <div key={i.artworkId} className="contents">
               <dt>{i.title}</dt>
               <dd>
                 <Price

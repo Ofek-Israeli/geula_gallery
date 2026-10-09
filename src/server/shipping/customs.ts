@@ -70,6 +70,24 @@ export function contentsDescriptionShort(mediumText: string): string {
   return full.length <= CONTENTS_DESCRIPTION_MAX ? full : "Original painting";
 }
 
+/**
+ * Weight of one line when splitting the declared total: the declared value (ILS), else the item
+ * price converted to ILS, so every weight is in one currency.
+ */
+export function declaredLineWeight(
+  item: { declaredValueMinor: number | null; priceMinor: number },
+  order: { currency: string; fxIlsPerUnit: string | null },
+): number {
+  if (item.declaredValueMinor !== null) return item.declaredValueMinor;
+  if (order.currency === "ILS") return item.priceMinor;
+  return Math.round(item.priceMinor * Number(order.fxIlsPerUnit ?? 1));
+}
+
+/** The waybill contents line for a parcel with several works. */
+export function contentsDescriptionMulti(count: number): string {
+  return `Original paintings (${count})`;
+}
+
 /** True when the declared value is strictly above the threshold (spec: "above USD 200"). */
 export function exportDeclarationRequired(
   declaredValueUsdMinor: number,

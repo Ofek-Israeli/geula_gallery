@@ -64,3 +64,31 @@ export function primaryAction(
   }
   return { kind: "request", request: "question", label: "ask" };
 }
+
+/** Notices after "Add to cart" (the `cart=` query on the work page). */
+export const CART_NOTICES = [
+  "added",
+  "already",
+  "full",
+  "mixed",
+  "unavailable",
+] as const;
+export type CartNotice = (typeof CART_NOTICES)[number];
+
+export function cartNoticeOf(value: string | undefined): CartNotice | null {
+  return (CART_NOTICES as readonly string[]).includes(value ?? "")
+    ? (value as CartNotice)
+    : null;
+}
+
+/**
+ * The cart control under Buy now: "Add to cart" for a buyable work, "In your cart" once it is
+ * there, nothing otherwise (works that are not buyable cannot enter the cart).
+ */
+export function cartControl(
+  a: Pick<ArtworkDetailDTO, "state">,
+  inCart: boolean,
+): "add" | "in_cart" | null {
+  if (a.state.kind !== "available" || !a.state.buyable) return null;
+  return inCart ? "in_cart" : "add";
+}

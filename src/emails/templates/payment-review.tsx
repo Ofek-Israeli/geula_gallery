@@ -22,7 +22,10 @@ export const paymentReview: EmailTemplate<Props> = {
       <Title>{ctx.t("emails-commerce.paymentReview.title")}</Title>
       <Greeting ctx={ctx} name={p.buyerName} />
       <P>
-        {ctx.t("emails-commerce.paymentReview.body", { number: p.orderNumber })}
+        {ctx.t("emails-commerce.paymentReview.body", {
+          number: p.orderNumber,
+          count: p.itemCount ?? 1,
+        })}
       </P>
       <SignOff ctx={ctx} />
     </Layout>

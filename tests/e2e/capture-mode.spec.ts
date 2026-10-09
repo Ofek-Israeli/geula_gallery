@@ -9,6 +9,7 @@ import {
   drainOutbox,
   e2eQuery,
   fillCheckout,
+  formatted,
   mailbox,
   messages,
   releaseFromSecondTab,
@@ -71,7 +72,7 @@ test("an approval after the work was sold is never captured", async ({
   await page.getByTestId("mock-approve").click();
   await expect(page).toHaveURL(/payment=lost_before_capture/);
   await expect(page.getByTestId("payment-result")).toHaveText(
-    enOrders.payment.lost_before_capture,
+    formatted("en", "orders", "payment.lost_before_capture", { count: 1 }),
   );
   const mock = await mockState(ref);
   expect(mock?.state).toBe("APPROVED");
@@ -104,7 +105,9 @@ test("under review: no new payment, no release, the work stays reserved", async 
   await expect(page.getByTestId("order-status")).toHaveText(
     enOrders.status.PAYMENT_REVIEW,
   );
-  await expect(page.getByText(enOrders.review.body)).toBeVisible();
+  await expect(
+    page.getByText(formatted("en", "orders", "review.body", { count: 1 })),
+  ).toBeVisible();
   await expect(page.getByTestId("pay-now")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: enOrders.release }),

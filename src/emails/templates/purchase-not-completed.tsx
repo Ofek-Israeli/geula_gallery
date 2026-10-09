@@ -27,7 +27,12 @@ export const purchaseNotCompleted: EmailTemplate<Props> = {
       >
         <Title>{t("title")}</Title>
         <Greeting ctx={ctx} name={p.buyerName} />
-        <P>{t(`reason.${p.reason}`, { number: p.orderNumber })}</P>
+        <P>
+          {t(`reason.${p.reason}`, {
+            number: p.orderNumber,
+            count: p.itemCount ?? 1,
+          })}
+        </P>
         {p.charged ? (
           <P>
             {p.refundAmountMinor

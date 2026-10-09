@@ -18,12 +18,21 @@ export const painterNewOrder: EmailTemplate<Props> = {
       { number: p.orderNumber },
     ),
   preview: (p, ctx) =>
-    ctx.t("emails-commerce.painterNewOrder.preview", { number: p.orderNumber }),
+    ctx.t("emails-commerce.painterNewOrder.preview", {
+      number: p.orderNumber,
+      count: p.items.length,
+    }),
   Component: ({ props: p, ctx }) => {
     const t = (key: string, values?: Record<string, string | number>) =>
       ctx.t(`emails-commerce.painterNewOrder.${key}`, values);
     return (
-      <Layout ctx={ctx} preview={t("preview", { number: p.orderNumber })}>
+      <Layout
+        ctx={ctx}
+        preview={t("preview", {
+          number: p.orderNumber,
+          count: p.items.length,
+        })}
+      >
         <Title>{t("title", { number: p.orderNumber })}</Title>
         {p.isDemo ? <P muted>{t("demo")}</P> : null}
         <P>{t("buyer", { name: p.buyerName, country: p.buyerCountry })}</P>
@@ -36,7 +45,7 @@ export const painterNewOrder: EmailTemplate<Props> = {
           ]}
         />
         <ButtonLink href={p.adminOrderUrl}>{t("open")}</ButtonLink>
-        <P muted>{t("next")}</P>
+        <P muted>{t("next", { count: p.items.length })}</P>
       </Layout>
     );
   },

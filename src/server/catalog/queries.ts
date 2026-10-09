@@ -386,6 +386,79 @@ const detailColumns = {
   seriesNameEn: series.nameEn,
 };
 
+/** A cart line's work: the card plus what the pre-contract disclosure needs. */
+export interface CartWorkDTO extends ArtworkCardDTO {
+  inventoryNumber: string;
+  framed: boolean;
+  signed: boolean;
+  coaIncluded: boolean;
+}
+
+/**
+ * The published works among `ids`, in `ids` order (the cart page and the cart checkout). Unknown or
+ * unpublished ids are left out; live state is read per request like every catalog read.
+ */
+export async function getCartWorks(
+  locale: Locale,
+  ids: readonly string[],
+  db: DbOrTx = defaultDb,
+): Promise<CartWorkDTO[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({
+      ...cardColumns,
+      inventoryNumber: artworks.inventoryNumber,
+      framed: artworks.framed,
+      signed: artworks.signed,
+      coaIncluded: artworks.coaIncluded,
+    })
+    .from(artworks)
+    .leftJoin(
+      artworkImages,
+      and(
+        eq(artworkImages.artworkId, artworks.id),
+        eq(artworkImages.role, "MAIN"),
+      ),
+    )
+    .where(and(inArray(artworks.id, [...ids]), eq(artworks.isPublished, true)));
+  const now = new Date();
+  const byId = new Map(
+    rows.map((r) => [
+      r.id,
+      {
+        ...cardDto(r, locale, now),
+        inventoryNumber: r.inventoryNumber,
+        framed: r.framed,
+        signed: r.signed,
+        coaIncluded: r.coaIncluded,
+      } satisfies CartWorkDTO,
+    ]),
+  );
+  return ids.flatMap((id) => {
+    const w = byId.get(id);
+    return w ? [w] : [];
+  });
+}
+
+/** How many of `ids` are published and not sold (the header cart count). */
+export async function countCartWorks(
+  ids: readonly string[],
+  db: DbOrTx = defaultDb,
+): Promise<number> {
+  if (ids.length === 0) return 0;
+  const [row] = await db
+    .select({ n: count() })
+    .from(artworks)
+    .where(
+      and(
+        inArray(artworks.id, [...ids]),
+        eq(artworks.isPublished, true),
+        sql`${artworks.saleStatus} <> 'SOLD'`,
+      ),
+    );
+  return Number(row?.n ?? 0);
+}
+
 export interface ArtworkPageData {
   artwork: ArtworkDetailDTO;
   /** Shipping engine input for the live buy box (server-only; never sent to the client). */

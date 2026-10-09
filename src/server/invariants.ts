@@ -19,6 +19,9 @@ import { type DbOrTx, db as defaultDb } from "@/server/db/client";
  * 6. `settled_refund_has_credit_note`: every settled refund (SUCCEEDED/MANUAL_DONE, not EXTERNAL)
  *    of an attempt that has a receipt row, completed more than `graceMinutes` ago, has a
  *    credit-note row.
+ * 7. `paid_order_items_sold`: every item of a PAID/COMPLETED order has exactly one sale row
+ *    (voided rows included: a cancellation voids, never deletes), and the sales add up to the
+ *    order's items total (a cart order sells all of its works or none).
  */
 export const INVARIANT_CHECKS = [
   "sold_has_one_sale",
@@ -27,6 +30,7 @@ export const INVARIANT_CHECKS = [
   "refunds_within_capture",
   "captured_attempt_has_receipt",
   "settled_refund_has_credit_note",
+  "paid_order_items_sold",
 ] as const;
 export type InvariantCheck = (typeof INVARIANT_CHECKS)[number];
 
@@ -143,6 +147,23 @@ export async function checkInvariants(
                             AND t.kind IN ('RECEIPT', 'INVOICE_RECEIPT'))
              AND NOT EXISTS (SELECT 1 FROM tax_documents t
                               WHERE t.refund_id = r.id AND t.kind = 'CREDIT_NOTE')`,
+    ),
+  );
+
+  push(
+    "paid_order_items_sold",
+    "order",
+    await ids(
+      db,
+      sql`SELECT o.id FROM orders o
+           WHERE o.status IN ('PAID', 'COMPLETED')
+             AND (
+               EXISTS (SELECT 1 FROM order_items oi
+                        WHERE oi.order_id = o.id
+                          AND (SELECT count(*) FROM sales s WHERE s.order_item_id = oi.id) <> 1)
+               OR (SELECT coalesce(sum(s.price_minor), 0) FROM sales s
+                     JOIN order_items oi ON oi.id = s.order_item_id
+                    WHERE oi.order_id = o.id) <> o.items_total_minor)`,
     ),
   );
 

@@ -75,6 +75,11 @@ export const paths = {
     slug: string,
     query: { to?: string; ship?: string; cur?: string } = {},
   ) => withQuery(`/checkout/${seg(slug)}`, query),
+  /** The cart (works collected for one checkout); `cart` carries a notice code. */
+  cart: (query: { cart?: string } = {}) => withQuery("/cart", query),
+  /** The cart checkout: every ready work of the cart in one order (no slug, so no shadowing). */
+  cartCheckout: (query: { to?: string; ship?: string; cur?: string } = {}) =>
+    withQuery("/checkout", query),
   checkoutReturned: (query: Record<string, QueryValue> = {}) =>
     withQuery("/checkout/returned", query),
   mockPay: (ref: string) => `/mock-pay/${seg(ref)}`,

@@ -155,6 +155,11 @@ export default async function AdminOrdersPage({
                   </td>
                   <td className="py-2">
                     {(locale === "he" ? r.titleHe : r.titleEn) ?? "—"}
+                    {r.itemCount > 1 ? (
+                      <span className="ms-1 text-ink-muted">
+                        {t("list.moreItems", { count: r.itemCount - 1 })}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-2">
                     <bdi>{r.buyerName ?? "—"}</bdi>

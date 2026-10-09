@@ -162,7 +162,13 @@ export const EMAIL_PROPS: Builders = {
     return {
       locale: order.locale,
       orderId: order.id,
-      props: orderRef(order, order.locale, env),
+      props: {
+        ...orderRef(order, order.locale, env),
+        itemCount: await db.$count(
+          orderItems,
+          eq(orderItems.orderId, order.id),
+        ),
+      },
     };
   },
 
@@ -192,6 +198,10 @@ export const EMAIL_PROPS: Builders = {
       orderId: order.id,
       props: {
         ...orderRef(order, order.locale, env),
+        itemCount: await db.$count(
+          orderItems,
+          eq(orderItems.orderId, order.id),
+        ),
         reason:
           fromRefund ?? (charged ? "LOST_RESERVATION" : "LOST_BEFORE_CAPTURE"),
         charged,

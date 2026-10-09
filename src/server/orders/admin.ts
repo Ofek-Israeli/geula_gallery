@@ -73,6 +73,8 @@ export interface AdminOrderRow {
   currency: Order["currency"];
   titleHe: string | null;
   titleEn: string | null;
+  /** Works in the order (the list shows the first title and "+N"). */
+  itemCount: number;
 }
 
 export async function listAdminOrders(
@@ -100,6 +102,7 @@ export async function listAdminOrders(
   const firstItemEn = sql<
     string | null
   >`(SELECT oi.title_en FROM order_items oi WHERE oi.order_id = "orders"."id" ORDER BY oi.created_at LIMIT 1)`;
+  const itemCount = sql<number>`(SELECT count(*)::int FROM order_items oi WHERE oi.order_id = "orders"."id")`;
   const rows = await db
     .select({
       id: orders.id,
@@ -115,6 +118,7 @@ export async function listAdminOrders(
       currency: orders.currency,
       titleHe: firstItem,
       titleEn: firstItemEn,
+      itemCount,
     })
     .from(orders)
     .where(where)

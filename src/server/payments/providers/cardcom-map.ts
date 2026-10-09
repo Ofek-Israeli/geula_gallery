@@ -70,6 +70,10 @@ const PRODUCT_PREFIX: Record<Locale, string> = {
   he: "ציור מקורי",
   en: "Original painting",
 };
+const PRODUCT_PREFIX_MANY: Record<Locale, string> = {
+  he: "ציורים מקוריים",
+  en: "Original paintings",
+};
 
 /** "Original painting – <title> (<orderNumber>)": artwork titles only, never buyer data. */
 export function cardcomProductName(i: {
@@ -81,7 +85,11 @@ export function cardcomProductName(i: {
     .map((l) => l.name.trim())
     .filter(Boolean)
     .join(", ");
-  const head = `${PRODUCT_PREFIX[i.locale]} – ${titles || i.orderNumber}`;
+  const prefix =
+    i.lines.length > 1
+      ? PRODUCT_PREFIX_MANY[i.locale]
+      : PRODUCT_PREFIX[i.locale];
+  const head = `${prefix} – ${titles || i.orderNumber}`;
   const tail = ` (${i.orderNumber})`;
   const max = 200;
   return head.length + tail.length > max
