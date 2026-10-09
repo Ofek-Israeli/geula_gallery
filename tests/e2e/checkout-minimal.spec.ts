@@ -11,7 +11,7 @@ test.describe("checkout and order page", () => {
     test(`checkout page (${locale}) shows the summary, disclosure and cancellation link`, async ({
       page,
     }) => {
-      const res = await page.goto(`/${locale}/checkout/landscape-no-26`);
+      const res = await page.goto(`/${locale}/checkout/the-path`);
       expect(res?.status()).toBe(200);
       await expect(page.getByTestId("checkout-summary")).toBeVisible();
       await expect(page.getByTestId("precontract")).toContainText(
@@ -29,7 +29,7 @@ test.describe("checkout and order page", () => {
   test("an unknown work 404s and a sold work is blocked", async ({ page }) => {
     const missing = await page.goto("/en/checkout/no-such-work");
     expect(missing?.status()).toBe(404);
-    await page.goto("/en/checkout/moonrise");
+    await page.goto("/en/checkout/reflection-in-the-pool");
     await expect(page.getByTestId("checkout-blocked")).toBeVisible();
   });
 
@@ -37,7 +37,7 @@ test.describe("checkout and order page", () => {
     page,
   }) => {
     const buyer = uniqueBuyer("checkout");
-    await page.goto("/en/checkout/icebound?ship=LOCAL_PICKUP");
+    await page.goto("/en/checkout/view-in-blue?ship=LOCAL_PICKUP");
     await page.getByRole("textbox", { name: /^Full name/ }).fill(buyer.name);
     await page.getByRole("textbox", { name: /^Email/ }).fill(buyer.email);
     await page.getByRole("textbox", { name: /^Phone/ }).fill("+97230000000");
@@ -58,12 +58,12 @@ test.describe("checkout and order page", () => {
       page.getByRole("link", { name: /cancellation form/ }),
     ).toHaveAttribute("href", `/en/cancel?order=${number}`);
 
-    await page.goto("/en/works/icebound");
+    await page.goto("/en/works/view-in-blue");
     await expect(page.getByTestId("artwork-status")).toHaveText("Sold");
   });
 
   test("required consents are enforced on the server", async ({ page }) => {
-    await page.goto("/en/checkout/antibes?ship=LOCAL_PICKUP");
+    await page.goto("/en/checkout/underground-city?ship=LOCAL_PICKUP");
     await page.getByRole("textbox", { name: /^Full name/ }).fill("Test Buyer");
     await page
       .getByRole("textbox", { name: /^Email/ })
@@ -73,6 +73,6 @@ test.describe("checkout and order page", () => {
     await expect(page.getByRole("alert").first()).toContainText(
       "Please tick this box",
     );
-    await expect(page).toHaveURL(/\/en\/checkout\/antibes/);
+    await expect(page).toHaveURL(/\/en\/checkout\/underground-city/);
   });
 });

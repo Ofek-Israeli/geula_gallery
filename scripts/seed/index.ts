@@ -1,11 +1,12 @@
 /**
  * Seed registry (spec §8.4; the module list is frozen at contracts-v1).
  *
- *   npm run db:seed [-- --db <name>] [--seed demo|none]
+ *   npm run db:seed [-- --db <name>] [--seed demo|fixtures|none]
  *
  * `db:reset` calls `runSeeds()` after migrating. Every module is idempotent and none enqueues
  * outbox jobs. Mode `none` runs only baseline configuration (settings); `demo` (default) also
- * seeds the demo catalog, sample orders and admin users.
+ * seeds the painter's catalog, sample orders and admin users; `fixtures` is `demo` limited to the
+ * 16 fixture works the test suites rely on.
  */
 import { pathToFileURL } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -35,8 +36,10 @@ export const seedModules: readonly SeedModule[] = [
 
 export function parseSeedMode(value: string | undefined): SeedMode {
   if (value === undefined || value === "demo") return "demo";
-  if (value === "none") return "none";
-  console.error(`[seed] unknown --seed "${value}" (expected demo | none)`);
+  if (value === "none" || value === "fixtures") return value;
+  console.error(
+    `[seed] unknown --seed "${value}" (expected demo | fixtures | none)`,
+  );
   process.exit(1);
 }
 

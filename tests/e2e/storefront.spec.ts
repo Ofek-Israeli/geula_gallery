@@ -1,5 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
-import { withGalleryImages } from "../helpers/factories/storefront";
+import {
+  withDescription,
+  withGalleryImages,
+} from "../helpers/factories/storefront";
 
 /**
  * WS1 storefront (spec §10.4 `storefront`): URL filters and sorts, Sold as text, the recently sold
@@ -7,14 +10,17 @@ import { withGalleryImages } from "../helpers/factories/storefront";
  * return, live region), "insured" only where a quote includes insurance, about and contact, and
  * the mobile gallery strip and sticky buy bar.
  *
- * Works used read-only: `landscape-no-26` (given 3 images here), `antibes`, the seeded sold and
+ * Works used read-only: `the-path` (given 3 images here), `underground-city`, the seeded sold and
  * held works. Purchase specs run in parallel and sell other works, so assertions never depend on
  * the exact set of available works.
  */
-const GALLERY_SLUG = "landscape-no-26";
+const GALLERY_SLUG = "the-path";
 
 test.beforeAll(async () => {
   await withGalleryImages(GALLERY_SLUG, 3);
+  // The seeded works have no description yet; give this one enough text below the buy box that
+  // the footer stays out of view once the buy box has scrolled away (mobile sticky bar).
+  await withDescription(GALLERY_SLUG, 6);
 });
 
 async function jsonLd(page: Page): Promise<Record<string, unknown>[]> {
@@ -61,13 +67,13 @@ test.describe("works filters and sorts", () => {
     );
     await expect(page.getByTestId("works-count")).toHaveText(/matching work/);
     const grid = page.getByRole("list", { name: "Works" });
+    await expect(grid.getByRole("link", { name: "The Path" })).toBeVisible();
     await expect(
-      grid.getByRole("link", { name: "Landscape no. 26" }),
+      grid.getByRole("link", { name: "Underground City" }),
     ).toBeVisible();
-    await expect(grid.getByRole("link", { name: "Antibes" })).toBeVisible();
-    await expect(
-      grid.getByRole("link", { name: "At the River's Bend" }),
-    ).toHaveCount(0);
+    await expect(grid.getByRole("link", { name: "By the Lake" })).toHaveCount(
+      0,
+    );
     const prices = await cardPrices(page);
     expect(prices.length).toBeGreaterThan(1);
     expect(prices.every((p) => p < 5000)).toBe(true);
@@ -80,23 +86,23 @@ test.describe("works filters and sorts", () => {
     await expect(page).toHaveURL(
       /\/he\/works\?price=under-5000&sort=price-desc$/,
     );
-    await expect(page.getByLabel("מחיר")).toHaveValue("under-5000");
+    await expect(
+      page.getByTestId("works-filters").getByLabel("מחיר"),
+    ).toHaveValue("under-5000");
   });
 
   test("series, size and orientation filters work from the URL; reset clears them", async ({
     page,
   }) => {
-    await page.goto("/en/works?series=works-on-paper");
+    await page.goto("/en/works?series=interiors-still-life");
     const grid = page.getByRole("list", { name: "Works" });
-    await expect(grid.getByRole("link", { name: "Antibes" })).toBeVisible();
-    await expect(
-      grid.getByRole("link", { name: "Landscape no. 26" }),
-    ).toHaveCount(0);
+    await expect(grid.getByRole("link", { name: "The Vase" })).toBeVisible();
+    await expect(grid.getByRole("link", { name: "The Path" })).toHaveCount(0);
 
     await page.goto("/en/works?orientation=panoramic");
     await expect(
       grid.getByRole("link", {
-        name: "The Banks of the River Durance at Saint Paul",
+        name: "Reflection in Yellow",
       }),
     ).toBeVisible();
     await expect(page.getByTestId("works-count")).toHaveText("1 matching work");
@@ -127,7 +133,9 @@ test.describe("status, strip and archive", () => {
 
     await page.goto("/en/works?availability=sold");
     const archive = page.getByRole("list", { name: "Archive: sold works" });
-    await expect(archive.getByRole("link", { name: "Moonrise" })).toBeVisible();
+    await expect(
+      archive.getByRole("link", { name: "Reflection in the Pool" }),
+    ).toBeVisible();
     // Every archived card states "Sold" in text, not only with the red dot.
     const cards = archive.getByRole("article");
     const n = await cards.count();
@@ -137,7 +145,7 @@ test.describe("status, strip and archive", () => {
       ).toBeVisible();
     }
 
-    await page.goto("/he/works/moonrise");
+    await page.goto("/he/works/reflection-in-the-pool");
     await expect(page.getByTestId("artwork-status")).toHaveText("נמכרה");
     await expect(page.getByTestId("buy-now")).toHaveCount(0);
     await expect(
@@ -165,17 +173,17 @@ test.describe("JSON-LD", () => {
       (await jsonLd(page)).some((b) => b["@type"] === "BreadcrumbList"),
     ).toBe(true);
 
-    await page.goto("/en/works/moonrise");
+    await page.goto("/en/works/reflection-in-the-pool");
     const sold = artworkLd(await jsonLd(page));
     expect(sold.offers?.availability).toBe("https://schema.org/SoldOut");
     expect(sold.offers?.price).toBeUndefined();
 
-    await page.goto("/en/works/boats-at-rest");
+    await page.goto("/en/works/a-ship-in-the-heart-of-the-sea");
     expect(artworkLd(await jsonLd(page)).offers?.availability).toBe(
       "https://schema.org/Reserved",
     );
 
-    await page.goto("/en/works/interior-music-room");
+    await page.goto("/en/works/the-piano");
     expect(artworkLd(await jsonLd(page)).offers).toBeUndefined();
 
     await page.goto("/he");
@@ -299,17 +307,8 @@ test.describe("artwork page", () => {
     ).not.toContainText("insured");
 
     // A quote-only work: no zone price, so no insurance claim anywhere.
-    await page.goto("/en/works/banks-of-the-durance");
+    await page.goto("/en/works/reflection-in-yellow");
     await expect(page.getByTestId("buy-box")).not.toContainText(/insured/i);
-  });
-
-  test("the AIC credit is an isolated English run on Hebrew pages", async ({
-    page,
-  }) => {
-    await page.goto(`/he/works/${GALLERY_SLUG}`);
-    const credit = page.locator('figcaption [lang="en"]');
-    await expect(credit).toHaveAttribute("dir", "ltr");
-    await expect(credit).toContainText("The Art Institute of Chicago");
   });
 });
 

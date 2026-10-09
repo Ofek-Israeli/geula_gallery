@@ -121,10 +121,3 @@ export type ZoneEstimateDTO =
       kind: "quote" | "unavailable";
       estimate: string | null;
     };
-
-/** One demo credit on `/credits` (spec §6.2): the AIC caption plus a link to the work. */
-export interface CreditDTO {
-  slug: string;
-  title: string;
-  caption: string;
-}

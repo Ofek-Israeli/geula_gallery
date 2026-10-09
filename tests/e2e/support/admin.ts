@@ -22,7 +22,7 @@ export const HE = {
 } as const;
 
 /** A demo-catalog JPEG (committed) used as the upload fixture. */
-export const IMAGE_FIXTURE = "data/demo-images/100476.jpg";
+export const IMAGE_FIXTURE = "data/catalog/images/the-path.jpg";
 
 export function escapeRe(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

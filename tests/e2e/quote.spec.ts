@@ -140,7 +140,7 @@ test("quote link: requote by a method change, then pay", async ({
   request,
 }) => {
   test.setTimeout(150_000);
-  await cloneWork("still-life-no-15", SLUG);
+  await cloneWork("puzzle", SLUG);
   const buyer = uniqueBuyer("requote");
   await page.goto(`/en/works/${SLUG}/request?kind=quote`);
   const form = page.getByTestId("request-form");

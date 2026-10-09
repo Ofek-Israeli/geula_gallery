@@ -19,7 +19,7 @@ const common = messages("en", "common");
 const SLUG = "e2e-intl-1";
 
 test.use({ extraHTTPHeaders: buyerIp(21) });
-test.beforeAll(async () => cloneWork("movement-no-10", SLUG));
+test.beforeAll(async () => cloneWork("blue-and-yellow-notes", SLUG));
 
 test("US buyer: Latin address and DAP required, pays the USD total", async ({
   page,

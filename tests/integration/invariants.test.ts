@@ -22,7 +22,7 @@ const { goLiveBlockers } = await import("@/server/golive");
 
 const ctx: SeedContext = {
   db: db as unknown as SeedContext["db"],
-  mode: "demo",
+  mode: "fixtures",
   env: {
     authBaseUrl: "http://localhost:3000",
     seedE2eUsers: false,

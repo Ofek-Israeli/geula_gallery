@@ -18,7 +18,7 @@ import { resetDatabase } from "../helpers/db";
 /** WS1 catalog reads over the demo catalog: filters, sorts, series, sitemap, SEO (spec §6.2, §6.6). */
 const ctx: SeedContext = {
   db,
-  mode: "demo",
+  mode: "fixtures",
   env: {
     authBaseUrl: "http://localhost:3000",
     seedE2eUsers: false,
@@ -46,31 +46,35 @@ describe("listArtworks filters", () => {
       true,
     );
 
-    const paper = await listArtworks("en", { seriesSlug: "works-on-paper" });
-    // terrace-bridge is sold, so only Antibes is in the current view.
-    expect(slugs(paper)).toEqual(["antibes"]);
+    const interiors = await listArtworks("en", {
+      seriesSlug: "interiors-still-life",
+    });
+    // Plant Near a Window is sold, so only The Vase is in the current view.
+    expect(slugs(interiors)).toEqual(["the-vase"]);
     expect(
       slugs(
         await listArtworks("en", {
           view: "sold",
-          seriesSlug: "works-on-paper",
+          seriesSlug: "interiors-still-life",
         }),
       ),
-    ).toEqual(["terrace-bridge-central-park"]);
+    ).toEqual(["plant-near-a-window"]);
     expect(
       (await listArtworks("en", { seriesSlug: "no-such-series" })).total,
     ).toBe(0);
 
-    const small = await listArtworks("en", { sizeBucket: "S" });
-    expect(new Set(slugs(small))).toEqual(
-      new Set(["landscape-no-26", "still-life-green-flower-vase"]),
+    // The smallest canvases are M (longest side under 80 cm); there are no S works.
+    expect((await listArtworks("en", { sizeBucket: "S" })).total).toBe(0);
+    const medium = await listArtworks("en", { sizeBucket: "M" });
+    expect(new Set(slugs(medium))).toEqual(
+      new Set(["the-path", "underground-city"]),
     );
     const pano = await listArtworks("en", { orientation: "PANORAMIC" });
-    expect(slugs(pano)).toEqual(["banks-of-the-durance"]);
+    expect(slugs(pano)).toEqual(["reflection-in-yellow"]);
 
     const cheap = await listArtworks("en", { priceMaxIlsMinor: 500_000 });
     expect(new Set(slugs(cheap))).toEqual(
-      new Set(["landscape-no-26", "still-life-green-flower-vase", "antibes"]),
+      new Set(["the-path", "the-vase", "underground-city"]),
     );
     // The not-for-sale work has no price, so any price band excludes it.
     const band = await listArtworks("en", {
@@ -79,10 +83,10 @@ describe("listArtworks filters", () => {
     });
     expect(new Set(slugs(band))).toEqual(
       new Set([
-        "beach-at-cabasson",
-        "boats-at-rest",
-        "banks-of-the-durance",
-        "a-holiday",
+        "ships-in-the-moonlight",
+        "a-ship-in-the-heart-of-the-sea",
+        "reflection-in-yellow",
+        "jerusalem",
       ]),
     );
   });
@@ -98,19 +102,19 @@ describe("listArtworks filters", () => {
       .slice(0, firstOther)
       .map((w) => w.price.ilsMinor ?? 0);
     expect(prices).toEqual([...prices].sort((a, b) => b - a));
-    expect(byPrice.items[0]?.slug).toBe("banks-of-the-durance");
+    expect(byPrice.items[0]?.slug).toBe("reflection-in-yellow");
 
     const asc = await listArtworks("en", {
       view: "available",
       sort: "price-asc",
     });
-    expect(asc.items[0]?.slug).toBe("antibes");
+    expect(asc.items[0]?.slug).toBe("underground-city");
 
     const bigFirst = await listArtworks("en", {
       view: "available",
       sort: "size-desc",
     });
-    expect(bigFirst.items[0]?.slug).toBe("banks-of-the-durance");
+    expect(bigFirst.items[0]?.slug).toBe("jerusalem");
     const areas = bigFirst.items.map((w) => w.heightMm * w.widthMm);
     expect(areas).toEqual([...areas].sort((a, b) => b - a));
 
@@ -118,7 +122,9 @@ describe("listArtworks filters", () => {
       view: "available",
       sort: "newest",
     });
-    expect(newest.items[0]?.year).toBe(1917);
+    // The painter's works carry a year only where the signature shows one; no fixture does.
+    expect(newest.total).toBe(11);
+    expect(newest.items.every((w) => w.year === null)).toBe(true);
   });
 
   it("paginates with a stable order", async () => {
@@ -136,8 +142,8 @@ describe("series, sitemap and SEO reads", () => {
     const series = await listSeries("he");
     expect(series.map((s) => s.slug)).toContain("landscapes");
     const landscapes = series.find((s) => s.slug === "landscapes");
-    // Five landscapes, one of them (Moonrise) sold.
-    expect(landscapes?.count).toBe(4);
+    // Seven landscapes, one of them (Reflection in the Pool) sold.
+    expect(landscapes?.count).toBe(6);
     expect(landscapes?.cover?.src).toMatch(/^\/api\/files\/public\//);
     expect(landscapes?.name).not.toBe("Landscapes");
   });
@@ -149,17 +155,17 @@ describe("series, sitemap and SEO reads", () => {
     await db
       .update(artworks)
       .set({ isPublished: false })
-      .where(eq(artworks.slug, "antibes"));
+      .where(eq(artworks.slug, "underground-city"));
     try {
       const after = await listSitemapArtworks();
-      expect(after.map((a) => a.slug)).not.toContain("antibes");
-      expect(await getArtworkPage("en", "antibes")).toBeNull();
-      expect(await getArtworkOgImage("antibes")).toBeNull();
+      expect(after.map((a) => a.slug)).not.toContain("underground-city");
+      expect(await getArtworkPage("en", "underground-city")).toBeNull();
+      expect(await getArtworkOgImage("underground-city")).toBeNull();
     } finally {
       await db
         .update(artworks)
         .set({ isPublished: true })
-        .where(eq(artworks.slug, "antibes"));
+        .where(eq(artworks.slug, "underground-city"));
     }
   });
 
@@ -168,7 +174,12 @@ describe("series, sitemap and SEO reads", () => {
       .select()
       .from(artworkImages)
       .innerJoin(artworks, eq(artworks.id, artworkImages.artworkId))
-      .where(and(eq(artworks.slug, "antibes"), eq(artworkImages.role, "MAIN")));
+      .where(
+        and(
+          eq(artworks.slug, "underground-city"),
+          eq(artworkImages.role, "MAIN"),
+        ),
+      );
     if (!main) throw new Error("no MAIN image");
     const img = main.artwork_images;
     await db
@@ -176,13 +187,13 @@ describe("series, sitemap and SEO reads", () => {
       .set({ ogKey: null })
       .where(eq(artworkImages.id, img.id));
     try {
-      const og = await getArtworkOgImage("antibes");
+      const og = await getArtworkOgImage("underground-city");
       expect(og).toEqual({
         url: expect.stringContaining(img.publicKey),
         width: img.width,
         height: img.height,
       });
-      const page = await getArtworkPage("en", "antibes");
+      const page = await getArtworkPage("en", "underground-city");
       expect(page?.artwork.ogImage).toBe(page?.artwork.images[0]?.src);
     } finally {
       await db
@@ -193,9 +204,9 @@ describe("series, sitemap and SEO reads", () => {
   });
 
   it("returns SEO extras, the OG image and the public profile without the ID number", async () => {
-    const page = await getArtworkPage("en", "landscape-no-26");
-    expect(page?.seo).toMatchObject({ medium: "OIL", surface: "CARDBOARD" });
-    expect(await getArtworkOgImage("landscape-no-26")).toMatchObject({
+    const page = await getArtworkPage("en", "the-path");
+    expect(page?.seo).toMatchObject({ medium: "ACRYLIC", surface: "CANVAS" });
+    expect(await getArtworkOgImage("the-path")).toMatchObject({
       url: expect.stringMatching(/^\/api\/files\/public\/og\//),
       width: 1200,
       height: 630,

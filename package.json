@@ -26,7 +26,6 @@
     "auth:generate": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/auth-generate.ts",
     "admin:create": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/admin-create.ts",
     "env:init": "node --import tsx scripts/env-init.ts",
-    "demo:fetch-images": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/fetch-demo-images.ts",
     "gen:api-types": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/gen-api-types.ts",
     "cron": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/cron.ts",
     "check:cardcom": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-cardcom.ts",

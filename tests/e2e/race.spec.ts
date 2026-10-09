@@ -14,7 +14,7 @@ const enArtwork = messages("en", "artwork");
 test("two buyers, one work: one pays, the other sees 'just reserved'", async ({
   browser,
 }) => {
-  const slug = "at-the-rivers-bend";
+  const slug = "by-the-lake";
   const contexts = await Promise.all(
     [21, 22].map((n) =>
       browser.newContext({ extraHTTPHeaders: buyerIp(n), locale: "en-US" }),

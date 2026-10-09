@@ -77,7 +77,6 @@
   "description": "Description",
   "demo": "Demo listing",
   "creditLabel": "Image:",
-  "creditLicence": "(CC0)",
   "gallery": {
     "label": "Images of the work",
     "thumbnails": "Choose an image",

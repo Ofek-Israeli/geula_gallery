@@ -40,7 +40,7 @@ for (const locale of ["he", "en"] as const) {
     }) => {
       test.setTimeout(120_000);
       const [art] = await e2eQuery<{ id: string }>(
-        "SELECT id FROM artworks WHERE slug = 'landscape-no-26'",
+        "SELECT id FROM artworks WHERE slug = 'the-path'",
       );
       const [order] = await e2eQuery<{ id: string }>(
         "SELECT id FROM orders ORDER BY created_at LIMIT 1",

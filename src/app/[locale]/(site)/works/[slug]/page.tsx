@@ -35,7 +35,7 @@ import { env } from "@/server/env";
  * now / Ask, delivery from ₪X and zone estimates, DAP note, trust row with "insured" only when
  * backed); facts in cm and inches; the description; `<details>` accordions (cancellation and
  * returns, duties, packing); the mobile sticky bar; VisualArtwork + Product and BreadcrumbList
- * JSON-LD; the AIC credit under demo images, bidi-isolated.
+ * JSON-LD; an image credit line when one is set, bidi-isolated.
  */
 export async function generateMetadata({
   params,
@@ -75,24 +75,16 @@ export async function generateMetadata({
 }
 
 /**
- * The AIC credit (English) under a Hebrew or English page: the caption is its own `lang="en"`
+ * An image credit (English) under a Hebrew or English page: the caption is its own `lang="en"`
  * LTR inline block, so when it wraps, its lines wrap as an English paragraph instead of mixing
  * with the Hebrew label (bidi reordering across line breaks; WCAG 3.1.2 language of parts).
  */
-function CreditLine({
-  label,
-  caption,
-  licence,
-}: {
-  label: string;
-  caption: string;
-  licence: string;
-}) {
+function CreditLine({ label, caption }: { label: string; caption: string }) {
   return (
     <>
       {label}{" "}
       <span lang="en" dir="ltr" className="inline-block text-start">
-        {caption} {licence}
+        {caption}
       </span>
     </>
   );
@@ -212,11 +204,7 @@ export default async function ArtworkPage({
           }))}
           caption={
             credit ? (
-              <CreditLine
-                label={t("creditLabel")}
-                caption={credit}
-                licence={t("creditLicence")}
-              />
+              <CreditLine label={t("creditLabel")} caption={credit} />
             ) : undefined
           }
         />

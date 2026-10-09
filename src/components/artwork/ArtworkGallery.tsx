@@ -72,7 +72,7 @@ export function ArtworkGallery({
 }: {
   images: GalleryImage[];
   title: string;
-  /** Rendered under the images (e.g. the AIC credit line), already bidi-isolated. */
+  /** Rendered under the images (e.g. an image credit line), already bidi-isolated. */
   caption?: React.ReactNode;
 }) {
   const t = useTranslations("artwork.gallery");

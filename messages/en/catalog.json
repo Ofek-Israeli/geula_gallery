@@ -36,13 +36,9 @@
   },
   "credits": {
     "title": "Credits",
-    "intro": "This site is currently a demo. The images are public-domain paintings from the collection of the Art Institute of Chicago, used as placeholders until the artist's own works are added.",
-    "imagesTitle": "Demo images",
-    "cc0": "The images and their data are released by the Art Institute of Chicago under CC0 1.0 (no rights reserved). Hebrew titles, alt texts and descriptions were written for this site.",
-    "source": "Source: the Art Institute of Chicago public API",
+    "intro": "Licences for the typefaces used on this site. The paintings and their photographs are the artist's own.",
     "fontsTitle": "Fonts",
-    "fonts": "Frank Ruhl Libre and Assistant are licensed under the SIL Open Font License 1.1.",
-    "viewListing": "View the demo listing"
+    "fonts": "Frank Ruhl Libre and Assistant are licensed under the SIL Open Font License 1.1."
   },
   "filters": {
     "label": "Filter and sort",
@@ -93,7 +89,7 @@
     "body": "Every work on this site is a single original, sent with a certificate of authenticity. Works are packed by hand in the studio and shipped with tracking. Studio pickup is available by appointment.",
     "studioTitle": "The studio",
     "studioBody": "The studio is in Israel. Visits and pickups are by appointment only.",
-    "demoNote": "This site is currently a demo: the biography and images are placeholders until the artist adds her own.",
+    "demoNote": "This site is currently a demo: the biography, prices and sales are placeholders until the artist adds her own.",
     "worksLink": "See the works",
     "contactLink": "Get in touch"
   },

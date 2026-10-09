@@ -7,7 +7,6 @@ import {
   getDeliveryEstimates,
   getFeaturedArtwork,
   listArtworks,
-  listCredits,
   listRecentlySold,
 } from "@/server/catalog/queries";
 import { db } from "@/server/db/client";
@@ -21,7 +20,7 @@ import { resetDatabase } from "../helpers/db";
 const STORAGE_DIR = ".data/test-uploads";
 const ctx: SeedContext = {
   db,
-  mode: "demo",
+  mode: "fixtures",
   env: {
     authBaseUrl: "http://localhost:3000",
     seedE2eUsers: false,
@@ -64,12 +63,12 @@ describe("catalog seed", () => {
         .map((r) => r.slug)
         .sort();
     expect(by("SOLD")).toEqual([
-      "moonrise",
-      "terrace-bridge-central-park",
-      "the-red-room-etretat",
+      "plant-near-a-window",
+      "reflection-in-the-pool",
+      "the-purple-city",
     ]);
-    expect(by("ON_HOLD")).toEqual(["boats-at-rest"]);
-    expect(by("NOT_FOR_SALE")).toEqual(["interior-music-room"]);
+    expect(by("ON_HOLD")).toEqual(["a-ship-in-the-heart-of-the-sea"]);
+    expect(by("NOT_FOR_SALE")).toEqual(["the-piano"]);
     const s = await db.select().from(sales);
     expect(s).toHaveLength(3);
     // WS6 replaced the M2 stub: the sold works come from the three sample orders (spec §8.4).
@@ -86,17 +85,17 @@ describe("catalog seed", () => {
     expect(await db.$count(sales)).toBe(3);
   });
 
-  it("stores the packaging defaults (icebound ships rolled)", async () => {
+  it("stores the packaging defaults (view-in-blue ships rolled)", async () => {
     const [ice] = await db
       .select()
       .from(artworks)
-      .where(eq(artworks.slug, "icebound"));
+      .where(eq(artworks.slug, "view-in-blue"));
     expect(ice).toMatchObject({
       packagingType: "ROLLED_TUBE",
-      packedLengthMm: 742,
+      packedLengthMm: 700,
       packedWidthMm: 260,
       packedHeightMm: 260,
-      packedWeightG: 4451,
+      packedWeightG: 4380,
     });
   });
 });
@@ -109,41 +108,41 @@ describe("catalog queries", () => {
     expect(current.items.at(-1)?.saleStatus).not.toBe("AVAILABLE");
     const sold = await listArtworks("he", { view: "sold" });
     expect(sold.total).toBe(3);
-    expect(sold.items[0]?.slug).toBe("terrace-bridge-central-park");
-    expect(sold.items[0]?.title).toBe("גשר הטרסה");
+    expect(sold.items[0]?.slug).toBe("the-purple-city");
+    expect(sold.items[0]?.title).toBe("העיר הסגולה");
     const recent = await listRecentlySold("en");
     expect(recent.map((w) => w.slug)).toEqual([
-      "terrace-bridge-central-park",
-      "moonrise",
-      "the-red-room-etretat",
+      "the-purple-city",
+      "reflection-in-the-pool",
+      "plant-near-a-window",
     ]);
   });
 
   it("returns the featured work and a full artwork page", async () => {
     const featured = await getFeaturedArtwork("en");
-    expect(featured?.slug).toBe("at-the-rivers-bend");
-    const page = await getArtworkPage("en", "landscape-no-26");
+    expect(featured?.slug).toBe("by-the-lake");
+    const page = await getArtworkPage("en", "the-path");
     expect(page?.artwork).toMatchObject({
-      title: "Landscape no. 26",
+      title: "The Path",
       price: { ilsMinor: 320_000, usdMinor: 87_000, onRequest: false },
       state: { kind: "available", buyable: true },
-      series: { slug: "landscapes", name: "Landscapes" },
+      series: { slug: "cities", name: "Cityscapes" },
     });
     expect(page?.artwork.images[0]?.src).toMatch(
       /^\/api\/files\/public\/artworks\/demo\//,
     );
     expect(await getArtworkPage("en", "nope")).toBeNull();
-    const held = await getArtworkPage("he", "boats-at-rest");
+    const held = await getArtworkPage("he", "a-ship-in-the-heart-of-the-sea");
     expect(held?.artwork.state).toEqual({
       kind: "on_hold",
       reservedOffline: true,
     });
-    const crate = await getArtworkPage("en", "banks-of-the-durance");
+    const crate = await getArtworkPage("en", "reflection-in-yellow");
     expect(crate?.artwork.state).toEqual({ kind: "available", buyable: false });
   });
 
   it("computes delivery estimates from the shipping settings", async () => {
-    const page = await getArtworkPage("en", "landscape-no-26");
+    const page = await getArtworkPage("en", "the-path");
     if (!page) throw new Error("missing");
     const d = await getDeliveryEstimates(
       "en",
@@ -153,17 +152,9 @@ describe("catalog queries", () => {
     expect(d.pickupFree).toBe(true);
     expect(d.zones.find((z) => z.zone === "IL")).toMatchObject({
       kind: "price",
-      fromIlsMinor: 6000,
+      fromIlsMinor: 12000,
       insured: false,
     });
     expect(d.zones.find((z) => z.zone === "EUROPE")?.kind).toBe("quote");
-  });
-
-  it("lists AIC credits", async () => {
-    const credits = await listCredits("en");
-    expect(credits).toHaveLength(16);
-    expect(credits[0]?.caption).toBe(
-      "Marsden Hartley. Landscape no. 26, 1909–10. The Art Institute of Chicago.",
-    );
   });
 });

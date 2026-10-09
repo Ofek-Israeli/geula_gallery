@@ -13,22 +13,22 @@ import {
   shipments,
   taxDocuments,
 } from "@/server/db/schema";
-import { readDemoManifest } from "../lib/demo-manifest";
+import { readCatalogManifest } from "../lib/catalog-manifest";
 import type { SeedDb, SeedModule } from "./types";
 
 /**
- * Sample orders (spec §8.4; owner WS6). Three demo orders for the three sold demo works
- * (manifest `sampleOrder` 1–3), each consistent with the invariants (spec §3.4): a SUCCEEDED MOCK
+ * Sample orders (spec §8.4; owner WS6). Three demo orders for the three sold catalog works
+ * (manifest `sampleOrder` 1–3, all fixtures), each consistent with the invariants (spec §3.4): a SUCCEEDED MOCK
  * attempt bound to the order's quote version and exact total, a matching `mock_payments` row (so a
  * refund through the mock provider works), an ONLINE `is_mock` sale for the order item, the work
  * SOLD, an ISSUED mock receipt, and a shipment. **No outbox jobs** are created.
  *
- * 1. 94241 (the-red-room-etretat): Israeli buyer, ILS, courier via the manual carrier "Israel
+ * 1. Israeli buyer, ILS, courier via the manual carrier "Israel
  *    Post", DELIVERED 7 days ago — plus a RECEIVED cancellation notice (received 5 days ago, so the
  *    refund is due in 9 days), matched to the order, which blocks fulfillment.
- * 2. 64754 (moonrise): US buyer, a QUOTE link order (from a converted quote request), USD, locked
+ * 2. US buyer, a QUOTE link order (from a converted quote request), USD, locked
  *    shipping, a mock waybill, IN_TRANSIT, export declaration recorded.
- * 3. 30928 (terrace-bridge-central-park): Israeli buyer, studio pickup, PAID and awaiting
+ * 3. Israeli buyer, studio pickup, PAID and awaiting
  *    fulfillment.
  *
  * Idempotent: an order number that already exists is skipped; a work that already has an active
@@ -98,9 +98,9 @@ const hex = (bytes: number) => randomBytes(bytes).toString("hex");
 
 export const ordersSeed: SeedModule = {
   name: "orders",
-  modes: ["demo"],
+  modes: ["demo", "fixtures"],
   async run({ db, log, env }) {
-    const manifest = await readDemoManifest();
+    const manifest = await readCatalogManifest();
     const appUrl = env.authBaseUrl.replace(/\/$/, "");
     let created = 0;
     for (const spec of SAMPLE_ORDERS) {
@@ -526,7 +526,7 @@ async function seedShipment(
       hsCode: art.hsCode,
       originCountry: "IL",
       contentsDescriptionEn:
-        art.customsDescriptionEn ?? "Original oil painting on canvas",
+        art.customsDescriptionEn ?? "Original painting on canvas",
       reasonForExport: "SALE",
       incoterm: "DAP",
       commercialInvoiceNumber: `CI-${spec.number}`,

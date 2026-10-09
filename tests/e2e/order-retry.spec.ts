@@ -24,7 +24,7 @@ test.use({ extraHTTPHeaders: buyerIp(13) });
 test("cancel at the provider → retry from the order page → paid", async ({
   page,
 }) => {
-  const slug = "still-life-no-15";
+  const slug = "puzzle";
   const buyer = uniqueBuyer("retry");
   await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
   await fillCheckout(page, { locale: "en", ...buyer });
@@ -63,7 +63,7 @@ test("cancel at the provider → retry from the order page → paid", async ({
 test("release my reservation → the work is available again (Hebrew)", async ({
   page,
 }) => {
-  const slug = "beach-les-grands-sables";
+  const slug = "lone-home";
   const buyer = uniqueBuyer("release");
   await page.goto(`/he/checkout/${slug}?ship=LOCAL_PICKUP`);
   await fillCheckout(page, { locale: "he", ...buyer });

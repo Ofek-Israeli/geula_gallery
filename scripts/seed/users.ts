@@ -68,7 +68,7 @@ export async function createAdminUser(
 
 export const usersSeed: SeedModule = {
   name: "users",
-  modes: ["demo"],
+  modes: ["demo", "fixtures"],
   async run({ db, env, log }) {
     const wanted: AdminUserInput[] = [];
     if (env.adminEmail && env.adminPassword) {

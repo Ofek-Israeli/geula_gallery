@@ -10,7 +10,7 @@ import { e2eDatabaseUrl, e2eQuery, messages } from "./support/commerce";
 const co = messages("he", "checkout");
 
 test("denied destinations are not offered", async ({ page }) => {
-  await page.goto("/he/checkout/landscape-no-26");
+  await page.goto("/he/checkout/the-path");
   const options = page.locator("#co-country option");
   await expect(options.first()).toBeAttached();
   const values = await options.evaluateAll((els) =>
@@ -21,7 +21,7 @@ test("denied destinations are not offered", async ({ page }) => {
     expect(values).not.toContain(denied);
   }
   // Even typed into the URL, a denied destination is refused.
-  await page.goto("/he/checkout/landscape-no-26?to=IR");
+  await page.goto("/he/checkout/the-path?to=IR");
   await expect(page.getByTestId("checkout-blocked")).toContainText(
     co.blocked.DESTINATION_DENIED,
   );
@@ -41,14 +41,14 @@ test("a declared value above the carrier cap routes to a quote", async ({
   );
   try {
     // ₪12,500 > USD 2,500.
-    await page.goto("/he/checkout/beach-at-cabasson?to=US");
+    await page.goto("/he/checkout/ships-in-the-moonlight?to=US");
     const blocked = page.getByTestId("checkout-blocked");
     await expect(blocked).toContainText(co.blocked.VALUE_CAP);
     await expect(
       blocked.getByRole("link", { name: co.blocked.requestQuote }),
     ).toBeVisible();
     // Under the cap the same destination is offered.
-    await page.goto("/he/checkout/landscape-no-26?to=US");
+    await page.goto("/he/checkout/the-path?to=US");
     await expect(page.getByTestId("checkout-form")).toBeVisible();
   } finally {
     await e2eExec(
@@ -62,7 +62,7 @@ test("a declared value above the carrier cap routes to a quote", async ({
 test("a crated, quote-only work is quote only, even in Israel", async ({
   page,
 }) => {
-  await page.goto("/he/checkout/banks-of-the-durance?to=IL");
+  await page.goto("/he/checkout/reflection-in-yellow?to=IL");
   const blocked = page.getByTestId("checkout-blocked");
   await expect(blocked).toContainText(co.blocked.QUOTE_ONLY);
   await expect(
@@ -84,7 +84,7 @@ test("GB at or under the low-value threshold is refused online", async ({
     `UPDATE settings SET value = jsonb_set(value, '{thresholds,gbLowValueGbp}', '1000'::jsonb) WHERE key = 'shipping'`,
   );
   try {
-    await page.goto("/he/checkout/antibes?to=GB");
+    await page.goto("/he/checkout/underground-city?to=GB");
     await expect(page.getByTestId("checkout-blocked")).toContainText(
       co.blocked.GB_LOW_VALUE,
     );
@@ -96,7 +96,7 @@ test("GB at or under the low-value threshold is refused online", async ({
     );
   }
   // Above the (restored) threshold GB falls in the disabled Europe zone: a quote.
-  await page.goto("/he/checkout/antibes?to=GB");
+  await page.goto("/he/checkout/underground-city?to=GB");
   await expect(page.getByTestId("checkout-blocked")).toContainText(
     co.blocked.ZONE_DISABLED,
   );

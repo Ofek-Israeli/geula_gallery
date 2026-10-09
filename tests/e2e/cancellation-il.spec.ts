@@ -19,7 +19,7 @@ import {
  * refund → credit note → the order is CANCELLED → relist. Plus the cancellation link on the legal
  * pages (the M1 smoke `fixme` for WS6).
  */
-const SLUG = "beach-at-cabasson";
+const SLUG = "ships-in-the-moonlight";
 const he = messages("he", "cancel");
 const heArtwork = messages("he", "artwork");
 

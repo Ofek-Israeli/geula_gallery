@@ -184,14 +184,6 @@ const rawSchema = z.object({
   BLOB_PRIVATE_READ_WRITE_TOKEN: optStr(),
   NEXT_PUBLIC_BLOB_HOST: optStr(),
 
-  // Demo
-  AIC_USER_AGENT: z.preprocess(
-    (v) =>
-      emptyToUndefined(v) ??
-      "geula-gallery-demo (https://github.com/Ofek-Israeli/geula_gallery)",
-    z.string(),
-  ),
-
   // Opt-in live checks
   CARDCOM_CONTRACT: bool(false),
   PAYPAL_CONTRACT: bool(false),

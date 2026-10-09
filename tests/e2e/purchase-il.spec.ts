@@ -18,7 +18,7 @@ import {
  * (stamped DEMO) and the disclosure document → the admin sees the order, its receipt, and records
  * manual tracking. The confirmation carries the disclosure PDF attachment (Tier B, WS6).
  */
-const SLUG = "movement-no-10";
+const SLUG = "blue-and-yellow-notes";
 const heOrders = messages("he", "orders");
 const heArtwork = messages("he", "artwork");
 const heAdminOrders = messages("he", "admin-orders");

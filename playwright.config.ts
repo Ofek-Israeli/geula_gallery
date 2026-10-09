@@ -7,7 +7,7 @@ import { E2E_ADMIN, E2E_SECRETS } from "./tests/e2e/e2e-env";
  * Playwright 1.63 (spec §10.4). `npm run test:e2e [-- <playwright args>]`.
  *
  * The web server is a production build on its own database, port and dist dir:
- *   db:reset (E2E db, demo seed) → next build (NEXT_DIST_DIR=.next-e2e) → next start -p E2E_PORT
+ *   db:reset (E2E db, fixtures seed) → next build (NEXT_DIST_DIR=.next-e2e) → next start -p E2E_PORT
  * Its environment is pinned below. Process env overrides `.env.local` for Next and the scripts,
  * and every provider credential is blanked, so real keys never reach an E2E server; the boot
  * assertion in `src/server/env.ts` (APP_ENV=test ⇒ auth and webhook hosts equal APP_URL's)
@@ -116,7 +116,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run db:reset -- --db ${E2E_DB} --seed demo --yes && npm run build && npm run start -- -p ${E2E_PORT}`,
+    command: `npm run db:reset -- --db ${E2E_DB} --seed fixtures --yes && npm run build && npm run start -- -p ${E2E_PORT}`,
     url: `${BASE_URL}/api/health`,
     env: serverEnv,
     timeout: 300_000,

@@ -27,7 +27,7 @@ test.use({ extraHTTPHeaders: buyerIp(12) });
 test("Pay without returning: the webhook alone marks the order paid", async ({
   page,
 }) => {
-  const slug = "still-life-green-flower-vase";
+  const slug = "the-vase";
   const buyer = uniqueBuyer("webhook-pay");
   await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
   await fillCheckout(page, { locale: "en", ...buyer });
@@ -92,7 +92,7 @@ test("a valid webhook for an unpaid payment leaves the order unpaid", async ({
   request,
   baseURL,
 }) => {
-  const slug = "a-holiday";
+  const slug = "jerusalem";
   const buyer = uniqueBuyer("webhook-unpaid");
   await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
   await fillCheckout(page, { locale: "en", ...buyer });

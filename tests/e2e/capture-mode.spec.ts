@@ -25,9 +25,9 @@ const enCheckout = messages("en", "checkout");
 
 test.use({ extraHTTPHeaders: buyerIp(24) });
 test.beforeAll(async () => {
-  await cloneWork("still-life-no-15", "e2e-capture-ok");
-  await cloneWork("still-life-no-15", "e2e-capture-lost");
-  await cloneWork("still-life-no-15", "e2e-capture-review");
+  await cloneWork("puzzle", "e2e-capture-ok");
+  await cloneWork("puzzle", "e2e-capture-lost");
+  await cloneWork("puzzle", "e2e-capture-review");
 });
 
 async function mockState(ref: string) {

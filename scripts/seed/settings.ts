@@ -210,7 +210,7 @@ export function settingsSeedValues(
 
 export const settingsSeed: SeedModule = {
   name: "settings",
-  modes: ["demo", "none"],
+  modes: ["demo", "fixtures", "none"],
   async run({ db, env, log }) {
     const rows = Object.entries(settingsSeedValues(env)).map(([key, value]) => {
       const k = key as SettingsKey;

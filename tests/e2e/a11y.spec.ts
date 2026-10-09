@@ -13,9 +13,9 @@ const PAGES = [
   "/works",
   "/works?size=m&sort=price-asc",
   "/works?availability=sold",
-  "/works/landscape-no-26",
-  "/works/moonrise",
-  "/works/boats-at-rest",
+  "/works/the-path",
+  "/works/reflection-in-the-pool",
+  "/works/a-ship-in-the-heart-of-the-sea",
   "/about",
   "/contact",
   "/credits",
@@ -36,7 +36,7 @@ async function seriousViolations(page: Page) {
 }
 
 test.beforeAll(async () => {
-  await withGalleryImages("landscape-no-26", 3);
+  await withGalleryImages("the-path", 3);
 });
 
 for (const locale of ["he", "en"] as const) {
@@ -52,7 +52,7 @@ for (const locale of ["he", "en"] as const) {
 
   test(`axe: lightbox open (${locale})`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto(`/${locale}/works/landscape-no-26`, {
+    await page.goto(`/${locale}/works/the-path`, {
       waitUntil: "load",
     });
     const dialog = page.getByRole("dialog");

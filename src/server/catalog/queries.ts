@@ -17,7 +17,6 @@ import type {
   ArtworkDetailDTO,
   ArtworkImageDTO,
   CatalogPage,
-  CreditDTO,
   ZoneEstimateDTO,
 } from "@/lib/catalog";
 import type { Locale } from "@/lib/locale";
@@ -557,34 +556,6 @@ export async function getDeliveryEstimates(
     pickupFree:
       settings.localPickup.enabled && settings.localPickup.feeIls === 0,
   };
-}
-
-/** `/credits`: every published demo work with its AIC caption. */
-export async function listCredits(
-  locale: Locale,
-  db: DbOrTx = defaultDb,
-): Promise<CreditDTO[]> {
-  const rows = await db
-    .select({
-      slug: artworks.slug,
-      titleHe: artworks.titleHe,
-      titleEn: artworks.titleEn,
-      creditLine: artworks.creditLine,
-    })
-    .from(artworks)
-    .where(
-      and(
-        eq(artworks.isDemo, true),
-        eq(artworks.isPublished, true),
-        isNotNull(artworks.creditLine),
-      ),
-    )
-    .orderBy(asc(artworks.sortOrder));
-  return rows.map((r) => ({
-    slug: r.slug,
-    title: locale === "he" ? r.titleHe : r.titleEn,
-    caption: r.creditLine ?? "",
-  }));
 }
 
 /**

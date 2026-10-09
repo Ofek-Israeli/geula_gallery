@@ -1,5 +1,5 @@
 /**
- * `npm run db:reset -- [--db <name>] [--seed demo|none] --yes`
+ * `npm run db:reset -- [--db <name>] [--seed demo|fixtures|none] --yes`
  *
  * Local only (refuses non-localhost hosts): drops the `public` and `drizzle` schemas, re-applies
  * the committed migrations and runs the seed registry (spec §8.4). `--yes` is required because

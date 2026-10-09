@@ -1,7 +1,8 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type * as schema from "@/server/db/schema";
 
-export type SeedMode = "demo" | "none";
+/** `demo`: the full catalog; `fixtures`: only the 16 fixture works (tests); `none`: settings only. */
+export type SeedMode = "demo" | "fixtures" | "none";
 export type SeedDb = NodePgDatabase<typeof schema>;
 
 /** Values the seeds read from the environment (scripts read process.env directly). */
@@ -13,7 +14,7 @@ export interface SeedEnv {
   authBaseUrl: string;
   seedE2eUsers: boolean;
   e2eAdminPassword: string;
-  /** STORAGE_DRIVER (default `local`); the demo catalog seed supports `local` only. */
+  /** STORAGE_DRIVER (default `local`); the catalog seed supports `local` only. */
   storageDriver?: string;
   /** LOCAL_STORAGE_DIR (default `.data/uploads`), where the catalog seed writes images. */
   storageDir?: string;

@@ -68,3 +68,38 @@ export async function withGalleryImages(
     await client.end();
   }
 }
+
+/**
+ * Gives a work a bilingual description of `paragraphs` paragraphs. The painter's works are seeded
+ * without descriptions, so the mobile sticky-bar spec uses this to keep the footer out of view
+ * once the buy box has scrolled away. Idempotent.
+ */
+export async function withDescription(
+  slug: string,
+  paragraphs: number,
+  connectionString = storefrontE2eDatabaseUrl(),
+): Promise<void> {
+  const he = Array.from(
+    { length: paragraphs },
+    (_, i) => `פסקת תיאור לבדיקה ${i + 1}: צבעים, משיכות מכחול ואור על הבד.`,
+  ).join("\n\n");
+  const en = Array.from(
+    { length: paragraphs },
+    (_, i) =>
+      `Test description paragraph ${i + 1}: colours, brushwork and light on the canvas.`,
+  ).join("\n\n");
+  const client = new pg.Client({
+    connectionString,
+    application_name: "geula-e2e-storefront",
+  });
+  await client.connect();
+  try {
+    const { rowCount } = await client.query(
+      "UPDATE artworks SET description_he = $2, description_en = $3 WHERE slug = $1",
+      [slug, he, en],
+    );
+    if (rowCount !== 1) throw new Error(`withDescription: no artwork ${slug}`);
+  } finally {
+    await client.end();
+  }
+}

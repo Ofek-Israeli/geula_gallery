@@ -24,8 +24,8 @@ const enOrders = messages("en", "orders");
 
 test.use({ extraHTTPHeaders: buyerIp(22) });
 test.beforeAll(async () => {
-  await cloneWork("still-life-no-15", "e2e-late-lost");
-  await cloneWork("still-life-no-15", "e2e-late-free");
+  await cloneWork("puzzle", "e2e-late-lost");
+  await cloneWork("puzzle", "e2e-late-free");
 });
 
 test("hold lost to another buyer → the late payment is refunded with an email and an alert", async ({

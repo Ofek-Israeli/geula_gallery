@@ -10,7 +10,7 @@ import type {
   FxReference,
   ShippingSettings,
 } from "@/server/shipping/types";
-import { readDemoManifest } from "../../scripts/lib/demo-manifest";
+import { readCatalogManifest } from "../../scripts/lib/catalog-manifest";
 import { demoPackaging } from "../../scripts/seed/packaging";
 import { shippingDefaults } from "../../scripts/seed/settings";
 
@@ -165,10 +165,10 @@ describe("NOT_INTERNATIONAL", () => {
 
 describe("§8.3: international checkout with the USD 2,500 DHL cap", () => {
   it("works for the six cheaper works; higher-value works route to a quote", async () => {
-    const manifest = await readDemoManifest();
+    const manifest = await readCatalogManifest();
     const ok: string[] = [];
     const quote: string[] = [];
-    for (const w of manifest.works) {
+    for (const w of manifest.works.filter((x) => x.fixture)) {
       if (w.status !== "AVAILABLE" || w.priceIls === null) continue;
       const p = demoPackaging(w);
       const q = quoteShipping({
@@ -206,16 +206,16 @@ describe("§8.3: international checkout with the USD 2,500 DHL cap", () => {
     }
     expect(ok.sort()).toEqual(
       [
-        "antibes",
-        "icebound",
-        "landscape-no-26",
-        "movement-no-10",
-        "still-life-green-flower-vase",
-        "still-life-no-15",
+        "underground-city",
+        "view-in-blue",
+        "the-path",
+        "blue-and-yellow-notes",
+        "the-vase",
+        "puzzle",
       ].sort(),
     );
-    expect(quote).toContain("beach-at-cabasson");
-    expect(quote).toContain("banks-of-the-durance");
+    expect(quote).toContain("ships-in-the-moonlight");
+    expect(quote).toContain("reflection-in-yellow");
   });
 });
 

@@ -25,9 +25,9 @@ const enCheckout = messages("en", "checkout");
 
 test.use({ extraHTTPHeaders: buyerIp(27) });
 test.beforeAll(async () => {
-  await cloneWork("still-life-no-15", "e2e-tamper-dup");
-  await cloneWork("still-life-no-15", "e2e-tamper-amount");
-  await cloneWork("still-life-no-15", "e2e-tamper-form");
+  await cloneWork("puzzle", "e2e-tamper-dup");
+  await cloneWork("puzzle", "e2e-tamper-amount");
+  await cloneWork("puzzle", "e2e-tamper-form");
 });
 
 test("duplicate and concurrent webhooks → exactly one sale", async ({

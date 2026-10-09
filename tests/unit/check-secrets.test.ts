@@ -185,7 +185,7 @@ describe("PII in fixtures and seeds (allowlist)", () => {
     for (const file of [
       "scripts/seed/catalog.ts",
       "tests/fixtures/cardcom/x.json",
-      "data/demo-manifest.json",
+      "data/catalog/manifest.json",
     ]) {
       expect(rules(file, text)).toEqual([
         "pii-email",
@@ -201,7 +201,7 @@ describe("PII in fixtures and seeds (allowlist)", () => {
       '"sha256": "bd9d437206644dd766e9967ff505fb555952ba6ec7b49121b5621e127289f35c",',
       '"blur": "data:image/webp;base64,UklGRk123456789xYz",',
     ].join("\n");
-    expect(rules("data/demo-manifest.json", text)).toEqual([]);
+    expect(rules("data/catalog/manifest.json", text)).toEqual([]);
   });
 });
 
