@@ -73,14 +73,14 @@
     "@types/qrcode": "1.5.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "6.1.1",
+    "@vitejs/plugin-react": "6.1.2",
     "auth": "1.7.7",
     "drizzle-kit": "0.31.11",
     "openapi-typescript": "7.13.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vite": "8.3.1",
+    "vite": "8.3.3",
     "vitest": "5.0.3"
   }
 }
