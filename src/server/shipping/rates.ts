@@ -771,7 +771,8 @@ function postFromIlsMinor(
  * estimate among the zone's listed countries (`dhlFromIlsMinor`; the table when none is listed or
  * the estimate is off), plus the minimum premium when insured (international zones assume the
  * DHL carrier for the insurance flag); `value` adds the export declaration when it is due. A
- * disabled zone or a quote-only work → `'QUOTE'`; a piece only a quote can price → `'QUOTE'`
+ * zone closed to online ordering still gets its estimate (ordering there is by quote); a
+ * quote-only work → `'QUOTE'`; a piece only a quote can price → `'QUOTE'`
  * unless Israel Post takes it; a work that cannot be shipped there → `'UNAVAILABLE'`. Value caps
  * are not applied; checkout applies them.
  */
@@ -800,7 +801,9 @@ export function zoneEstimates(
       out[zone] = "UNAVAILABLE";
       continue;
     }
-    if (!cfg.enabled || a.quoteOnly) {
+    // A zone closed to online ordering (EUROPE by default) still shows its estimate; there the
+    // buyer asks for a quote (`rules.ts`: ZONE_DISABLED).
+    if (a.quoteOnly) {
       out[zone] = "QUOTE";
       continue;
     }

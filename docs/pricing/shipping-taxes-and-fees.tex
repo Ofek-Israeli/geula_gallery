@@ -272,8 +272,9 @@ Checkout asks the buyer to request a quote instead of showing a price for:
   \item a crate, glazing, a tube for a work that cannot be rolled, a work marked ``quote only'',
     more than 70\,kg actual weight, or a piece beyond DHL's limits (300\,cm, 1{,}000\,kg);
   \item a declared value above \usd{2{,}500} (the site's cap for DHL);
-  \item Europe, while its zone is off (EU sales wait for the GPSR requirements), and any country
-    on the quote-only list.
+  \item Europe, while its zone is off (EU sales wait for the GPSR requirements; the artwork page
+    still shows Europe's estimate, Section~\ref{sec:europe}), and any country on the quote-only
+    list.
 \end{itemize}
 Denied destinations (Iran, Syria, Lebanon, Iraq) and parcels to Great Britain worth up to
 \pounds135 (where the seller would have to collect UK VAT) are refused. When the estimate is
@@ -314,8 +315,9 @@ lists \cite{postdomestic,postems}, whenever the parcel fits its limits. The code
     site uses 105 and 200). Crates and glazed works are not sent by post.
   \item \textbf{EMS abroad}: the destination's group (1--13) sets the price per item: up to
     0.5\,kg, up to 1\,kg, then each further 0.5\,kg or part. EMS reaches 171 countries; where
-    Israel Post sends no EMS (for example Saudi Arabia, Kuwait, Qatar) only DHL is offered, and
-    Europe stays ``by quote'' while its zone is off. The site uses the counter prices; preparing
+    Israel Post sends no EMS (for example Saudi Arabia, Kuwait, Qatar) only DHL is offered.
+    Europe is priced the same way on the artwork page but ordered by quote while its zone is off
+    (Section~\ref{sec:europe}). The site uses the counter prices; preparing
     the parcel online (``prepare at home'') is \nis{5} cheaper.
   \item \textbf{Insurance abroad}: Israel Post's liability extension, \nis{6.90} per
     \nis{1{,}000} of value or part of it, up to \nis{25{,}000} (a setting).
@@ -402,6 +404,44 @@ $110\times26\times26$\,cm, 2.7\,kg), shipping only, on 15 October 2026, in sheke
 DHL bills the box as 28\,kg and the tube as 15\,kg. EMS to the United States takes at most
 200\,cm in length plus girth, and the tube's girth is 104\,cm: a canvas whose shorter side is over
 86\,cm goes by DHL there even rolled.
+
+\section{Europe}\label{sec:europe}
+Europe (the EU, the UK, Switzerland, Norway and the rest of DHL's zone~2) is still closed to online
+ordering: EU sales wait for the GPSR requirements, so checkout asks a European buyer for a quote.
+Since October 2026 the artwork page nevertheless shows ``Europe from \nis{X}'' instead of ``on
+request'', computed exactly as for the other zones (Sections~\ref{sec:abroad}, \ref{sec:post}
+and~\ref{sec:rolled}): the cheaper of DHL's published price and Israel Post EMS, rolled in a tube
+when the work may be rolled, for the zone's cheapest country, plus insurance, with EMS's 5--10
+business days. The painter answers a European quote request with the same figures.
+
+Israel Post EMS, shipping only, on 15 October 2026, in shekels (the EMS group in brackets):
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrrr@{}}
+  \toprule
+  Painting, packing (weight) & Greece (10) & UK, France, NL, CH (3) & Germany, Italy (3) & Sweden (13) \\
+  \midrule
+  $60\times80$, rolled (2.1\,kg) & 217.50 & 218.50 & 218.50 & 257 \\
+  $60\times80$, stretched (4.4\,kg) & 271.50 & 264.50 & too large & 309 \\
+  $80\times80$, rolled (2.3\,kg) & 217.50 & 218.50 & 218.50 & 257 \\
+  $80\times80$, stretched (5.3\,kg) & 298.50 & 287.50 & too large & 335 \\
+  $100\times100$, rolled (2.7\,kg) & 231 & 230 & too large & 270 \\
+  $145\times120$, rolled (3.6\,kg) & 258 & 253 & too large & 296 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+On the site Israel Post's insurance is added (\nis{6.90} per \nis{1{,}000} of the work's value or
+part of it). Across the painter's 151 works ``Europe from'' is \nis{232}--\nis{340} (median
+\nis{252}, against \nis{278} to North America); 143 of them are cheapest rolled. One work that can
+be neither rolled nor sent by post shows about \nis{3{,}700}, DHL's price, as it does for North
+America.
+
+Germany and Italy take EMS parcels up to 105\,cm and 200\,cm in length plus girth only: there a
+box, or the tube of a canvas whose shorter side is over 86\,cm, goes by DHL (zone~2: \nis{2{,}736}
+for a rolled $100\times100$\,cm canvas, \nis{4{,}292} stretched), so a quote for those countries
+can be well above the ``from'' price, which is the zone's cheapest country. The Nordic countries (group~13)
+cost about \nis{40} more than the rest.
 
 \section{The quote lock}
 When the buyer presses ``Continue to payment'', the server prices the order again from the same

@@ -552,10 +552,12 @@ describe("zoneEstimates", () => {
     // 2,058 g, 43×43×9 cm. Israel: the table's ₪60 beats Israel Post's ₪73. Abroad Israel Post EMS
     // wins: Canada (group 4) ₪171 + 3 × ₪24 = ₪243, Georgia (group 12, the rest of the world's
     // cheapest) ₪183 + 3 × ₪11 = ₪216, each + ₪6.90 minimum insurance, with EMS's delivery time.
+    // Europe is closed to online ordering but still shows its estimate: EMS group 10 (Greece,
+    // Croatia; the zone's cheapest) ₪177 + 3 × ₪13.50 = ₪217.50.
     const ems = settings.israelPost.estimate.abroad;
     expect(zoneEstimates(a, settings, DAY)).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
-      EUROPE: "QUOTE",
+      EUROPE: { fromIlsMinor: 21_750 + 690, insured: true, estimate: ems },
       NORTH_AMERICA: {
         fromIlsMinor: 24_300 + 690,
         insured: true,
@@ -583,10 +585,11 @@ describe("zoneEstimates", () => {
       israelPost: { ...settings.israelPost, domestic: false, abroad: false },
     };
     // 43×43×9 cm → 3.5 kg in zone 1 (₪567.42) + demand ₪5.95 + fuel 49 % → ₪855; + ₪45 minimum
-    // premium. Rest of the world's cheapest listed country is Mexico (zone 1).
+    // premium. Rest of the world's cheapest listed country is Mexico (zone 1). Europe: zone 2
+    // (₪696.43) + demand ₪3.15 + fuel 49 % → ₪1,043.
     expect(zoneEstimates(a, noPost, DAY)).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
-      EUROPE: "QUOTE",
+      EUROPE: { fromIlsMinor: 104_300 + 4500, insured: true },
       NORTH_AMERICA: { fromIlsMinor: 85_500 + 4500, insured: true },
       REST_OF_WORLD: { fromIlsMinor: 85_500 + 4500, insured: true },
     });
@@ -602,7 +605,7 @@ describe("zoneEstimates", () => {
       zoneEstimates(a, { ...tableOnly, israelPost: noPost.israelPost }, DAY),
     ).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
-      EUROPE: "QUOTE",
+      EUROPE: { fromIlsMinor: 22_000 + 4400 + 4000 + 4500, insured: true },
       NORTH_AMERICA: {
         fromIlsMinor: 26_000 + 5200 + 4000 + 4500,
         insured: true,

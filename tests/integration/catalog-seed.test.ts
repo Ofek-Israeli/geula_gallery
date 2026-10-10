@@ -158,6 +158,7 @@ describe("catalog queries", () => {
       insured: false,
       estimate: "1–2 business days",
     });
-    expect(d.zones.find((z) => z.zone === "EUROPE")?.kind).toBe("quote");
+    // Europe is closed to online ordering but shows its estimate.
+    expect(d.zones.find((z) => z.zone === "EUROPE")?.kind).toBe("price");
   });
 });
