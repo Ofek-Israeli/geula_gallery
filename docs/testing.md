@@ -81,10 +81,10 @@ Set the `*_CONTRACT` flags in the **shell**, not in `.env.local`. Fixtures are w
 
 | Area | Files |
 |---|---|
-| Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `phone`, `il-id`, `countries`, `ids`, `validation` |
+| Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `phone`, `il-id`, `countries` (including the countries without postal codes), `ids`, `validation` (including the checkout destination rules) |
 | Deadlines and fee | `deadlines`, `cancellation-amounts` (works only on a partial cancellation, shipping with the last work, the shared ₪100 cap, the refund clamped by what is still refundable) |
-| Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` |
-| Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines` (including the repack edges back to AWAITING_FULFILLMENT), `payments-registry`, `cart` (cookie codec, buy-box decisions) |
+| Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table, the DHL estimate path and its table fallback), `dhl-tariff` (the published rows agree with DHL's increments; one zone or none per country), `dhl-estimate` (the worked examples and price table of `docs/pricing/shipping-taxes-and-fees.tex`, rounding, surcharges, failures), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` (including the `dhl.*` fields) |
+| Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines` (including the repack edges back to AWAITING_FULFILLMENT), `payments-registry`, `cart` (cookie codec, buy-box decisions), `checkout-steps` (the address-first URL contract: parsing, the step resolver, query and link building) |
 | Provider maps | `cardcom-map`, `paypal-map`, `morning-map` (with the gateway builder), `dhl-builder`, `dhl-map`, `resend-driver` |
 | Platform | `env` (derivations and cross-field rules), `csp`, `security`, `auth-policy`, `storage`, `media-ingest`, `outbox-cron`, `routes`, `script`, `settings-schemas`, `mock-signature`, `test-helpers` |
 | Content | `email-core` (`lang`/`dir`, footer identity without the ID number, LTR runs), `legal-content` (s.14C(a) elements, forbidden phrases, the ID number never in legal pages or the footer), `storefront` |
@@ -129,18 +129,20 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 |---|---|
 | `smoke` (`@smoke`) | locale redirects, `html[dir][lang]`, demo banner, `X-Robots-Tag`; the cancel link on home, works, artwork, about, legal, contact, checkout and order pages; the admin guard |
 | `storefront`, `storefront-minimal` | URL filters and sorts, "Sold" as text, the recently-sold strip, JSON-LD availability, the keyboard lightbox (arrows mirrored in he, Esc, focus return, live region), "insured" only when configured; `@mobile` sticky bar and scroll-snap |
-| `checkout-minimal`, `purchase-il` | full Israeli purchase → Sold → emails with the disclosure PDF attachment → mock receipt → the admin sees the order |
+| `checkout-minimal`, `purchase-il` | the bare checkout opens on step 1 (destination); full Israeli purchase through the three steps → Sold → emails with the disclosure PDF attachment → mock receipt → the admin sees the order; a pickup purchase types no street address |
+| `checkout-steps` | the address-first steps with JavaScript off (pickup shows no street fields), "Change" keeps the values, postal code required in the US but not in Hong Kong, a carried method that isn't offered, the currency links, a blocked destination with the form prefilled, axe on every step in he and en |
 | `race` | two browser contexts: one reaches payment, the other sees "just reserved" |
 | `webhook`, `tamper` | "Pay without returning" → PAID; forged webhook → 401; duplicate webhooks → one sale; tampered amount → not paid plus a CRITICAL alert |
 | `order-retry`, `late-payment`, `capture-mode` | cancel → retry → paid; release → available; late payments; capture and review modes |
-| `international`, `shipping-rules` | US destination: Latin-only validation, DAP acknowledgement, USD total; blocked countries, GB low value, value cap, crate → quote only |
+| `international`, `shipping-rules` | US destination: a Latin city at step 1, the courier named "DHL Express" and priced by the estimate (the locked quote has `rateSource = DHL_ESTIMATE`), USD through the currency links, a Latin street address, DAP acknowledgement, USD total; blocked countries, GB low value, value cap, crate → quote only |
 | `quote`, `offer`, `manual-order`, `contact` | quote → link → re-quote by switching to studio pickup → pay; offer through the artwork page → accept → pay, and auto-decline; manual order → exact transfer → PAID; the contact form |
 | `cancellation-il` | the POST form with name and ID only, the ID never in the URL, review → confirm → acknowledgement and email with the ID masked, a resubmission as a possible duplicate, then the admin side: match, fee, refund, credit note, relist |
 | `cancellation-partial` | a cart of three works paid by courier; the buyer unticks one on the review step; the admin sees the two ticked, the live preview (shipping kept, then refunded when the third is ticked), accepts; the refund settles with the order still PAID; relist → two AVAILABLE, one SOLD; the fulfillment page packs the third and names the cancelled works; axe on the review step in he and en |
-| `cart` | add two works (header count), remove and re-add, one pickup checkout and one courier checkout in Hebrew, both Sold and the cart emptied; a work sold meanwhile named and left out; "Buy now" takes the work out of the cart; two buyers with overlapping carts; add and remove without JavaScript; axe on the cart and the cart checkout |
+| `cart` | add two works (header count), remove and re-add, one pickup checkout (through the steps, no street address) and one courier checkout in Hebrew, both Sold and the cart emptied; a work sold meanwhile named and left out, and "Remove from cart" keeps the destination and step; "Buy now" takes the work out of the cart; two buyers with overlapping carts; add and remove without JavaScript; axe on the cart and every cart checkout step |
 | `fulfill` | a 5 MB packing photo upload, mock label, tracking cron → DELIVERED, printables, the label only through a signed URL, pickup blocked until the disclosure is confirmed |
 | `admin-artwork`, `admin-offline`, `admin-auth` | create, upload, publish blocked until alt text is filled; an audited price change; offline hold and sale; 6 bad logins → 429; TOTP enrolment |
-| `a11y`, `admin-a11y` | axe on home, works, artwork, checkout, cancel, order, admin login and the editor, in he and en → zero serious or critical |
+| `a11y`, `admin-a11y` | axe on home, works, artwork, checkout, cancel, order, admin login, the editor and the settings pages (including shipping), in he and en → zero serious or critical |
+| `admin-shipping` | the DHL Express estimate group of the shipping settings: stored values, the tariff panel and DHL's links, in he and en |
 | `not-found` | localized and global 404s |
 
 **Not automated (spec §10.4 names them):** `headers`, `mobile` and `admin-security` specs do not

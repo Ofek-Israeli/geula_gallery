@@ -14,7 +14,9 @@ One Next.js app and one PostgreSQL database run four things:
 3. **Real provider integrations, each behind an interface with a mock:**
    - payments: Cardcom (primary) and PayPal (secondary);
    - tax documents: Morning (Green Invoice) or Cardcom gateway documents;
-   - shipping: DHL Express MyDHL, a manual carrier, and a table-rate engine the painter edits;
+   - shipping: DHL Express MyDHL, a manual carrier, a DHL Express estimate from DHL's published
+     Israel tariff for shipments abroad, and a table-rate engine the painter edits (Israel, and the
+     fallback abroad);
    - email: Resend.
 4. **The Israeli consumer-law flows:** the pre-contract disclosure, the cancellation form (per
    work: the buyer may cancel some works of an order), refund deadlines and data retention.
@@ -233,7 +235,8 @@ Fonts: Frank Ruhl Libre and Assistant, under the SIL Open Font License (`assets/
   advertising, so sold or held works offer a one-to-one inquiry instead.
 - **EU sales:** EUR prices and EU targeting (GPSR). The EUROPE zone exists but is disabled and
   routes buyers to a quote.
-- **Shipping extras:** DHL live rates and landed cost, DDP, the DHL Unified Tracking API,
+- **Shipping extras:** DHL live rates (shipments abroad use the published-tariff estimate until
+  then) and landed cost, DDP, the DHL Unified Tracking API,
   domestic courier APIs, and the DHL "Request pickup" button (the adapter method exists).
 - **Payment extras:** the Cardcom iframe, J5 authorise-then-capture, the PayPal JS SDK and
   disputes API, and other payment providers. Today a PayPal dispute raises an alert and blocks

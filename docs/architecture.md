@@ -1253,9 +1253,11 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
 - USD checkout says "insured up to ₪5,800" (insured value in ILS while the buyer pays USD) (WS2/WS3).
 - Artwork image captions (English AIC credit lines) are not bidi-isolated on Hebrew pages, so a
   trailing word can wrap onto the far side (WS1: wrap in `<bdi>`/`lang="en"`).
-- The checkout postal-code label has neither "(required)" nor "(optional)" (WS2).
-- The checkout details form needs JS (only the delivery GET form has a no-JS path); fine per §5.1,
-  noted because the order page's forms now work without JS.
+- The checkout postal-code label had neither "(required)" nor "(optional)" (WS2). Resolved by the
+  address-first checkout: step 1 marks the postal code "(optional)" where it is not required.
+- The checkout details form needs JS; fine per §5.1, noted because the order page's forms work
+  without JS. Since the address-first checkout, steps 1 and 2 (destination, delivery) are GET forms
+  that work without JS; only step 3 (the details form) needs it.
 
 ### M3 WS5 Integrations notes
 
@@ -2117,3 +2119,155 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
     `MOCK_SALES_ON_REAL_WORKS` until the database is reset.
 - **The banner.** The demo banner and the About page's demo note no longer say the prices are
   placeholders. They now say that payments are test payments and sales are not real.
+
+### Address-first checkout
+
+- **Three steps on the same two pages.** "Buy now" (`checkout/[slug]`) and the cart (`checkout`) go
+  in three steps:
+  1. **Destination:** country, city and postal code.
+  2. **Delivery:** the priced options, with a ₪/$ toggle abroad.
+  3. **Details:** name, email and phone; the street address only for a delivery, then the consents
+     and the payment method.
+
+  Pickup buyers never type a street address. The steps are driven by the URL, and steps 1 and 2 are
+  GET forms that work without JS.
+  - Both pages still call `getCheckoutQuote({country: to, method: ship, currency: cur})` first, so
+    404s and blocked states behave as before on every step. A blocked destination shows the
+    step-1 form prefilled.
+  - The old "Update delivery" form is gone, and with it a bug: a radio ticked without pressing it
+    used the last rendered method.
+- **The URL contract** (`src/lib/checkout-steps.ts`, `CHECKOUT_QUERY_KEYS` in `routes.ts`).
+  - `to`, `city`, `zip`, `ship`, `cur`, and `step` = `destination | delivery | details`.
+  - `step` is the step the buyer *asked for*: each form submits the next one, and "Change" links
+    send an earlier one.
+  - Without `step`, the page goes as far as the data allows. Deep links and the `price_changed`
+    reload link rely on this.
+  - `resolveCheckoutStep` keeps step 1 until the destination is valid. It keeps step 2 until `ship`
+    is offered **and** equals the quote's method, because `quote.ts` silently falls back to
+    another one. A requested earlier step wins.
+  - Step-1 errors show only when the buyer asked to move on. Step 2 says when a carried method is
+    not offered here, except right after a country change.
+  - Every step after 1 needs a complete destination; there is no pickup exception. The E2E deep
+    links use `checkoutUrl()` (`tests/e2e/support/commerce.ts`).
+- **Validation.** `src/lib/validation/destination.ts#destinationIssues` validates step 1 and the
+  final action, so the two never disagree.
+  - The city is required, at most 120 characters, and Latin-only abroad.
+  - The postal code follows `postalCodeRequired`: optional in Israel, required abroad except in
+    the 69 countries that use none (`POSTAL_CODE_FREE_COUNTRIES`).
+  - That list comes from Google libaddressinput `region_metadata_constants.cc`: regions whose
+    format has no `%Z`, plus ZW, whose missing format falls back to one without it.
+  - Link orders use the same postal-code rule.
+- **What the address does.** City and postal code never change a price (the remote-area surcharge
+  is not estimated, see the next section). They go into the address as hidden fields on step 3,
+  for a delivery only.
+  - A pickup posts neither and keeps `shipTo = null`, so its `ship_*` columns stay empty.
+  - Errors on those hidden fields become a "problem with the destination" banner linking to step 1.
+- **Privacy trade-off.**
+  - City and postal code (never the street, the name or contact details) appear in browser
+    history, our request logs, and the reload and remove-from-cart queries.
+  - The pages set `referrer: "strict-origin"`, so the provider redirect and other sites see only the
+    origin.
+  - `runRemove` accepts the checkout query up to 2,000 characters, because a Hebrew city
+    percent-encodes long. `checkoutQuery` drops values over the limits.
+- **UI.**
+  - One h2 per step, and a progress `<ol>` with `aria-current="step"`.
+  - "Change" links whose `aria-label` contains the visible text.
+  - Currency as links with `aria-current`, so the prices shown are the prices charged.
+  - User text wrapped in `<bdi>`.
+  - `methodName` (`_components/parts.tsx`) names the courier "DHL Express" when the DHL estimate
+    priced it.
+  - New E2E: `checkout-steps` (steps with JS off, postal-code rules, a method that isn't offered,
+    currency links, a blocked destination, axe on every step). Helpers: `checkoutUrl`,
+    `chooseDestination`, `chooseDelivery`, `seriousAxeViolations`.
+- **Contract changes (additive).** `paths.checkout`/`cartCheckout` take the new query keys. The
+  quote contract and the domain services are unchanged.
+
+### DHL Express estimate abroad
+
+- **Why.** There is no DHL business account yet, so the site cannot ask DHL's rating API for a
+  price. Abroad, courier shipping is priced instead by DHL's *published* Israel export tariff,
+  applied in code. Israel keeps the painter's table, calibrated from her courier's price list
+  (Israeli couriers have no standard pricing API). The document explaining shipping, customs, VAT
+  and fees is `docs/pricing/shipping-taxes-and-fees.tex` (build files git-ignored).
+- **Where.**
+  - `src/server/shipping/tariff/` holds the data: `dhl-express-il-2026.ts` with the rows,
+    increments, zones, piece and shipment surcharges, the demand window and regions, and sources.
+    `index.ts#dhlTariffOn(date)` picks the guide by date.
+  - The rows were extracted from the guide's PDF text, not retyped. `tests/unit/dhl-tariff.test.ts`
+    checks the 11–30 kg and 40–70 kg rows against the published increments, and that every
+    selector country has one zone or none.
+  - `src/server/shipping/dhl-estimate.ts` is the pure estimate. `tests/unit/dhl-estimate.test.ts`
+    pins the document's worked examples and price table.
+- **When it applies.** In `quoteShipping`, for `CARRIER_TABLE` outside Israel, when
+  `shipping.dhlEstimate.enabled` and the guide lists the destination, whatever the carrier code
+  (DHL, MANUAL or MOCK: without an account she ships with DHL at about the published price).
+  - It runs after the existing refusals (blocked, not international, destination quote, quote-only
+    work).
+  - Otherwise the table prices the shipment, as before. That covers an estimate switched off, and
+    the 21 selector codes with no published price: AF AQ AX BV CC CX EH GS HM IM IO MF NF PM PN PS
+    SJ TF TK UM WF.
+- **How.**
+  - The order is one multi-piece shipment, as fulfilment books it.
+  - Each piece's sides are measured in whole cm rounded up (`mmToCmCeil`, as on the label). Its
+    volumetric weight is cm³/5000, and it bills at max(actual, volumetric) rounded up to 0.5 kg.
+  - The shipment bills at the sum, in 0.5 kg steps up to 30 kg and whole kg above.
+  - Transport comes from the published row, or the row below plus the published increment, less
+    `accountDiscountPct`.
+  - Each piece pays one surcharge at most: Overweight, else Oversize, else Non-Conveyable (25–70 kg
+    actual, a crate, or a round tube).
+  - The demand surcharge is per kg, by DHL's destination region, inside its window (inclusive
+    Jerusalem days).
+  - Elevated Risk applies to the destinations DHL lists; DHL suspended Israel's own listing on
+    2026-09-25. Restricted Destination applies to its listed destinations.
+  - Fuel (`fuelSurchargePct`) applies to transport, piece surcharges, demand and elevated risk. It
+    does not apply to Restricted Destination, insurance or customs services.
+  - The export declaration costs ₪110 + VAT (`vatRateBpOn`). It is added when
+    `exportDeclarationRequired` (the fulfilment rule) holds and `exportDeclarationByDhl` is on.
+  - The total is rounded up to whole shekels.
+  - Not estimated: remote area (a per-address lookup), optional services.
+- **Quotes on that path.** `dhlPriceable` decides. A QUOTE class caused only by the table's weight
+  limits (≥ 25 kg actual, > 45 kg chargeable) is priced, because the tariff covers it.
+  - `SIZE_QUOTE` remains for a crate, glazing, an unrollable tube, `quote_only`, an override to
+    QUOTE, over 70 kg actual, and anything beyond DHL's limits (300 cm or 1,000 kg per piece,
+    3,000 kg per shipment).
+  - An override to S/M/L still wins: a crate overridden to L is priced, with Non-Conveyable.
+- **The quote.**
+  - `breakdown` holds net transport, piece surcharges, and the rest; the three add up to the ILS
+    total.
+  - `rateSource` is `DHL_ESTIMATE` (`TABLE` on table quotes), and `dhl` holds the workings: tariff,
+    zone, region, per-piece and shipment weights, every surcharge, fuel % and date, rounding.
+  - The existing lock snapshots both into `orders.shipping_quote`. A fuel or discount edit
+    between page view and "Continue to payment" gives `price_changed`.
+  - `sizeClass` and `chargeableG` keep their table meanings (informational).
+- **Artwork page.** `zoneEstimates` abroad takes the cheapest estimate among the site zone's
+  offered, DHL-listed countries, so Rest of World starts at Mexico's zone 1.
+  - The new optional `value` adds the export declaration when it is due. `getDeliveryEstimates`
+    gets it from the new server-only `ArtworkPageData.declaredValueIlsMinor`, and the admin
+    artwork page passes its own.
+- **Settings.**
+  - `shipping.dhlEstimate` = `{ enabled, fuelSurchargePct, fuelSurchargeAsOf, accountDiscountPct,
+    exportDeclarationByDhl }`. Every field has a default and the object is `.prefault({})`, so
+    stored rows parse.
+  - Seed: on, 49 % as of 2026-10-12 (DHL's value for 12–18 Oct 2026), discount 0, DHL files.
+  - Insurance moves to DHL's published 1 % / ₪45 minimum.
+  - The admin group shows a "not updated" badge when the fuel date is over 14 days old, and a
+    review badge from the tariff's `reviewBy` (2027-01-01). Its read-only panel lists the sources,
+    the demand window, the restricted and elevated-risk lists, and what is not estimated.
+  - `settings-form.ts` reads the `dhl.*` fields only with `dhl.present`, so a page opened before
+    the deploy keeps the stored values. The table's own surcharges now apply only to table prices.
+- **Price level.** At list prices a typical 100×80 cm canvas (112×92×11 cm, 22.7 kg volumetric) costs
+  ₪2,959 to the US, ₪3,689 to Germany and ₪5,098 to Japan, against ₪1,600 on the placeholder
+  table. A DHL account discount brings every estimate down.
+- **Yearly update.**
+  1. Add the new guide as a new file and an entry in `DHL_TARIFFS`, with its `validFrom`. Old
+     dates keep the old guide.
+  2. Regenerate the rows from the PDF text, not by hand.
+  3. Update the tests and the document.
+- **Contract changes (additive).**
+  - `shipping/types.ts`: `ShippingQuoteResult.rateSource?` and `.dhl?`, with the `DhlZone`,
+    `DhlDemandRegion`, `DhlPieceSurcharge`, `DhlEstimatePiece` and `DhlEstimateDetail` types.
+  - `settings/schemas.ts`: `ShippingSettings.dhlEstimate` (`dhlEstimateSettingsSchema`).
+  - `rates.ts`: `zoneEstimates(a, settings, date, value?)`, plus the new exports `dhlPriceable` and
+    `dhlPieceOf`.
+  - `catalog/queries.ts`: `getDeliveryEstimates(…, declaredValueIlsMinor?)`, and
+    `ArtworkPageData.declaredValueIlsMinor`.

@@ -79,7 +79,7 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - A "ביטול עסקה / Cancel a purchase" link in the header and footer of every public page and in the checkout footer.
 
 *Checkout and payments*
-- Flow: Buy now → one server-rendered checkout page → an atomic 35-minute hold → full-page redirect to the provider → server-side finalization → order page (countdown, retry, "release my hold").
+- Flow: Buy now → a server-rendered checkout in three steps (destination, delivery, details) → an atomic 35-minute hold → full-page redirect to the provider → server-side finalization → order page (countdown, retry, "release my hold").
 - Providers:
 
   | Provider | Role | Testing |
@@ -99,7 +99,7 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - Exactly once is guaranteed by a DB claim plus a search for our marker in Morning.
 
 *Shipping*
-- Table rates the painter edits: zones, size classes S/M/L/QUOTE, per-piece rules, time-boxed surcharges, insurance on a capped insured value, and a declared-value cap per carrier.
+- Table rates the painter edits: zones, size classes S/M/L/QUOTE, per-piece rules, time-boxed surcharges, insurance on a capped insured value, and a declared-value cap per carrier. Abroad, a DHL Express estimate from DHL's published Israel tariff replaces the table (§4.4); the table stays for Israel and as the fallback.
 - Country rules and the DAP notice.
 - Methods: CARRIER_TABLE, LOCAL_PICKUP, ARTIST_DELIVERY, QUOTED.
 - Carriers: `mock`, `manual`, and `dhl` (built from the OpenAPI types plus fixtures).
@@ -161,7 +161,7 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - **Cart UI:** the schema and reservation SQL already handle n items.
 - **Advertising email:** newsletter and "notify me". These are advertising under s.30A; sold or held works offer a 1:1 inquiry instead.
 - **EU:** EUR prices and EU targeting (GPSR). The EUROPE zone exists but is disabled and routes to quote.
-- **Shipping extras:** DHL live rates and landed cost; DDP; the DHL Unified Tracking API; domestic courier APIs.
+- **Shipping extras:** DHL live rates (until then, the published-tariff estimate of §4.4 prices shipments abroad) and landed cost; DDP; the DHL Unified Tracking API; domestic courier APIs.
 - **Payment extras:** Cardcom iframe and J5 SuspendedDeal; PayPal JS SDK and the disputes API (disputes raise an alert and block fulfillment only); other PSPs and Airwallex.
 - **Other:** analytics, "view on a wall", carousels, buyer accounts, Vercel WAF and BotID, the actual deployment.
 
@@ -899,7 +899,7 @@ export interface TaxDocumentProvider { id: 'mock' | 'morning' | 'gateway' | 'non
 export function classify(a: ArtworkShipSpec, divisor = 5000): { sizeClass: SizeClass; chargeableG: number; oversizePiece: boolean; nonConveyable: boolean; reasons: string[] };
 export function quoteShipping(i: { items: ArtworkShipSpec[]; country: string; method?: ShippingMethod; currency: Currency; date: Date;
   declaredValueIlsMinor: number; settings: ShippingSettings; fx: FxReference; carrier: 'DHL'|'MANUAL'|'MOCK' }): ShippingQuoteResult; // includes insuredValueMinor, insured: boolean
-export function zoneEstimates(a: ArtworkShipSpec, settings: ShippingSettings, date: Date): Record<ZoneId, { fromIlsMinor: number; insured: boolean } | 'QUOTE' | 'UNAVAILABLE'>;
+export function zoneEstimates(a: ArtworkShipSpec, settings: ShippingSettings, date: Date, value?: { declaredValueIlsMinor: number; fx: FxReference }): Record<ZoneId, { fromIlsMinor: number; insured: boolean } | 'QUOTE' | 'UNAVAILABLE'>;
 export function evaluateDestination(i: { country: string; declaredValueIlsMinor: number; carrier: 'DHL'|'MANUAL'|'MOCK'; settings: ShippingSettings; fx: FxReference }):
   { mode: 'ok' | 'quote_only' | 'blocked'; reason?: BlockReason; notices: NoticeCode[] };
 export type BlockReason = 'DESTINATION_DENIED'|'ZONE_DISABLED'|'NOT_INTERNATIONAL'|'QUOTE_ONLY'|'SIZE_QUOTE'|'VALUE_CAP'|'GB_LOW_VALUE';
@@ -925,6 +925,18 @@ export type NoticeCode = 'DAP_DUTIES'|'EU_LOW_VALUE_DUTY'|'US_DUTY_FREE_CLEARANC
   - It is included only when `insurance.enabled` and the carrier or method supports it. The quote carries `insured: boolean` and `insuredValueMinor`.
   - Pickup and the manual domestic carrier are uninsured unless the painter sets otherwise.
 - USD orders convert shipping and insurance once with the dated `settings.checkout.fx.ilsPerUsd`, rounded up to whole dollars, and lock the result.
+
+*Abroad: the DHL Express estimate* (`shipping/dhl-estimate.ts`, tariff data in `shipping/tariff/`; explained in `docs/pricing/shipping-taxes-and-fees.tex`)
+- Applies to `CARRIER_TABLE` outside Israel when `shipping.dhlEstimate.enabled` and DHL's guide lists the destination, whatever the carrier code (DHL, MANUAL or MOCK). Otherwise (estimate off, a destination without a DHL zone) the table above prices it.
+- DHL's published *Service & Rate Guide 2026: Israel* (DHL Express Worldwide, non-documents) for the whole order as one multi-piece shipment:
+  - each piece: sides in whole cm rounded up, volumetric weight cm³/5000, billing weight max(actual, volumetric) rounded up to 0.5 kg; one piece surcharge (Overweight ₪395 > 70 kg, else Oversize ₪80, else Non-Conveyable ₪80 for 25–70 kg actual, a crate or a round tube);
+  - the shipment: Σ pieces, 0.5 kg steps up to 30 kg and whole kg above; transport from the published rows and increments, less `accountDiscountPct`;
+  - demand surcharge per kg by DHL's destination region inside its window; Elevated Risk (listed destinations; Israel's own listing suspended 2026-09-25) and Restricted Destination ₪119 each;
+  - fuel `fuelSurchargePct` on transport + piece + demand + elevated risk; export declaration ₪110 + VAT when required (the fulfilment rule) and `exportDeclarationByDhl`; the total rounded up to whole shekels.
+  - Not estimated: remote area (a per-address lookup), optional services.
+- On that path a piece needs a quote only for a crate, glazing, an unrollable tube, `quote_only`, an override to QUOTE, over 70 kg actual, or beyond DHL's limits (300 cm, 1,000 kg per piece, 3,000 kg per shipment) → `SIZE_QUOTE`; the table's weight limits do not apply.
+- `breakdown` = net transport / piece surcharges / everything else (ILS minor, summing to the total); the quote carries `rateSource: 'DHL_ESTIMATE'` and `dhl` (the workings), snapshotted with the order. Table quotes carry `rateSource: 'TABLE'`.
+- `zoneEstimates` abroad: the cheapest estimate among the site zone's offered, DHL-listed countries; `value` adds the export declaration when due.
 
 *Rolled tube*
 - Only if `can_be_rolled`.
@@ -1042,6 +1054,7 @@ export interface CarrierAdapter { id: 'mock' | 'manual' | 'dhl'; mode: 'mock' | 
   - `divisor` 5000, `calibratedAt`;
   - `zones[{id, enabled, countries, estimate{he,en}}]`;
   - `classRatesIls`, `oversizeFeeIls`, `nonConveyableFeeIls`, `surcharges[…]`;
+  - `dhlEstimate{enabled, fuelSurchargePct, fuelSurchargeAsOf, accountDiscountPct, exportDeclarationByDhl}` (every field defaulted, so older rows parse);
   - `insurance{enabled, provider: 'DHL'|'THIRD_PARTY'|'NONE', ratePct, minIls, maxInsuredIls, coverageConfirmedAt}`;
   - `valueCaps[{carrier, maxUsd}]`, `deniedCountries`, `quoteOnlyCountries`;
   - thresholds `gbLowValueGbp` 135, `euLowValueEur` 150, `usFormalEntryUsd` 2500, `exportDeclarationUsd` 200;
@@ -1098,14 +1111,11 @@ export interface CarrierAdapter { id: 'mock' | 'manual' | 'dhl'; mode: 'mock' | 
    - not a demo item while a live provider is configured.
 
    It links to `/[locale]/checkout/[slug]`. No hold is created yet.
-2. **Checkout page** `/[locale]/checkout/[slug]?to=<CC>&ship=<METHOD>&cur=<ILS|USD>`. It is dynamic and noindex, calls `getCheckoutQuote(...)`, and renders:
-   - **Blocked states** with CTAs ("Request a quote" / "Ask about this work").
-   - **Delivery:**
-     - a country `<select>` (`Intl.DisplayNames`, `Intl.Collator`) in a GET form with a no-JS button;
-     - method radios with price, estimate, and "tracked" plus "insured up to ₪X" only when the quote includes insurance;
-     - a currency toggle when USD is possible;
-     - notices.
-   - **Details form** (`useActionState`): name, email, phone, address (Latin abroad), optional company name and VAT ID.
+2. **Checkout page** `/[locale]/checkout/[slug]?to=<CC>&city=…&zip=…&ship=<METHOD>&cur=USD&step=<destination|delivery|details>` (address first; `src/lib/checkout-steps.ts`). It is dynamic and noindex, calls `getCheckoutQuote(...)` with the country, method and currency on every step, and renders:
+   - **Blocked states** with CTAs ("Request a quote" / "Ask about this work"), and the destination form for destination reasons.
+   - **Step 2a, destination** (a GET form, works without JS): the country `<select>` (`Intl.DisplayNames`, `Intl.Collator`), city, and postal code (optional in Israel and where none is used; Latin abroad). Prices depend on the country only; city and postal code go into the address.
+   - **Step 2b, delivery** (a GET form, works without JS): the destination with a "Change" link; method radios with price, estimate, and "tracked" plus "insured up to ₪X" only when the quote includes insurance (abroad the courier is "DHL Express", priced by the §4.4 estimate); currency links when USD is possible; notices; Continue.
+   - **Step 2c, details**, only when the chosen method is offered and selected: the destination and method with "Change" links, then the **details form** (`useActionState`): name, email, phone, the street address only for a delivery (pickup buyers type none; city and postal code come from step 2a), optional company name and VAT ID.
    - **`PreContractDisclosure`**, built from `content/disclosure.ts` `buildPreContract()`:
      - seller legal name, ID/company number, address, phones (local and +972), email, **"Merchant country: Israel"**, customer service;
      - main characteristics;
@@ -1729,8 +1739,9 @@ AIC URLs never go through next/image.
   | NORTH_AMERICA | 260 | 560 | 1,300 |
   | REST_OF_WORLD | 300 | 650 | 1,500 |
 
-- Surcharges: fuel 20% (placeholder); DHL Demand 2026-10-01 to 2027-02-05 at ₪40 (placeholder, enabled); Elevated Risk disabled.
-- Insurance: enabled for DHL at 1.5% with a ₪50 minimum and `maxInsuredIls` 10,000 (placeholder); `coverageConfirmedAt: null` (a go-live blocker).
+- Surcharges (table prices only: Israel and the fallback abroad): fuel 20% (placeholder); DHL Demand 2026-10-01 to 2027-02-05 at ₪40 (placeholder, enabled); Elevated Risk disabled.
+- DHL estimate: enabled; fuel 49% as of 2026-10-12 (DHL's value for 12–18 Oct 2026); account discount 0 (list prices); DHL files the export declaration.
+- Insurance: enabled for DHL at DHL's published 1% with a ₪45 minimum and `maxInsuredIls` 10,000 (placeholder); `coverageConfirmedAt: null` (a go-live blocker).
 - DHL cap USD 2,500; deny list IR, SY, LB, IQ; dated FX; `calibratedAt: null`.
 
 **Sample orders** (`orders.ts`). Each has a SUCCEEDED MOCK attempt bound to its quote version, an ONLINE `is_mock` sale, an ISSUED mock receipt, and consistent invariants. No outbox jobs are created.
@@ -1935,7 +1946,10 @@ Six agents may run only if Postgres connections and CPU allow.
   - surcharge windows inclusive on 2026-10-01 and 2027-02-05;
   - **insured value capped before the premium**; `insured=false` when disabled or for pickup or manual;
   - USD lock; tube maths;
-  - **the §8.3 expected-class table with exact numbers.**
+  - **the §8.3 expected-class table with exact numbers;**
+  - the DHL estimate path: whole order priced by the estimate, the table fallback (estimate off, Afghanistan), heavy pieces priced abroad, crates and over 70 kg quoted.
+- **`dhl-tariff`:** the published rows agree with the published increments; every selector country has one DHL zone or none; demand regions; restricted and elevated-risk lists.
+- **`dhl-estimate`:** the worked examples and price table of `docs/pricing/shipping-taxes-and-fees.tex`; rounding; surcharge precedence; demand window edges; fuel base; discount; export declaration; failures; stale fuel and tariff review.
 - **`shipping-rules`:** deny list and IQ toggle; ZONE_DISABLED; GB_LOW_VALUE; EU notice; US notices; formal entry; VALUE_CAP; NOT_INTERNATIONAL; Latin-only addresses.
 - **`pricing`:** IL → ILS; USD rules.
 - **`requote`:** a version bump on any amount, method or currency change; refused while in flight.
@@ -2005,7 +2019,9 @@ Six agents may run only if Postgres connections and CPU allow.
 | `late-payment` | hold lost → late pay → `purchase-not-completed`, refund, alert; free variant → PAID |
 | `capture-mode` | approve → capture → paid; approval after loss → not captured; retry refused during review |
 | `tamper` | duplicate webhooks → one sale; tampered amount → not paid, CRITICAL alert |
-| `international` | US destination: Latin validation, DAP required, USD total, pay |
+| `international` | US destination: Latin city at step 1, DHL Express priced, USD via the currency links, Latin street address, DAP required, USD total, pay; the locked quote has `rateSource = DHL_ESTIMATE` |
+| `checkout-steps` | address-first steps with JS off (pickup shows no street fields); Change keeps the values; postal code required in the US, not in Hong Kong; a method that isn't offered; currency links; blocked destination prefilled; axe on every step, he + en |
+| `admin-shipping` | the DHL Express estimate group: stored values, the tariff panel and DHL's links, he + en |
 | `shipping-rules` | IR hidden; GB low value → quote; VALUE_CAP → quote; crate → quote only |
 | `quote` | quote request → admin quotes → link → requote by method change → pay |
 | `offer` (Tier B) | offer → accept → link → pay; auto-decline |
@@ -2016,7 +2032,7 @@ Six agents may run only if Postgres connections and CPU allow.
 | `admin-offline` | hold toggles the badge; offline sale during a hold → later payment refunded |
 | `admin-security` | **a forged `better-auth.session_token` cookie on admin pages and `/print/admin/packing-slip/<id>` → redirect or 403, with no PII in the body**; enroll-2fa without a loop |
 | `admin-auth` (project `auth-limits`) | 6 quick bad logins → 429; TOTP enrolment → re-login requires a code |
-| `a11y` | axe on home, works, artwork, checkout, cancel, order, admin login and editor, he + en → zero serious or critical |
+| `a11y` | axe on home, works, artwork, checkout (every step), cancel, order, admin login, editor and settings (including shipping), he + en → zero serious or critical |
 | `headers`, `not-found`, `mobile` | headers; 404s; sticky bar, scroll-snap, touch targets, checkout at 360 and 390 px; screenshots saved for agent review |
 
 ### 10.5 Live sandbox checks (opt-in; never in `verify`)

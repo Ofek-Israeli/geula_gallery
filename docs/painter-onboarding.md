@@ -54,7 +54,8 @@
 - המסלול (נדרש מסלול עם גישת API) ומפתחות API ל-sandbox ולייצור.
 
 ### DHL Express ישראל
-- **חשבון DHL** ומפתחות MyDHL API (בדיקות וייצור).
+- **חשבון DHL** ומפתחות MyDHL API (בדיקות וייצור). עד אז מחירי המשלוח לחו״ל באתר הם מחירי
+  המחירון ש-DHL מפרסמת; עם פתיחת החשבון – אחוז ההנחה על המחירון.
 - תקרת ערך למשלוח אמנות; האם יצירות מקוריות מותרות לכל יעד.
 - ביטוח ו-Shipment Value Protection; קוד השירות WY.
 - **הצהרת יצוא** ו**ייפוי כוח** לעמיל המכס; מי מגיש מעל 200$.
@@ -111,9 +112,14 @@
   מלאים ומעודכנים", תשלומים אמיתיים חסומים.
 - **הגדרות ← קופה ותשלומים**: זמני שמירה, מגבלות נגד "תפיסת" יצירות, שער הדולר, מספר תשלומים
   מקסימלי, האם להציע PayPal גם ליעדים בישראל, וקבלה לתשלומים שהוחזרו.
-- **הגדרות ← משלוחים**: אזורים, תעריף בסיס לפי גודל, תוספות (דלק, עונה), ביטוח ותקרת שווי מבוטח,
-  תקרת שווי מוצהר לפי מוביל, מדינות, ספים (הצהרת יצוא), איסוף עצמי, מסירה על ידי האמנית, שליח
-  בארץ. אחרי בדיקת התעריפים – "סימון: התעריפים כוילו היום".
+- **הגדרות ← משלוחים**: אזורים, הערכת DHL Express לחו״ל, תעריף בסיס לפי גודל (מחירון חברת
+  השליחויות בארץ), תוספות (דלק, עונה), ביטוח ותקרת שווי מבוטח, תקרת שווי מוצהר לפי מוביל, מדינות,
+  ספים (הצהרת יצוא), איסוף עצמי, מסירה על ידי האמנית, שליח בארץ. אחרי העתקת מחירון השליחויות –
+  "סימון: התעריפים כוילו היום".
+- **היטל הדלק של DHL**: פעם בשבוע או שבועיים מעתיקים מעמוד התוספות של DHL (mydhl.express.dhl/il/en/ship/surcharges.html)
+  את היטל הדלק הבין־לאומי לשבוע הקרוב ואת התאריך שלו (הגדרות ← משלוחים ← הערכת DHL Express).
+  אחרי 14 יום בלי עדכון מופיע "לא עודכן". כש-DHL נותנת הנחה לחשבון, מזינים אותה שם; אם הצהרת
+  היצוא מוגשת בנפרד ולא דרך DHL, מבטלים את הסימון.
 - **הגדרות ← ביטול עסקה**: דמי הביטול המוצעים (הצעה בלבד – בכל ביטול אפשר רק להפחית).
 - **חשבון**: סיסמה ואימות דו-שלבי (חובה באתר החי).
 - בלוח הבקרה מופיעה רשימת "מוכנות לעלייה לאוויר": כל עוד יש בה פריט פתוח, תשלומים אמיתיים חסומים.
@@ -221,7 +227,8 @@
 - The plan (it must include API access), and API keys for the sandbox and for production.
 
 ### DHL Express Israel
-- **A DHL account** and MyDHL API keys (test and production).
+- **A DHL account** and MyDHL API keys (test and production). Until then the site prices shipments
+  abroad at DHL's published list prices; once the account exists, ask for its discount on them.
 - The value limit for shipping art; whether original works may go to every destination.
 - Insurance and Shipment Value Protection; the WY service code.
 - The **export declaration** and the **power of attorney** for the customs broker; who files
@@ -298,10 +305,17 @@
 - **Settings → Checkout and payments:** hold times, anti-hoarding limits, the USD rate, the
   maximum number of installments, whether PayPal is offered for Israeli destinations too, and
   receipts for refunded payments.
-- **Settings → Shipping:** zones, base rate by size, surcharges (fuel, season), insurance and the
-  insured-value cap, the declared-value cap per carrier, countries, thresholds (export
-  declaration), studio pickup, delivery by the artist, the domestic courier. After checking the
-  rates, press "Mark the rates as calibrated today".
+- **Settings → Shipping:** zones, the DHL Express estimate abroad, base rate by size (your Israeli
+  courier's price list), surcharges (fuel, season), insurance and the insured-value cap, the
+  declared-value cap per carrier, countries, thresholds (export declaration), studio pickup,
+  delivery by the artist, the domestic courier. After copying the courier's prices, press "Mark
+  the rates as calibrated today".
+- **DHL's fuel surcharge:** every week or two, copy DHL's international fuel surcharge for the
+  coming week and its date from DHL's surcharges page
+  (mydhl.express.dhl/il/en/ship/surcharges.html) into Settings → Shipping → DHL Express estimate.
+  After 14 days without an update the page shows "not updated". When DHL gives your account a
+  discount, enter it there; if the export declaration is filed separately rather than through DHL,
+  untick that box.
 - **Settings → Cancellations:** the suggested cancellation fee. It is a suggestion only; for each
   cancellation you can only lower it.
 - **Account:** password and two-step verification (required on the live site).

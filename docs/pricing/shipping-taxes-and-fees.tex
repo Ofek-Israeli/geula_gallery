@@ -1,0 +1,414 @@
+% How the website prices shipping, customs, taxes and fees.
+% Build: latexmk -pdf shipping-taxes-and-fees.tex   (pdfLaTeX; build files are git-ignored)
+% The DHL numbers are produced by src/server/shipping/dhl-estimate.ts with the tariff in
+% src/server/shipping/tariff/, and are checked by tests/unit/dhl-estimate.test.ts and
+% tests/unit/dhl-tariff.test.ts: change the code, the tests and this document together.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{lake}{HTML}{2E7D8C}
+\newcommand{\nis}[1]{\text{NIS\,#1}}
+\newcommand{\usd}[1]{\text{USD\,#1}}
+\newcommand{\code}[1]{\nolinkurl{#1}}  % breaks at / and .
+\setlist{itemsep=2pt,topsep=4pt}
+
+\title{\textbf{Shipping, customs, taxes and fees}\\[4pt]\large What a buyer pays on top of the
+  price of a work, and what the seller pays out of it}
+\author{Geula Levi website}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{tcolorbox}[colback=lake!6,colframe=lake,title=\textbf{The rule},fonttitle=\sffamily]
+The buyer pays the works, the delivery and, abroad, the insurance when the quote includes it:
+\[
+  \text{total} \;=\; \text{works} \;+\; \text{delivery} \;+\; \text{insurance}.
+\]
+\begin{itemize}[leftmargin=*]
+  \item The price of a work already includes VAT when the seller is an \emph{osek murshe}; a sale
+    abroad is a zero-rated export.
+  \item In Israel, delivery is a flat price: pickup, delivery by the artist, or the courier's price
+    for the box size. Abroad, it is DHL Express's \emph{published} price for the box, computed by
+    the site.
+  \item Duties, import taxes and clearance fees at the destination are the buyer's, paid to DHL on
+    delivery (Incoterm DAP). The site never collects them.
+  \item Payment and currency-conversion fees are the seller's, paid out of the price. They are
+    never added to the buyer's total.
+\end{itemize}
+The quote is locked when the buyer presses ``Continue to payment''.
+\end{tcolorbox}
+
+\section{What the buyer pays}
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.3cm}
+  >{\raggedright\arraybackslash}p{4.3cm}>{\raggedright\arraybackslash}p{3.2cm}@{}}
+  \toprule
+  Component & Israel & Abroad & Set in \\
+  \midrule
+  Work & the price list (shekels); VAT inside when \emph{murshe} & the dollar or shekel price;
+    0\,\% VAT (export) & the pricing procedure \\
+  Delivery & pickup \nis{0}; the artist \nis{150}; courier by box size (table) & the DHL Express
+    estimate (Section~\ref{sec:abroad}) & Settings $\to$ Shipping \\
+  Insurance & none & DHL's, $\max(\nis{45}, 1\,\%)$, when shipped with the DHL account &
+    Settings $\to$ Shipping \\
+  Duties, import VAT, clearance & none & paid by the buyer to DHL on delivery (DAP) & the
+    destination country \\
+  Payment fees & paid by the seller & paid by the seller & the merchant agreements \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\section{Delivery in Israel}
+\begin{itemize}
+  \item \textbf{Pickup from the studio} costs nothing, and the buyer types no address.
+  \item \textbf{Delivery by the artist} is a flat \nis{150} per order (a setting).
+  \item \textbf{The courier} is priced per box from a table, by size class. The class comes from
+    the packed box, sides sorted longest first, and its chargeable weight
+    $\max(\text{actual}, \text{L}\times\text{W}\times\text{H}/5000)$:
+    \begin{itemize}
+      \item S: longest side $\le 50$\,cm and chargeable weight $\le 5$\,kg;
+      \item M: longest $\le 100$\,cm, second $\le 80$\,cm, chargeable $\le 20$\,kg;
+      \item L: anything larger, up to 45\,kg chargeable;
+      \item a quote: a crate, glass or acrylic glazing, 25\,kg or more actual weight, more than
+        45\,kg chargeable, a ``quote only'' work, or a tube for a work that cannot be rolled.
+    \end{itemize}
+    The table's shekel prices (seed: S \nis{60}, M \nis{120}, L \nis{250}) are placeholders. The
+    painter copies her courier's price list into the table and presses ``Mark the rates as
+    calibrated today''; until then going live is blocked (\code{RATES_UNCALIBRATED}). Israeli
+    couriers publish price lists but no standard pricing API.
+  \item Shipments in Israel are not insured.
+\end{itemize}
+
+\section{Delivery abroad: the DHL Express estimate}\label{sec:abroad}
+The site has no DHL account yet, so it cannot ask DHL for a live price. Instead it applies DHL's
+published price list for exports from Israel, the \emph{DHL Express Service \& Rate Guide 2026:
+Israel} \cite{dhlguide}, together with the surcharges DHL publishes on its Israeli pages
+\cite{dhlsur,dhldemand,dhlnotice,dhlcustoms}. The product is DHL Express Worldwide
+(non-documents), the one the site books. The code is \code{src/server/shipping/dhl-estimate.ts};
+the tariff data is in \code{src/server/shipping/tariff/}.
+
+\subsection{The box and its billing weight}
+\begin{enumerate}
+  \item Each work travels in its packed box. The default box is the painting plus 12\,cm on each
+    dimension, 11\,cm deep for a stretched canvas; the painter can enter the real box per work.
+  \item DHL measures each side in whole centimetres, rounded up (as on the label), and computes
+    the \emph{volumetric weight} $\text{L}\times\text{W}\times\text{H}/5000$\,kg.
+  \item A piece bills at the higher of its actual and volumetric weight, rounded up to 0.5\,kg.
+  \item The whole order is one multi-piece shipment, as fulfilment books it: the billing weight is
+    the sum of the pieces, in 0.5\,kg steps up to 30\,kg and whole kilograms above. One shipment
+    of two works costs less than two shipments.
+\end{enumerate}
+Paintings are large and light, so the volume decides. A $100\times80$\,cm canvas weighs 6.3\,kg
+packed, but its $112\times92\times11$\,cm box bills at 23\,kg.
+
+\subsection{Zones and the rate card}
+DHL places every destination in one of six zones \cite[pp.~24--25]{dhlguide}:
+\begin{center}
+\small
+\begin{tabular}{@{}c>{\raggedright\arraybackslash}p{13.4cm}@{}}
+  \toprule
+  Zone & Destinations (examples) \\
+  \midrule
+  1 & United States, Canada, Mexico \\
+  2 & Europe: the EU, the UK, Switzerland, Norway, Iceland, T\"urkiye, Ukraine, the Balkans,
+    Armenia \\
+  3 & China, Hong Kong \\
+  4 & Japan, South Korea, Taiwan, Singapore, India, South-East Asia, Australia, New Zealand,
+    the UAE, Saudi Arabia, Bahrain, Oman, Jordan, Egypt, Morocco \\
+  5 & Central and South America, the Dominican Republic, Sudan \\
+  6 & the rest: Africa, the Caribbean, the Pacific islands, Russia and Central Asia, Qatar,
+    Kuwait, Macau \\
+  \bottomrule
+\end{tabular}
+\end{center}
+A few codes have no published price (Afghanistan, the Palestinian territories, the Isle of Man,
+\AA{}land and uninhabited territories); for them the site uses the fallback table
+(Section~\ref{sec:quote}). An excerpt of the published transport prices, in shekels, excluding
+VAT, duties and every surcharge \cite[pp.~26--27]{dhlguide}:
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrrrrr@{}}
+  \toprule
+  Billing weight & Zone 1 & Zone 2 & Zone 3 & Zone 4 & Zone 5 & Zone 6 \\
+  \midrule
+  1\,kg & 284.88 & 358.77 & 414.44 & 453.90 & 487.92 & 573.41 \\
+  3\,kg & 520.56 & 636.79 & 771.88 & 843.53 & 885.74 & 1{,}049.67 \\
+  5\,kg & 708.00 & 875.35 & 1{,}109.24 & 1{,}211.09 & 1{,}240.98 & 1{,}491.07 \\
+  10\,kg & 1{,}120.70 & 1{,}262.75 & 1{,}822.64 & 1{,}960.89 & 2{,}040.28 & 2{,}449.87 \\
+  15\,kg & 1{,}364.50 & 1{,}655.35 & 2{,}281.24 & 2{,}460.89 & 2{,}749.68 & 3{,}325.27 \\
+  20\,kg & 1{,}608.30 & 2{,}047.95 & 2{,}739.84 & 2{,}960.89 & 3{,}459.08 & 4{,}200.67 \\
+  23\,kg & 1{,}779.30 & 2{,}287.95 & 3{,}009.42 & 3{,}253.81 & 3{,}850.04 & 4{,}656.85 \\
+  25\,kg & 1{,}893.30 & 2{,}447.95 & 3{,}189.14 & 3{,}449.09 & 4{,}110.68 & 4{,}960.97 \\
+  30\,kg & 2{,}178.30 & 2{,}847.95 & 3{,}638.44 & 3{,}937.29 & 4{,}762.28 & 5{,}721.27 \\
+  each extra 0.5\,kg, 10--20\,kg & 24.38 & 39.26 & 45.86 & 50.00 & 70.94 & 87.54 \\
+  each extra 0.5\,kg, 20--30\,kg & 28.50 & 40.00 & 44.93 & 48.82 & 65.16 & 76.03 \\
+  each extra kg, 30--70\,kg & 70.61 & 76.10 & 100.78 & 109.05 & 140.60 & 160.41 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+The code holds all 44 published rows and every increment; a test checks the 11--30\,kg and
+40--70\,kg rows against the increments.
+
+\subsection{Surcharges}
+\begin{itemize}
+  \item \textbf{Piece surcharges}, at most one per piece \cite{dhlsur}: \emph{Overweight}
+    \nis{395} above 70\,kg (actual or volumetric); otherwise \emph{Oversize} \nis{80} when the
+    longest side exceeds 100\,cm or the second exceeds 80\,cm (most of her canvases); otherwise
+    \emph{Non-Conveyable} \nis{80} for 25--70\,kg actual weight, a wooden crate or a round tube.
+  \item \textbf{Peak season (demand) surcharge} \cite{dhldemand}: from 1~October 2026 to
+    5~February 2027, per kilogram of billing weight, by DHL's destination region: Americas
+    (including the US) \nis{1.70}, Oceania \nis{1.70}, Europe \nis{0.90}, the rest of the world
+    \nis{2.80}; Asia, China and the Middle East nothing.
+  \item \textbf{Elevated Risk} \nis{119} per shipment to the destinations DHL lists (for example
+    Ukraine, Venezuela, Haiti). DHL suspended the surcharge on Israel's own shipments on
+    25~September 2026 \cite{dhlnotice}, so ordinary exports do not pay it.
+  \item \textbf{Restricted Destination} \nis{119} per shipment to the destinations under UN
+    sanctions that DHL lists.
+  \item \textbf{Fuel surcharge}: a percentage that DHL sets every week from the US Gulf Coast jet
+    fuel price, between 23\,\% and 56.25\,\% \cite{dhlsur}. It applies to transport and to the
+    piece, peak season and elevated risk surcharges, but not to the restricted destination
+    surcharge, insurance or customs services. For 12--18 October 2026 it is \textbf{49\,\%}
+    (48\,\% the week before). The painter copies it into the settings.
+  \item \textbf{Export declaration}: DHL's customs service, \nis{110} plus 18\,\% VAT
+    $=$ \nis{129.80} per shipment \cite{dhlguide,dhlcustoms}, added when the works are worth more
+    than the export declaration threshold (USD~200). If the painter files the declaration herself
+    online, she unticks the setting and the fee goes.
+  \item \textbf{Not estimated}: DHL's \emph{remote area} surcharge ($\max(\nis{95},\ \nis{2}$ per
+    kg), plus fuel) depends on the exact address, and DHL publishes it only as a per-address
+    lookup. Optional services (Saturday delivery, residential delivery and others) are not
+    booked. When a remote-area charge happens, the seller absorbs it (about \nis{142} with fuel).
+\end{itemize}
+
+\subsection{The formula}
+With $W$ the shipment's billing weight, $z$ its zone, $T_z(W)$ the published transport price,
+$d$ the account discount, $f$ the fuel surcharge, $P$ the piece surcharges, $D$ the peak season
+surcharge ($\text{rate} \times W$), $E$ elevated risk, $R$ restricted destination and $X$ the
+export declaration:
+\[
+  T' = T_z(W)\,(1-d), \qquad
+  \text{delivery} \;=\; \Bigl\lceil\, T' + P + D + E + f\,\bigl(T' + P + D + E\bigr) + R + X
+  \,\Bigr\rceil_{\nis{1}}
+\]
+Each product is rounded to the agora, and the total is rounded \emph{up} to a whole shekel. A
+dollar order converts the shekel total once at the site's rate (\nis{3.7}) and rounds up to a
+whole dollar.
+
+\subsection{Worked examples}
+One $100\times80$\,cm canvas (box $112\times92\times11$\,cm, 6.3\,kg, so $W = 23$\,kg and
+Oversize), fuel 49\,\%, no discount, worth \nis{5{,}500} (so the export declaration applies). All
+amounts in shekels:
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrrrrrr@{}}
+  \toprule
+  Example & $W$ & Transport & Piece & Peak & Fuel & Export decl. & Delivery \\
+  \midrule
+  (a) US, 15 Oct 2026 & 23\,kg & 1{,}779.30 & 80.00 & 39.10 & 930.22 & 129.80 & \textbf{2{,}959} \\
+  (b) Germany & 23\,kg & 2{,}287.95 & 80.00 & 20.70 & 1{,}170.44 & 129.80 & \textbf{3{,}689} \\
+  (c) Japan & 23\,kg & 3{,}253.81 & 80.00 & 0.00 & 1{,}633.57 & 129.80 & \textbf{5{,}098} \\
+  (d) two canvases, US & 46\,kg & 3{,}308.06 & 160.00 & 78.20 & 1{,}737.67 & 129.80 & \textbf{5{,}414} \\
+  (e) (a) on 1 Mar 2027 & 23\,kg & 1{,}779.30 & 80.00 & 0.00 & 911.06 & 129.80 & \textbf{2{,}901} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+For (a): $1{,}779.30 + 80 + 1.70\times23 = 1{,}898.40$; fuel $0.49 \times 1{,}898.40 = 930.22$;
+plus \nis{129.80} gives \nis{2{,}958.42}, rounded up to \nis{2{,}959}, or \usd{800} at 3.7.
+For (d), 46\,kg is the 30\,kg price plus $16 \times 70.61$; two separate shipments would cost
+$2 \times 2{,}959 = 5{,}918$.
+
+\subsection{Typical prices}
+Single works, with the default box, in October 2026 (fuel 49\,\%, peak season, no discount),
+in shekels:
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrrrrr@{}}
+  \toprule
+  Painting & Box & $W$ & US (1) & Germany (2) & Japan (4) & South Africa (6) \\
+  \midrule
+  $60\times80$\,cm & $92\times72\times11$ & 15\,kg & 2{,}201 & 2{,}617 & 3{,}797 & 5{,}148 \\
+  $80\times100$\,cm & $112\times92\times11$ & 23\,kg & 2{,}959 & 3{,}689 & 5{,}098 & 7{,}284 \\
+  $100\times120$\,cm & $132\times112\times11$ & 33\,kg & 3{,}894 & 4{,}877 & 6{,}604 & 9{,}629 \\
+  $120\times145$\,cm & $157\times132\times11$ & 46\,kg & 5{,}295 & 6{,}369 & 8{,}716 & 12{,}790 \\
+  \bottomrule
+\end{tabular}
+\end{center}
+These are DHL's list prices; to the US they are about half the price of the work. A DHL account
+usually comes with a discount on the published transport prices: the painter enters it as the
+account discount, and every estimate follows.
+
+\subsection{Insurance}
+DHL's Shipment Insurance costs $\max(\nis{45},\ 1\,\%$ of the insured value$)$ \cite{dhlguide}.
+The insured value is the lowest of the declared value, the work's own cap (when set) and the
+\nis{10{,}000} cap in the settings. Insurance is included only abroad, and only when the shipment
+goes through the DHL account; with manual shipping it is not, and the site does not say
+``insured''. Example: a \nis{5{,}500} work is insured for \nis{55} (\usd{15}).
+
+\subsection{When checkout asks for a quote, and the fallback table}\label{sec:quote}
+Checkout asks the buyer to request a quote instead of showing a price for:
+\begin{itemize}
+  \item a crate, glazing, a tube for a work that cannot be rolled, a work marked ``quote only'',
+    more than 70\,kg actual weight, or a piece beyond DHL's limits (300\,cm, 1{,}000\,kg);
+  \item a declared value above \usd{2{,}500} (the site's cap for DHL);
+  \item Europe, while its zone is off (EU sales wait for the GPSR requirements), and any country
+    on the quote-only list.
+\end{itemize}
+Denied destinations (Iran, Syria, Lebanon, Iraq) and parcels to Great Britain worth up to
+\pounds135 (where the seller would have to collect UK VAT) are refused. When the estimate is
+switched off, or DHL's guide has no price for the destination, the painter's table prices the
+parcel (zone $\times$ size class, plus its own fuel and season surcharges), as in Israel.
+
+\subsection{Keeping the estimate current}
+\begin{itemize}
+  \item \textbf{Every week or two}: copy DHL's international fuel surcharge for the coming week
+    and its date into Settings $\to$ Shipping \cite{dhlsur}. After 14 days the settings page
+    shows ``not updated''.
+  \item \textbf{Every January}: DHL publishes a new rate guide. The new prices are added as a new
+    tariff in \code{src/server/shipping/tariff/} (the old one stays for old dates), with the tests
+    and this document; from 1 January 2027 the settings page reminds her.
+  \item \textbf{When DHL announces it}: a new peak season window, changes to the elevated risk or
+    restricted lists.
+  \item \textbf{Once DHL opens an account}: the account discount, and the decision whether DHL
+    files the export declaration.
+\end{itemize}
+
+\section{The quote lock}
+When the buyer presses ``Continue to payment'', the server prices the order again from the same
+rules. If anything differs from the page (for example, the fuel surcharge was updated in between)
+the buyer sees ``the price changed'' and reloads. Otherwise the order stores the whole quote: the
+method, the carrier, whether the table or the DHL estimate priced it, and the estimate's workings
+(tariff, zone, weights, every surcharge, the fuel percentage and its date, the rounding). It also
+stores the quote's version and, for dollar orders, the exchange rate. The works are held for
+35~minutes. A payment that arrives for an outdated version is refunded automatically. Later
+changes to the settings never change an existing order.
+
+\section{Customs}
+\paragraph{Leaving Israel.} Every international shipment carries a commercial invoice: HS code
+9701.91 (export code 9701910000), ``Original painting, \ldots, hand-painted unique work of art'',
+Incoterm DAP, reason ``Permanent export -- sale of an original work of art'', the line values and
+a statement of Israeli origin (invoices to the EU also say the work is not concerned by
+Regulation (EU) 2019/880). Above USD~200 an export declaration is required before the label is
+bought; DHL files it for \nis{129.80} (included in the estimate), or the painter files it online.
+
+\paragraph{Arriving.} Shipments are DAP: the buyer pays the destination's duties, import VAT and
+any clearance fee to DHL on delivery, and ticks a box saying so before paying. The site shows a
+notice; it never charges these amounts. Examples:
+\begin{itemize}
+  \item \textbf{United States}: original paintings (HTS 9701.91.00) are free of duty
+    \cite{usitc}; DHL may charge a clearance fee, and above \usd{2{,}500} a formal entry is needed.
+  \item \textbf{United Kingdom}: import VAT on works of art is charged on a quarter of the value,
+    an effective 5\,\% \cite{hmrc}.
+  \item \textbf{European Union}: import VAT at the member state's rate, which may be a reduced
+    rate for works of art (Directive 2006/112/EC, art.~103 \cite{vatdir}; Germany 7\,\%
+    \cite{ustg}). The temporary EUR~3 duty applies only to parcels up to EUR~150.
+\end{itemize}
+Prepaid duties (DDP; DHL's ``Duty Tax Paid'' costs 2\,\% of the duties, at least \nis{67}) are
+not offered.
+
+\section{VAT and tax documents}
+\begin{itemize}
+  \item The VAT rate is 18\,\% (since 1 January 2025).
+  \item \textbf{Osek patur} (the current setting): no VAT is charged and receipts are issued. The
+    2026 turnover ceiling is \nis{122{,}833} \cite{patur}; the site counts the works' prices
+    (not delivery) and warns at 80\,\% and 95\,\%.
+  \item \textbf{Osek murshe}: prices include VAT. In Israel the VAT is included in the whole total
+    (works, delivery, insurance), and tax invoice-receipts are issued. A sale abroad is an export
+    at 0\,\% VAT (VAT Law, section 30(a)(1) \cite{vatlaw}), supported by the export documents.
+  \item DHL's international transport carries no Israeli VAT; its export declaration service does
+    (hence \nis{129.80}). An \emph{osek murshe} can reclaim that VAT; an \emph{osek patur}
+    cannot.
+  \item Income tax is outside the site; it is the accountant's.
+\end{itemize}
+
+\section{Fees and commissions}
+The seller pays every processing fee out of the price; the buyer's total never includes one.
+\begin{itemize}
+  \item \textbf{Cardcom} (cards, Bit, Apple Pay, Google Pay): the rates are set by the merchant
+    agreement and are not public. The questions to ask (Israeli and foreign cards, the dollar
+    terminal's conversion rate, who pays installment interest) are in the onboarding guide. Bit
+    is offered for shekel totals up to \nis{5{,}000}.
+  \item \textbf{PayPal} (buyers abroad): the published Israeli merchant fees \cite{paypal} are
+    3.40\,\% plus a fixed fee (\usd{0.30} or \nis{1.20}), plus 1.00\,\% when the buyer's account is
+    in the US, Canada or PayPal's ``Europe~I'' and ``Northern Europe'' groups (2.00\,\% elsewhere),
+    plus 18\,\% VAT on the fees.
+    Converting a dollar balance to shekels costs 2.5\,\% on the exchange rate (2.95\,\% with VAT).
+    Example: a US buyer pays $\usd{1{,}490} + \usd{800} = \usd{2{,}290}$; the fee is
+    $4.40\,\% \times 2{,}290 + 0.30 = \usd{101.06}$, \usd{119.25} with VAT (5.2\,\%), and
+    converting the rest to shekels costs about \usd{64} more, so the seller keeps about 92\,\%.
+  \item \textbf{Installments} are off (one payment); up to 36 can be enabled for Israeli card
+    payments in shekels. Who pays the interest is still to be agreed with Cardcom.
+  \item \textbf{DHL}: every DHL charge the seller pays is inside the delivery price above;
+    the destination's clearance fees are the buyer's.
+  \item \textbf{Cancellation}: when an Israeli buyer cancels for a change of mind, the seller may
+    keep $\min(5\,\%,\ \nis{100})$ of the refund, once per order (Consumer Protection Law). It is
+    the only fee the seller may withhold.
+  \item \textbf{Gallery commission}: none on the website. A gallery that sells a work takes its
+    commission out of the list price; it does not add to it (the pricing procedure, rule~2).
+\end{itemize}
+
+\section{Currency}
+Shekels are the base; Israeli destinations always pay in shekels. Every work also has a stored
+dollar price, $\operatorname{round}_{10}(\text{shekel price} / 3.7)$, and buyers abroad may pay in
+dollars when every work in the order has one. Delivery and insurance are computed in shekels and
+converted once at the site's rate (\nis{3.7} per dollar, set on 1 October 2026), each rounded up
+to a whole dollar; the rate is stored with the order, and dollar payments are refunded in dollars.
+The rate is a setting (Settings $\to$ Checkout) to update when the shekel moves.
+
+\section{Open questions}
+\begin{enumerate}
+  \item The export declaration: the threshold (the site uses USD~200) and who files it, DHL or
+    the painter (DHL, the customs broker).
+  \item Whether an \emph{osek patur} may export, and how the export is reported (the accountant).
+  \item Cardcom's rates for Israeli and foreign cards, the dollar terminal, and installment
+    interest (Cardcom).
+  \item DHL's account discount, and whether residential or remote-area surcharges apply to her
+    usual destinations (DHL).
+\end{enumerate}
+
+{\raggedright
+\begin{thebibliography}{99}
+\bibitem{dhlguide} DHL Express, \emph{Service \& Rate Guide 2026: Israel}, valid from 1 January
+  2026.
+  \url{https://mydhl.express.dhl/content/dam/downloads/il/en/rate-guide/service_and%20rate_guide_il_en_2026.pdf.coredownload.pdf}
+\bibitem{dhlsur} DHL Express Israel, \emph{Surcharges} (with the weekly fuel surcharge), checked
+  10 October 2026. \url{https://mydhl.express.dhl/il/en/ship/surcharges.html}
+\bibitem{dhldemand} DHL Express Israel, \emph{Demand surcharge}, checked 10 October 2026.
+  \url{https://mydhl.express.dhl/il/en/ship/surcharges/demand-surcharge.html}
+\bibitem{dhlnotice} DHL Express, \emph{Important information} (Elevated Risk surcharge for Israel
+  suspended from 25 September 2026).
+  \url{https://mydhl.express.dhl/us/en/important-information.important-info-active-items.html}
+\bibitem{dhlcustoms} DHL Express Israel, \emph{Customs services}.
+  \url{https://mydhl.express.dhl/il/en/ship/customs-services.html}
+\bibitem{paypal} PayPal, \emph{Merchant fees: Israel}, last updated 6 July 2026.
+  \url{https://www.paypalobjects.com/marketing/ua/pdf/IL/en/il-en-merchant-fees-06-july-2026.pdf}
+\bibitem{usitc} U.S. International Trade Commission, \emph{Harmonized Tariff Schedule}, heading
+  9701. \url{https://hts.usitc.gov/}
+\bibitem{hmrc} HM Revenue \& Customs, \emph{VAT: works of art} (tax information and impact note).
+  \url{https://assets.publishing.service.gov.uk/media/60a38d03d3bf7f288288cd2c/TIIN_-_VAT_works_of_art.pdf}
+\bibitem{vatdir} Council Directive 2006/112/EC on the common system of value added tax,
+  article 103. \url{https://eur-lex.europa.eu/eli/dir/2006/112/oj}
+\bibitem{ustg} Umsatzsteuergesetz (Germany), \S\,12(2) no.~12.
+  \url{https://www.gesetze-im-internet.de/ustg_1980/__12.html}
+\bibitem{patur} The 2026 \emph{osek patur} turnover ceiling, \nis{122{,}833}.
+  \url{https://www.efraty.com/?p=5221}
+\bibitem{vatlaw} Value Added Tax Law, 5736--1975 (Israel), section 30(a)(1).
+\end{thebibliography}
+}
+
+\end{document}
