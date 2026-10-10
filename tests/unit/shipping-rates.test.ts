@@ -25,6 +25,11 @@ const fx: FxReference = {
   asOf: "2026-10-01",
 };
 const settings: ShippingSettings = shippingDefaults;
+/** The same settings with the DHL estimate off: the painter's table prices abroad too. */
+const tableOnly: ShippingSettings = {
+  ...settings,
+  dhlEstimate: { ...settings.dhlEstimate, enabled: false },
+};
 /** 2026-10-01 12:00 in Jerusalem (inside the DHL Demand window). */
 const DAY = new Date("2026-10-01T09:00:00Z");
 
@@ -290,7 +295,7 @@ describe("quoteShipping", () => {
     expect(() => quoteShipping(input({ currency: "USD" }))).toThrow(RangeError);
   });
 
-  it("abroad: base + fuel % + fixed demand surcharge + capped insurance", () => {
+  it("abroad: the DHL estimate for the whole order, plus capped insurance", () => {
     // The mock carrier has no value cap (DHL's USD 2,500 would route ₪12,500 to a quote).
     const q = quoteShipping(
       input({
@@ -300,18 +305,112 @@ describe("quoteShipping", () => {
       }),
     );
     expect(q.mode).toBe("ok");
+    expect(q.rateSource).toBe("DHL_ESTIMATE");
+    // 40×40×9 cm → 2.88 kg volumetric → 3 kg in zone 1 (₪520.56); demand 1.70 × 3; fuel 49 %;
+    // export declaration ₪129.80; rounded up to whole shekels.
+    expect(q.dhl).toMatchObject({
+      zone: 1,
+      billingG: 3000,
+      transportMinor: 52_056,
+      demandMinor: 510,
+      fuelMinor: 25_757,
+      exportDeclarationMinor: 12_980,
+      totalMinor: 91_400,
+    });
+    expect(q.breakdown).toEqual({
+      baseMinor: 52_056,
+      pieceFeesMinor: 0,
+      surchargesMinor: 91_400 - 52_056,
+    });
+    expect(q.shippingMinor).toBe(91_400);
+    // ₪12,500 capped at ₪10,000 before the premium: 1 % = ₪100.
+    expect(q.insured).toBe(true);
+    expect(q.insuredValueMinor).toBe(1_000_000);
+    expect(q.insuranceMinor).toBe(10_000);
+    expect(q.notices).toEqual(["DAP_DUTIES", "TRANSIT_ESTIMATE"]);
+    expect(q.estimate?.en).toBe("5–10 business days");
+  });
+
+  it("abroad with the estimate off: base + fuel % + fixed demand surcharge (table)", () => {
+    const q = quoteShipping(
+      input({
+        country: "CA",
+        carrier: "MOCK",
+        declaredValueIlsMinor: 1_250_000,
+        settings: tableOnly,
+      }),
+    );
+    expect(q.rateSource).toBe("TABLE");
+    expect(q.dhl).toBeUndefined();
     expect(q.breakdown).toEqual({
       baseMinor: 26_000,
       pieceFeesMinor: 0,
       surchargesMinor: 5200 + 4000,
     });
     expect(q.shippingMinor).toBe(35_200);
-    // ₪12,500 capped at ₪10,000 before the premium: 1.5 % = ₪150.
-    expect(q.insured).toBe(true);
-    expect(q.insuredValueMinor).toBe(1_000_000);
-    expect(q.insuranceMinor).toBe(15_000);
-    expect(q.notices).toEqual(["DAP_DUTIES", "TRANSIT_ESTIMATE"]);
-    expect(q.estimate?.en).toBe("5–10 business days");
+    expect(q.insuranceMinor).toBe(10_000);
+  });
+
+  it("falls back to the table where DHL's guide has no price (Afghanistan)", () => {
+    const q = quoteShipping(input({ country: "AF" }));
+    expect(q).toMatchObject({
+      mode: "ok",
+      rateSource: "TABLE",
+      zone: "REST_OF_WORLD",
+      // ₪300 + 20 % fuel + ₪40 demand; 1 % of ₪3,200 = ₪32 < ₪45 minimum.
+      shippingMinor: 40_000,
+      insuranceMinor: 4500,
+    });
+  });
+
+  it("prices heavy pieces abroad that the table sends to a quote", () => {
+    const heavy = spec({ packedWeightG: 30_000 });
+    expect(classify(heavy).sizeClass).toBe("QUOTE");
+    const q = quoteShipping(input({ country: "CA", items: [heavy] }));
+    expect(q.mode).toBe("ok");
+    expect(q.dhl?.pieces[0]?.surcharge).toBe("NON_CONVEYABLE");
+    // 30 kg: ₪2,178.30 + ₪80 + 1.70 × 30; fuel 49 %; + ₪129.80 → ₪3,570.66 → ₪3,571.
+    expect(q.shippingMinor).toBe(357_100);
+    expect(quoteShipping(input({ items: [heavy] }))).toMatchObject({
+      mode: "quote_only",
+      reason: "SIZE_QUOTE",
+    });
+  });
+
+  it("keeps a quote abroad for crates, glazing and over 70 kg; an override to L is priced", () => {
+    for (const a of [
+      spec({ packagingType: "CRATE" }),
+      spec({ glazing: "GLASS" }),
+      spec({ packedWeightG: 71_000 }),
+      spec({ sizeClassOverride: "QUOTE" }),
+    ]) {
+      expect(quoteShipping(input({ country: "CA", items: [a] }))).toMatchObject(
+        { mode: "quote_only", reason: "SIZE_QUOTE" },
+      );
+    }
+    const crate = quoteShipping(
+      input({
+        country: "CA",
+        items: [spec({ packagingType: "CRATE", sizeClassOverride: "L" })],
+      }),
+    );
+    expect(crate.dhl?.pieces[0]?.surcharge).toBe("NON_CONVEYABLE");
+    expect(crate.shippingMinor).toBe(103_300);
+  });
+
+  it("prices the manual carrier abroad by the DHL estimate, uninsured", () => {
+    const q = quoteShipping(input({ country: "US", carrier: "MANUAL" }));
+    expect(q).toMatchObject({
+      mode: "ok",
+      carrier: "MANUAL",
+      rateSource: "DHL_ESTIMATE",
+      insured: false,
+      insuranceMinor: 0,
+    });
+    expect(quoteShipping(input()).rateSource).toBe("TABLE");
+    expect(
+      quoteShipping(input({ method: "LOCAL_PICKUP" })).rateSource,
+    ).toBeUndefined();
   });
 
   it("caps the insured value by the artwork cap and applies the minimum premium", () => {
@@ -330,11 +429,11 @@ describe("quoteShipping", () => {
         carrier: "MOCK",
       }),
     );
-    expect(capped.insuranceMinor).toBe(7500);
+    expect(capped.insuranceMinor).toBe(5000);
     const low = quoteShipping(
       input({ country: "CA", declaredValueIlsMinor: 200_000 }),
     );
-    expect(low.insuranceMinor).toBe(5000); // 1.5 % = ₪30 < ₪50 minimum
+    expect(low.insuranceMinor).toBe(4500); // 1 % = ₪20 < ₪45 minimum
   });
 
   it("is uninsured when insurance is disabled, for pickup and for the manual carrier", () => {
@@ -360,11 +459,22 @@ describe("quoteShipping", () => {
     const q = quoteShipping(
       input({ country: "US", currency: "USD", declaredValueIlsMinor: 320_000 }),
     );
-    // ₪260 + ₪52 + ₪40 = ₪352 → $95.14 → $96; insurance ₪50 → $13.52 → $14.
-    expect(q.shippingMinor).toBe(9600);
-    expect(q.insuranceMinor).toBe(1400);
+    // ₪914 → $247.03 → $248; insurance ₪45 → $12.16 → $13.
+    expect(q.shippingMinor).toBe(24_800);
+    expect(q.insuranceMinor).toBe(1300);
     expect(q.fxIlsPerUsd).toBe(3.7);
-    expect(q.breakdown.baseMinor).toBe(26_000);
+    expect(q.breakdown.baseMinor).toBe(52_056);
+    const table = quoteShipping(
+      input({
+        country: "US",
+        currency: "USD",
+        declaredValueIlsMinor: 320_000,
+        settings: tableOnly,
+      }),
+    );
+    // ₪260 + ₪52 + ₪40 = ₪352 → $95.14 → $96.
+    expect(table.shippingMinor).toBe(9600);
+    expect(table.breakdown.baseMinor).toBe(26_000);
   });
 
   it("adds the oversize fee only when an oversize piece is overridden below L", () => {
@@ -441,17 +551,33 @@ describe("quoteShipping", () => {
 });
 
 describe("zoneEstimates", () => {
-  it("prices every zone for a small work", () => {
+  it("prices every zone for a small work: the table in Israel, the cheapest DHL estimate abroad", () => {
     const a = demo(305, 305, "CARDBOARD");
+    // 43×43×9 cm → 3.5 kg in zone 1 (₪567.42) + demand ₪5.95 + fuel 49 % → ₪855; + ₪45 minimum
+    // premium. Rest of the world's cheapest listed country is Mexico (zone 1).
     expect(zoneEstimates(a, settings, DAY)).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
       EUROPE: "QUOTE",
+      NORTH_AMERICA: { fromIlsMinor: 85_500 + 4500, insured: true },
+      REST_OF_WORLD: { fromIlsMinor: 85_500 + 4500, insured: true },
+    });
+    // With the work's value the export declaration (₪129.80) is included.
+    expect(
+      zoneEstimates(a, settings, DAY, {
+        declaredValueIlsMinor: 320_000,
+        fx,
+      }).NORTH_AMERICA,
+    ).toEqual({ fromIlsMinor: 98_500 + 4500, insured: true });
+    // With the estimate off: the table everywhere.
+    expect(zoneEstimates(a, tableOnly, DAY)).toEqual({
+      IL: { fromIlsMinor: 6000, insured: false },
+      EUROPE: "QUOTE",
       NORTH_AMERICA: {
-        fromIlsMinor: 26_000 + 5200 + 4000 + 5000,
+        fromIlsMinor: 26_000 + 5200 + 4000 + 4500,
         insured: true,
       },
       REST_OF_WORLD: {
-        fromIlsMinor: 30_000 + 6000 + 4000 + 5000,
+        fromIlsMinor: 30_000 + 6000 + 4000 + 4500,
         insured: true,
       },
     });

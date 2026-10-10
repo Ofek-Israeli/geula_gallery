@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import type { SaleStatus } from "@/lib/catalog";
 import { type ChecklistItem, publishChecklist } from "@/server/catalog/publish";
-import { shipSpecOf } from "@/server/checkout/pricing";
+import { declaredValueIlsMinor, shipSpecOf } from "@/server/checkout/pricing";
 import { ordersWithAttemptInFlight } from "@/server/checkout/reservations";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import {
@@ -191,7 +191,10 @@ export async function getAdminArtwork(
       inFlight,
     };
   }
-  const settings = await getSetting("shipping", db);
+  const [settings, checkout] = await Promise.all([
+    getSetting("shipping", db),
+    getSetting("checkout", db),
+  ]);
   const spec = shipSpecOf(artwork);
   const store = storage();
   return {
@@ -203,7 +206,10 @@ export async function getAdminArtwork(
     hold,
     shipping: {
       classified: classify(spec, settings.divisor),
-      estimates: zoneEstimates(spec, settings, new Date()),
+      estimates: zoneEstimates(spec, settings, new Date(), {
+        declaredValueIlsMinor: declaredValueIlsMinor(artwork),
+        fx: checkout.fx,
+      }),
       usesDefaults:
         artwork.packedLengthMm === null ||
         artwork.packedWidthMm === null ||

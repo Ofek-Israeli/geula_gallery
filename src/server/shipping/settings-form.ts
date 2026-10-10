@@ -13,7 +13,9 @@ import {
  * - IR, SY and LB stay on the deny list (IQ is removable; spec §4.4);
  * - "Mark calibrated today" and "Confirm the coverage terms today" stamp the time; otherwise the
  *   stored timestamps are kept;
- * - a surcharge row with an empty id is ignored (the blank "new" row), a ticked `remove` drops it.
+ * - a surcharge row with an empty id is ignored (the blank "new" row), a ticked `remove` drops it;
+ * - the DHL estimate fields (`dhl.*`) are read only when the form carries `dhl.present` (a page
+ *   opened before they existed keeps the stored values); an empty fuel date keeps the stored one.
  */
 export type FormFields = Record<string, string | string[] | undefined>;
 
@@ -77,6 +79,18 @@ export function shippingSettingsFromForm(
     return { ok: false, code: "DENIED_FIXED", details: missing.join(", ") };
   }
 
+  const dhlEstimate =
+    f["dhl.present"] === undefined
+      ? current.dhlEstimate
+      : {
+          enabled: on(f, "dhl.enabled"),
+          fuelSurchargePct: num(f, "dhl.fuelPct"),
+          fuelSurchargeAsOf:
+            one(f, "dhl.fuelAsOf") || current.dhlEstimate.fuelSurchargeAsOf,
+          accountDiscountPct: num(f, "dhl.discountPct"),
+          exportDeclarationByDhl: on(f, "dhl.exportDecl"),
+        };
+
   const candidate = {
     divisor: num(f, "divisor"),
     calibratedAt: on(f, "markCalibrated")
@@ -104,6 +118,7 @@ export function shippingSettingsFromForm(
     oversizeFeeIls: num(f, "oversizeFeeIls"),
     nonConveyableFeeIls: num(f, "nonConveyableFeeIls"),
     surcharges,
+    dhlEstimate,
     insurance: {
       enabled: on(f, "ins.enabled"),
       provider: one(f, "ins.provider") || "NONE",
@@ -175,7 +190,13 @@ export function shippingSettingsToForm(s: ShippingSettings): FormFields {
     "artist.areaEn": s.artistDelivery.area.en,
     "domestic.he": s.domesticCarrierName.he,
     "domestic.en": s.domesticCarrierName.en,
+    "dhl.present": "1",
+    "dhl.fuelPct": String(s.dhlEstimate.fuelSurchargePct),
+    "dhl.fuelAsOf": s.dhlEstimate.fuelSurchargeAsOf,
+    "dhl.discountPct": String(s.dhlEstimate.accountDiscountPct),
   };
+  if (s.dhlEstimate.enabled) f["dhl.enabled"] = "on";
+  if (s.dhlEstimate.exportDeclarationByDhl) f["dhl.exportDecl"] = "on";
   if (s.insurance.enabled) f["ins.enabled"] = "on";
   if (s.localPickup.enabled) f["pickup.enabled"] = "on";
   if (s.artistDelivery.enabled) f["artist.enabled"] = "on";

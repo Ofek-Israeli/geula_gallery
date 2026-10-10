@@ -1,9 +1,16 @@
 import "server-only";
-import { ZONE_IDS, zoneOf } from "@/lib/countries";
+import { COUNTRY_CODES, ZONE_IDS, zoneOf } from "@/lib/countries";
 import { chargeableWeightG, sortedDims } from "@/lib/dimensions";
 import { jerusalemDateKey } from "@/lib/format";
 import { applyBasisPoints, ilsToUsdCeilWhole } from "@/lib/money";
 import type { ShippingSettings } from "@/server/settings/schemas";
+import { declaredValueUsdMinor, exportDeclarationRequired } from "./customs";
+import {
+  type DhlPieceInput,
+  dhlEstimate,
+  dhlPriceKey,
+  dhlZoneOf,
+} from "./dhl-estimate";
 import { evaluateDestination } from "./rules";
 import type {
   ArtworkShipSpec,
@@ -11,6 +18,8 @@ import type {
   CarrierCode,
   ClassifyResult,
   DestinationEvaluation,
+  DhlEstimateDetail,
+  FxReference,
   NoticeCode,
   QuoteShippingInput,
   ShippingMethod,
@@ -44,6 +53,15 @@ import type {
  * max(ratePct × insuredValue, `minIls`), only when `insurance.enabled` and the carrier or method
  * supports it. USD converts shipping and insurance once with `fx.ilsPerUsd`, each rounded up to
  * whole dollars; `breakdown` stays in ILS minor units.
+ *
+ * Abroad, `CARRIER_TABLE` is priced by the DHL Express estimate instead of the table
+ * (`dhl-estimate.ts`: DHL's published Israel tariff for the whole order as one multi-piece
+ * shipment) when `dhlEstimate.enabled` and the guide lists the destination; the table stays for
+ * Israel and as the fallback (estimate disabled, destination without a DHL zone). On that path a
+ * piece needs a quote only for what DHL's tariff cannot settle (`dhlPriceable`: crate, glazing,
+ * an unrollable tube, `quote_only`, over 70 kg actual, an override to QUOTE, or beyond DHL's
+ * piece and shipment limits); the table's weight limits do not apply. `breakdown` = net
+ * transport / piece surcharges / everything else, and the quote carries `rateSource` and `dhl`.
  */
 
 export const TUBE_EXTRA_MM = 100;
@@ -128,6 +146,47 @@ export function classify(a: ArtworkShipSpec, divisor = 5000): ClassifyResult {
     sizeClass = "L";
   }
   return { sizeClass, chargeableG, oversizePiece, nonConveyable, reasons };
+}
+
+const WEIGHT_REASONS: ReadonlySet<string> = new Set([
+  "ACTUAL_WEIGHT",
+  "CHARGEABLE_WEIGHT",
+]);
+
+/**
+ * Whether DHL's tariff can price a classified piece: an S/M/L class (an override included), or a
+ * QUOTE caused only by the table's weight limits (≥ 25 kg actual, > 45 kg chargeable), which the
+ * tariff prices itself.
+ */
+export function dhlPriceable(c: ClassifyResult): boolean {
+  if (c.sizeClass !== "QUOTE") return true;
+  return c.reasons.length > 0 && c.reasons.every((r) => WEIGHT_REASONS.has(r));
+}
+
+/** A packed artwork as DHL measures it; a crate and a round tube are Non-Conveyable. */
+export function dhlPieceOf(a: ArtworkShipSpec): DhlPieceInput {
+  const box = packedBox(a);
+  return {
+    lengthMm: box.lengthMm,
+    widthMm: box.widthMm,
+    heightMm: box.heightMm,
+    weightG: a.packedWeightG,
+    nonConveyablePackaging:
+      a.packagingType === "CRATE" ||
+      (a.packagingType === "ROLLED_TUBE" && a.canBeRolled),
+  };
+}
+
+/** The export declaration is required: the same rule fulfilment applies (`customs.ts`). */
+function exportDeclarationDue(
+  valueIlsMinor: number,
+  settings: ShippingSettings,
+  fx: FxReference,
+): boolean {
+  return exportDeclarationRequired(
+    declaredValueUsdMinor(valueIlsMinor, "ILS", fx.ilsPerUsd),
+    settings.thresholds.exportDeclarationUsd,
+  );
 }
 
 function maxClass(classes: readonly SizeClass[]): SizeClass {
@@ -247,6 +306,16 @@ const NO_PRICE: PiecePrice = {
   surchargesMinor: 0,
 };
 
+/** A DHL estimate in the frozen breakdown: net transport / piece surcharges / the rest. */
+function dhlBreakdown(d: DhlEstimateDetail): PiecePrice {
+  return {
+    baseMinor: d.transportNetMinor,
+    pieceFeesMinor: d.pieceSurchargesMinor,
+    surchargesMinor:
+      d.totalMinor - d.transportNetMinor - d.pieceSurchargesMinor,
+  };
+}
+
 export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
   if (i.items.length === 0) throw new RangeError("no items to ship");
   if (i.country === "IL" && i.currency !== "ILS") {
@@ -266,6 +335,7 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     carrier: CarrierCode | null,
     breakdown: PiecePrice,
     insurable: boolean,
+    extra: Pick<ShippingQuoteResult, "rateSource" | "dhl"> = {},
   ): ShippingQuoteResult => {
     const shipIls =
       breakdown.baseMinor +
@@ -297,6 +367,7 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
       ...(method === "CARRIER_TABLE"
         ? { estimate: zoneEstimateText(settings, zone) }
         : {}),
+      ...extra,
     };
   };
   const refuse = (
@@ -363,6 +434,37 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     return refuse("quote_only", "QUOTE_ONLY", notices, carrier);
   }
 
+  if (
+    !domestic &&
+    settings.dhlEstimate.enabled &&
+    dhlZoneOf(i.country, i.date) !== null
+  ) {
+    if (!classes.every(dhlPriceable)) {
+      return refuse("quote_only", "SIZE_QUOTE", notices, carrier);
+    }
+    const est = dhlEstimate({
+      pieces: i.items.map(dhlPieceOf),
+      country: i.country,
+      date: i.date,
+      settings: settings.dhlEstimate,
+      exportDeclaration: exportDeclarationDue(
+        i.declaredValueIlsMinor,
+        settings,
+        i.fx,
+      ),
+    });
+    // Beyond DHL's piece or shipment limits: DHL would refuse it, so it is a quote.
+    if (!est.ok) return refuse("quote_only", "SIZE_QUOTE", notices, carrier);
+    notices.push("TRANSIT_ESTIMATE");
+    return build(
+      { mode: "ok", notices },
+      carrier,
+      dhlBreakdown(est.detail),
+      insuranceSupported(settings, method, zone, carrier),
+      { rateSource: "DHL_ESTIMATE", dhl: est.detail },
+    );
+  }
+
   const breakdown = { ...NO_PRICE };
   for (const c of classes) {
     const p = piecePrice(c, settings, zone, i.date);
@@ -377,6 +479,7 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     carrier,
     breakdown,
     insuranceSupported(settings, method, zone, carrier),
+    { rateSource: "TABLE" },
   );
 }
 
@@ -419,18 +522,71 @@ export function insuredValueInCurrency(
 }
 
 /**
- * "Delivery from ₪X" per zone for one work (artwork page). `fromIlsMinor` is the carrier-table
+ * The cheapest DHL estimate for one work among the countries of a site zone that DHL's guide lists
+ * (and that are offered: not denied, not quote-only). Null when the zone has no such country (the
+ * table applies); `"QUOTE"` when DHL's tariff cannot price the piece.
+ */
+function dhlFromIlsMinor(
+  a: ArtworkShipSpec,
+  c: ClassifyResult,
+  settings: ShippingSettings,
+  zone: ZoneId,
+  date: Date,
+  exportDeclaration: boolean,
+): number | "QUOTE" | null {
+  // One country per group that costs the same (zone, demand region, per-shipment surcharges).
+  const byKey = new Map<string, string>();
+  for (const code of COUNTRY_CODES) {
+    if (
+      code === "IL" ||
+      settings.deniedCountries.includes(code) ||
+      settings.quoteOnlyCountries.includes(code) ||
+      zoneOf(code, settings.zones) !== zone
+    ) {
+      continue;
+    }
+    const key = dhlPriceKey(code, date);
+    if (key !== null && !byKey.has(key)) byKey.set(key, code);
+  }
+  if (byKey.size === 0) return null;
+  if (!dhlPriceable(c)) return "QUOTE";
+  const pieces = [dhlPieceOf(a)];
+  let best: number | null = null;
+  for (const country of byKey.values()) {
+    const est = dhlEstimate({
+      pieces,
+      country,
+      date,
+      settings: settings.dhlEstimate,
+      exportDeclaration,
+    });
+    if (!est.ok) return "QUOTE";
+    if (best === null || est.detail.totalMinor < best) {
+      best = est.detail.totalMinor;
+    }
+  }
+  return best;
+}
+
+/**
+ * "Delivery from ₪X" per zone for one work (artwork page). `fromIlsMinor` is the lowest shipping
  * price on `date` plus, when insured, the minimum premium (the real premium depends on the value);
- * international zones assume the DHL carrier for the insurance flag. A disabled zone, a quote-only
- * work or a QUOTE class → `'QUOTE'`; a work that cannot be shipped there → `'UNAVAILABLE'`.
- * Value caps are not applied (no value here); checkout applies them.
+ * international zones assume the DHL carrier for the insurance flag. Abroad the price is the
+ * cheapest DHL estimate among the zone's listed countries (`dhlFromIlsMinor`; the table when none
+ * is listed or the estimate is off); `value` adds the export declaration when it is due. A
+ * disabled zone, a quote-only work or a piece needing a quote → `'QUOTE'`; a work that cannot be
+ * shipped there → `'UNAVAILABLE'`. Value caps are not applied; checkout applies them.
  */
 export function zoneEstimates(
   a: ArtworkShipSpec,
   settings: ShippingSettings,
   date: Date,
+  value?: { declaredValueIlsMinor: number; fx: FxReference },
 ): Record<ZoneId, ZoneEstimate> {
   const c = classify(a, settings.divisor);
+  const exportDeclaration = value
+    ? exportDeclarationDue(value.declaredValueIlsMinor, settings, value.fx)
+    : false;
   const out = {} as Record<ZoneId, ZoneEstimate>;
   for (const zone of ZONE_IDS) {
     const cfg = settings.zones.find((z) => z.id === zone);
@@ -439,10 +595,28 @@ export function zoneEstimates(
       out[zone] = "UNAVAILABLE";
       continue;
     }
-    const p = piecePrice(c, settings, zone, date);
-    if (!cfg.enabled || a.quoteOnly || !p) {
+    if (!cfg.enabled || a.quoteOnly) {
       out[zone] = "QUOTE";
       continue;
+    }
+    const dhl =
+      !domestic && settings.dhlEstimate.enabled
+        ? dhlFromIlsMinor(a, c, settings, zone, date, exportDeclaration)
+        : null;
+    let shipMinor: number;
+    if (dhl === "QUOTE") {
+      out[zone] = "QUOTE";
+      continue;
+    }
+    if (dhl !== null) {
+      shipMinor = dhl;
+    } else {
+      const p = piecePrice(c, settings, zone, date);
+      if (!p) {
+        out[zone] = "QUOTE";
+        continue;
+      }
+      shipMinor = p.baseMinor + p.pieceFeesMinor + p.surchargesMinor;
     }
     const insured = insuranceSupported(
       settings,
@@ -452,10 +626,7 @@ export function zoneEstimates(
     );
     out[zone] = {
       fromIlsMinor:
-        p.baseMinor +
-        p.pieceFeesMinor +
-        p.surchargesMinor +
-        (insured ? Math.round(settings.insurance.minIls * 100) : 0),
+        shipMinor + (insured ? Math.round(settings.insurance.minIls * 100) : 0),
       insured,
     };
   }

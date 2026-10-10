@@ -35,4 +35,25 @@ describe("settings schemas", () => {
     (all.surcharges[0] as { zones: unknown }).zones = "ALL";
     expect(shippingSettingsSchema.safeParse(all).success).toBe(true);
   });
+
+  it("reads a shipping row saved before the DHL estimate existed with its defaults", () => {
+    const { dhlEstimate: _omitted, ...old } = shippingSettingsSchema.parse(
+      settingsSeedValues(seedEnv).shipping,
+    );
+    expect(shippingSettingsSchema.parse(old).dhlEstimate).toEqual({
+      enabled: true,
+      fuelSurchargePct: 49,
+      fuelSurchargeAsOf: "2026-10-12",
+      accountDiscountPct: 0,
+      exportDeclarationByDhl: true,
+    });
+    for (const fuelSurchargePct of [-1, 101]) {
+      expect(
+        shippingSettingsSchema.safeParse({
+          ...old,
+          dhlEstimate: { fuelSurchargePct },
+        }).success,
+      ).toBe(false);
+    }
+  });
 });

@@ -53,6 +53,43 @@ describe("shipping settings form", () => {
     expect(res.value.insurance.coverageConfirmedAt).toBe(NOW.toISOString());
   });
 
+  it("edits the DHL estimate: fuel surcharge and its date, discount, export declaration", () => {
+    const f = shippingSettingsToForm(shippingDefaults);
+    f["dhl.fuelPct"] = "50.25";
+    f["dhl.fuelAsOf"] = "2026-10-19";
+    f["dhl.discountPct"] = "35";
+    delete f["dhl.exportDecl"];
+    const res = shippingSettingsFromForm(f, shippingDefaults, NOW);
+    if (!res.ok) throw new Error(res.details);
+    expect(res.value.dhlEstimate).toEqual({
+      enabled: true,
+      fuelSurchargePct: 50.25,
+      fuelSurchargeAsOf: "2026-10-19",
+      accountDiscountPct: 35,
+      exportDeclarationByDhl: false,
+    });
+    // An empty date keeps the stored one; an out-of-range fuel % is refused with its path.
+    f["dhl.fuelAsOf"] = "";
+    f["dhl.fuelPct"] = "120";
+    const bad = shippingSettingsFromForm(f, shippingDefaults, NOW);
+    expect(bad).toMatchObject({
+      ok: false,
+      details: expect.stringContaining("dhlEstimate.fuelSurchargePct"),
+    });
+  });
+
+  it("keeps the stored DHL estimate when the form has no DHL fields (an older page)", () => {
+    const f = shippingSettingsToForm(shippingDefaults);
+    for (const k of Object.keys(f)) if (k.startsWith("dhl.")) delete f[k];
+    const stored = {
+      ...shippingDefaults,
+      dhlEstimate: { ...shippingDefaults.dhlEstimate, accountDiscountPct: 20 },
+    };
+    const res = shippingSettingsFromForm(f, stored, NOW);
+    if (!res.ok) throw new Error(res.details);
+    expect(res.value.dhlEstimate).toEqual(stored.dhlEstimate);
+  });
+
   it("keeps IR, SY and LB blocked; IQ is removable", () => {
     const f = shippingSettingsToForm(shippingDefaults);
     f.deniedCountries = "IR, SY, LB";

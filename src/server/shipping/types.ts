@@ -90,6 +90,61 @@ export interface DestinationEvaluation {
   notices: NoticeCode[];
 }
 
+/** DHL Express rating zone of a destination (the published Israel export tariff). */
+export type DhlZone = 1 | 2 | 3 | 4 | 5 | 6;
+/** DHL's destination regions for the demand (peak season) surcharge. */
+export type DhlDemandRegion =
+  | "CN_HK_MO"
+  | "ASIA"
+  | "OCEANIA"
+  | "EUROPE"
+  | "AMERICAS"
+  | "MENA"
+  | "ROW";
+export type DhlPieceSurcharge = "OVERWEIGHT" | "OVERSIZE" | "NON_CONVEYABLE";
+
+/** One piece as DHL bills it: whole cm (rounded up, longest first), grams, billing weight. */
+export interface DhlEstimatePiece {
+  dimsCm: [number, number, number];
+  actualG: number;
+  /** cm³ × 1000 / divisor, rounded up to the gram. */
+  volumetricG: number;
+  /** max(actual, volumetric) rounded up to 0.5 kg. */
+  billingG: number;
+  surcharge: DhlPieceSurcharge | null;
+  surchargeMinor: number;
+}
+
+/**
+ * How a DHL Express estimate was computed (`shipping/dhl-estimate.ts`), snapshotted with the quote.
+ * ILS minor units; `totalMinor` = net transport + piece surcharges + demand + elevated risk +
+ * restricted destination + fuel + export declaration + rounding (up to whole shekels).
+ */
+export interface DhlEstimateDetail {
+  /** The published tariff (e.g. `DHL-EXPRESS-WORLDWIDE-IL-2026`). */
+  tariff: string;
+  zone: DhlZone;
+  region: DhlDemandRegion;
+  pieces: DhlEstimatePiece[];
+  /** Shipment billing weight: Σ pieces, 0.5 kg steps up to 30 kg, whole kg above. */
+  billingG: number;
+  transportMinor: number;
+  discountBp: number;
+  transportNetMinor: number;
+  pieceSurchargesMinor: number;
+  demandPerKgMinor: number;
+  demandMinor: number;
+  elevatedRiskMinor: number;
+  restrictedMinor: number;
+  fuelBp: number;
+  /** ISO date of the fuel surcharge value used. */
+  fuelAsOf: string;
+  fuelMinor: number;
+  exportDeclarationMinor: number;
+  roundingMinor: number;
+  totalMinor: number;
+}
+
 /** One priced shipping method for a destination (snapshotted into `orders.shipping_quote`). */
 export interface ShippingQuoteResult extends DestinationEvaluation {
   zone: ZoneId | null;
@@ -113,6 +168,14 @@ export interface ShippingQuoteResult extends DestinationEvaluation {
   /** Locked FX for USD orders (whole dollars, rounded up). */
   fxIlsPerUsd?: number;
   estimate?: { he: string; en: string };
+  /**
+   * How an ok `CARRIER_TABLE` quote was priced: the painter's rate table (Israel, and the fallback
+   * abroad) or the DHL Express estimate from DHL's published tariff (abroad). Absent on refusals,
+   * other methods and quotes stored before it existed.
+   */
+  rateSource?: "TABLE" | "DHL_ESTIMATE";
+  /** The DHL estimate's workings, when `rateSource` is `DHL_ESTIMATE`. */
+  dhl?: DhlEstimateDetail;
 }
 
 export interface QuoteShippingInput {

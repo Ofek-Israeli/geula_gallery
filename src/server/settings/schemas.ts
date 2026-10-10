@@ -112,6 +112,23 @@ export const insuranceSettingsSchema = z.object({
   coverageConfirmedAt: isoDateTime.nullable(),
 });
 
+/**
+ * The DHL Express estimate abroad (`shipping/dhl-estimate.ts`): DHL's published tariff in code, plus
+ * what changes between guides. DHL updates the fuel surcharge weekly (the painter copies it from
+ * DHL's surcharges page); the discount is the account rate off the published prices (0 = list
+ * prices). `exportDeclarationByDhl`: DHL files the export declaration (its published fee is added
+ * when the value is above `thresholds.exportDeclarationUsd`); off when the painter files it.
+ * Every field has a default, so rows saved before it existed still parse.
+ */
+export const dhlEstimateSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  fuelSurchargePct: z.number().min(0).max(100).default(49),
+  fuelSurchargeAsOf: isoDate.default("2026-10-12"),
+  accountDiscountPct: z.number().min(0).max(100).default(0),
+  exportDeclarationByDhl: z.boolean().default(true),
+});
+export type DhlEstimateSettings = z.infer<typeof dhlEstimateSettingsSchema>;
+
 export const shippingSettingsSchema = z.object({
   /** Volumetric divisor (cm³ per kg). */
   divisor: z.number().int().positive().default(5000),
@@ -122,6 +139,7 @@ export const shippingSettingsSchema = z.object({
   oversizeFeeIls: nonNegNum,
   nonConveyableFeeIls: nonNegNum,
   surcharges: z.array(surchargeSchema),
+  dhlEstimate: dhlEstimateSettingsSchema.prefault({}),
   insurance: insuranceSettingsSchema,
   valueCaps: z.array(
     z.object({

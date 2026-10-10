@@ -459,6 +459,8 @@ export interface ArtworkPageData {
   artwork: ArtworkDetailDTO;
   /** Shipping engine input for the live buy box (server-only; never sent to the client). */
   shipSpec: ArtworkShipSpec;
+  /** Customs value in ILS minor units (override, else the price; server-only), for estimates. */
+  declaredValueIlsMinor: number;
   /** Structured-data and metadata extras (JSON-LD `artMedium` / `artworkSurface`, dates). */
   seo: ArtworkSeo;
 }
@@ -493,6 +495,7 @@ export async function getArtworkPage(
       packedWeightG: artworks.packedWeightG,
       sizeClassOverride: artworks.sizeClassOverride,
       maxInsurableValueMinor: artworks.maxInsurableValueMinor,
+      declaredValueOverrideMinor: artworks.declaredValueOverrideMinor,
     })
     .from(artworks)
     .leftJoin(series, eq(series.id, artworks.seriesId))
@@ -587,7 +590,13 @@ export async function getArtworkPage(
     publishedAt: row.publishedAt?.toISOString() ?? null,
     updatedAt: row.updatedAt.toISOString(),
   };
-  return { artwork, shipSpec, seo };
+  return {
+    artwork,
+    shipSpec,
+    seo,
+    declaredValueIlsMinor:
+      row.declaredValueOverrideMinor ?? row.priceIlsMinor ?? 0,
+  };
 }
 
 export interface DeliveryEstimates {
@@ -596,15 +605,27 @@ export interface DeliveryEstimates {
   pickupFree: boolean;
 }
 
-/** "Delivery from ₪X" per zone (spec §6.3), from the painter's table rates on `now`. */
+/**
+ * "Delivery from ₪X" per zone (spec §6.3) on `now`: the table in Israel, the cheapest DHL estimate
+ * abroad (`zoneEstimates`). With the work's customs value, the estimate includes the export
+ * declaration when it is due.
+ */
 export async function getDeliveryEstimates(
   locale: Locale,
   spec: ArtworkShipSpec,
   now: Date = new Date(),
   db: DbOrTx = defaultDb,
+  declaredValueIlsMinor?: number,
 ): Promise<DeliveryEstimates> {
   const settings = await getSetting("shipping", db);
-  const estimates = zoneEstimates(spec, settings, now);
+  const value =
+    declaredValueIlsMinor === undefined
+      ? undefined
+      : {
+          declaredValueIlsMinor,
+          fx: (await getSetting("checkout", db)).fx,
+        };
+  const estimates = zoneEstimates(spec, settings, now, value);
   const zones = settings.zones.map((z): ZoneEstimateDTO => {
     const e = estimates[z.id];
     const estimate = z.estimate[locale] || null;

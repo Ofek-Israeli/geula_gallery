@@ -168,11 +168,21 @@ export const shippingDefaults: ShippingSettings = {
       endsOn: null,
     },
   ],
+  // DHL Express estimate abroad (shipping/dhl-estimate.ts): DHL's fuel surcharge for 12–18 Oct
+  // 2026, list prices (no account discount), DHL files the export declaration.
+  dhlEstimate: {
+    enabled: true,
+    fuelSurchargePct: 49,
+    fuelSurchargeAsOf: "2026-10-12",
+    accountDiscountPct: 0,
+    exportDeclarationByDhl: true,
+  },
+  // DHL's published Shipment Insurance: 1% of the insured value, at least 45 ILS.
   insurance: {
     enabled: true,
     provider: "DHL",
-    ratePct: 1.5,
-    minIls: 50,
+    ratePct: 1,
+    minIls: 45,
     maxInsuredIls: 10000,
     coverageConfirmedAt: null,
   },

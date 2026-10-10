@@ -57,6 +57,7 @@ for (const locale of ["he", "en"] as const) {
         `/${locale}/admin/settings`,
         `/${locale}/admin/settings/business`,
         `/${locale}/admin/settings/checkout`,
+        `/${locale}/admin/settings/shipping`,
         `/${locale}/admin/account`,
         `/${locale}/admin/more`,
         ...(order ? [`/${locale}/admin/orders/${order.id}`] : []),

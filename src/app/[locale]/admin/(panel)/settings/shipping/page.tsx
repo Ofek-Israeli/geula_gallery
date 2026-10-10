@@ -3,17 +3,26 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { ActionForm } from "@/components/fulfillment/ActionForm";
+import { Badge } from "@/components/ui/Badge";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { ZONE_IDS } from "@/lib/countries";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { countryName, ZONE_IDS } from "@/lib/countries";
+import { formatDate, formatDateTime, jerusalemDateKey } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
+import { applyBasisPoints, formatMoney } from "@/lib/money";
+import { vatRateBpOn } from "@/lib/vat";
 import { env } from "@/server/env";
 import { requireAdmin } from "@/server/next/guards";
 import { getSetting } from "@/server/settings";
+import {
+  FUEL_STALE_AFTER_DAYS,
+  fuelSurchargeStale,
+  tariffReviewDue,
+} from "@/server/shipping/dhl-estimate";
 import { shippingSettingsToForm } from "@/server/shipping/settings-form";
+import { dhlTariffOn } from "@/server/shipping/tariff";
 import { saveShippingSettingsAction } from "./actions";
 
 export async function generateMetadata({
@@ -35,7 +44,9 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /**
- * `/admin/settings/shipping` (spec §6.10): zones and estimates, the class-rate grid, piece fees,
+ * `/admin/settings/shipping` (spec §6.10): zones and estimates, the DHL Express estimate abroad
+ * (fuel surcharge with a "stale" badge, account discount, export declaration, and a read-only
+ * summary of the published tariff with its sources), the class-rate grid, piece fees,
  * time-boxed surcharges, insurance (with "coverage confirmed on"), value caps per carrier, the deny
  * and quote-only lists, thresholds, pickup, artist delivery, the domestic courier name, "Mark
  * calibrated today", the dated FX (read only; set in the checkout settings) and a read-only
@@ -83,6 +94,24 @@ export default async function ShippingSettingsPage({
     </Field>
   );
   const surchargeRows = s.surcharges.length + 1;
+  const now = new Date();
+  const today = jerusalemDateKey(now);
+  const tariff = dhlTariffOn(now);
+  const ils = (minor: number) => formatMoney(minor, "ILS", locale);
+  const names = (codes: readonly string[]) =>
+    codes.map((c) => countryName(c, locale)).join(", ");
+  const demand = tariff.demand.find((d) => today <= d.to);
+  const decl = tariff.exportDeclaration;
+  const declFee =
+    decl.minor +
+    (decl.plusVat ? applyBasisPoints(decl.minor, vatRateBpOn(now)) : 0);
+  const sources = [
+    "rateGuide",
+    "surcharges",
+    "demandSurcharge",
+    "notices",
+    "customsServices",
+  ] as const;
 
   return (
     <div
@@ -142,7 +171,146 @@ export default async function ShippingSettingsPage({
           ))}
         </Group>
 
+        <Group title={t("dhl.title")}>
+          <p className="text-sm text-ink-muted">{t("dhl.intro")}</p>
+          <input type="hidden" name="dhl.present" value="1" />
+          <Checkbox
+            id="dhl-on"
+            name="dhl.enabled"
+            defaultChecked={s.dhlEstimate.enabled}
+            label={t("dhl.enabled")}
+          />
+          <div className="grid gap-3 md:grid-cols-3">
+            <Field
+              id="dhl-fuel"
+              label={t("dhl.fuelPct")}
+              hint={t("dhl.fuelHint", {
+                min: tariff.fuel.minPct,
+                max: tariff.fuel.maxPct,
+              })}
+            >
+              {(c) => (
+                <Input
+                  {...c}
+                  name="dhl.fuelPct"
+                  inputMode="decimal"
+                  dir="ltr"
+                  defaultValue={val("dhl.fuelPct")}
+                />
+              )}
+            </Field>
+            <Field id="dhl-fuel-date" label={t("dhl.fuelAsOf")}>
+              {(c) => (
+                <Input
+                  {...c}
+                  type="date"
+                  dir="ltr"
+                  name="dhl.fuelAsOf"
+                  defaultValue={val("dhl.fuelAsOf")}
+                />
+              )}
+            </Field>
+            <Field
+              id="dhl-discount"
+              label={t("dhl.discountPct")}
+              hint={t("dhl.discountHint")}
+            >
+              {(c) => (
+                <Input
+                  {...c}
+                  name="dhl.discountPct"
+                  inputMode="decimal"
+                  dir="ltr"
+                  defaultValue={val("dhl.discountPct")}
+                />
+              )}
+            </Field>
+          </div>
+          {fuelSurchargeStale(s.dhlEstimate.fuelSurchargeAsOf, now) ? (
+            <p data-testid="dhl-fuel-stale">
+              <Badge tone="hold">
+                {t("dhl.fuelStale", { days: FUEL_STALE_AFTER_DAYS })}
+              </Badge>
+            </p>
+          ) : null}
+          <Checkbox
+            id="dhl-decl"
+            name="dhl.exportDecl"
+            defaultChecked={s.dhlEstimate.exportDeclarationByDhl}
+            label={t("dhl.exportDecl", { fee: ils(declFee) })}
+            hint={t("dhl.exportDeclHint")}
+          />
+          <div className="flex flex-col gap-1 text-sm" data-testid="dhl-tariff">
+            <p>
+              {t("dhl.tariff", {
+                name: tariff.name,
+                date: formatDate(tariff.validFrom, locale),
+                checked: formatDate(tariff.checkedOn, locale),
+              })}{" "}
+              {tariffReviewDue(now) ? (
+                <Badge tone="hold">{t("dhl.reviewDue")}</Badge>
+              ) : null}
+            </p>
+            <p>
+              {demand
+                ? t("dhl.demand", {
+                    from: formatDate(demand.from, locale),
+                    to: formatDate(demand.to, locale),
+                    americas: ils(demand.minorPerKg.AMERICAS),
+                    oceania: ils(demand.minorPerKg.OCEANIA),
+                    europe: ils(demand.minorPerKg.EUROPE),
+                    row: ils(demand.minorPerKg.ROW),
+                  })
+                : t("dhl.noDemand")}
+            </p>
+            <p>
+              {t("dhl.restricted", {
+                fee: ils(tariff.restrictedDestination.minor),
+                countries: names(tariff.restrictedDestination.countries),
+              })}
+            </p>
+            <p>
+              {t("dhl.elevated", {
+                fee: ils(tariff.elevatedRisk.minor),
+                countries: names(tariff.elevatedRisk.countries),
+                date: formatDate(
+                  tariff.elevatedRisk.israelSuspendedSince ?? today,
+                  locale,
+                ),
+              })}
+            </p>
+            <p>
+              {t("dhl.notEstimated", {
+                min: ils(tariff.remoteArea.minMinor),
+                perKg: ils(tariff.remoteArea.perKgMinor),
+              })}
+            </p>
+            <p>
+              {t("dhl.insurance", {
+                pct: tariff.insurance.ratePct,
+                min: ils(tariff.insurance.minMinor),
+              })}
+            </p>
+            <p>{t("dhl.sources")}</p>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1">
+              {sources.map((k) => (
+                <li key={k}>
+                  <a
+                    href={tariff.sources[k]}
+                    className="underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t(`dhl.source.${k}`)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Group>
+
         <Group title={t("rates.title")}>
+          <p className="text-sm text-ink-muted">{t("rates.fallback")}</p>
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr>

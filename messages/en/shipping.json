@@ -261,6 +261,35 @@
         "REST_OF_WORLD": "Rest of the world"
       }
     },
+    "dhl": {
+      "title": "DHL Express estimate (abroad)",
+      "intro": "Courier prices abroad follow DHL's published price list for Israel: the box's weight or volume, the destination's DHL zone and DHL's surcharges. The whole order is priced as one DHL shipment. Prices are locked when the buyer continues to payment.",
+      "enabled": "Price shipments abroad by the DHL estimate",
+      "fuelPct": "Fuel surcharge (%)",
+      "fuelHint": "DHL publishes it every week (between {min}% and {max}%). Copy the international value for the coming week.",
+      "fuelAsOf": "Fuel surcharge valid from",
+      "fuelStale": "The fuel surcharge has not been updated for more than {days} days",
+      "discountPct": "Account discount off DHL's prices (%)",
+      "discountHint": "0 = DHL's published prices. Enter your account's discount once DHL gives you one.",
+      "exportDecl": "The export declaration is filed through DHL ({fee} per shipment, added when the value is above the export declaration threshold)",
+      "exportDeclHint": "Untick it if the export declaration is filed separately online.",
+      "tariff": "Price list: {name}, valid from {date}; checked against DHL's pages on {checked}.",
+      "reviewDue": "Look for DHL's new price list for this year",
+      "demand": "Peak season surcharge from {from} to {to}, per kg: Americas {americas}, Oceania {oceania}, Europe {europe}, rest of the world {row}; Asia, China and the Middle East ₪0.",
+      "noDemand": "No peak season surcharge is in force.",
+      "restricted": "Restricted destinations ({fee} extra per shipment): {countries}.",
+      "elevated": "Elevated risk destinations ({fee} extra per shipment): {countries}. The surcharge on Israel's own shipments was suspended on {date}.",
+      "notEstimated": "Not estimated: DHL's remote-area surcharge ({min} or {perKg} per kg, depending on the address) and optional services such as Saturday delivery.",
+      "insurance": "DHL's published insurance: {pct}% of the insured value, at least {min} (set under Insurance).",
+      "sources": "DHL's pages",
+      "source": {
+        "rateGuide": "Rate guide 2026 (PDF)",
+        "surcharges": "Surcharges and weekly fuel surcharge",
+        "demandSurcharge": "Peak season surcharge",
+        "notices": "Notices",
+        "customsServices": "Customs services"
+      }
+    },
     "rates": {
       "title": "Base rate by size (₪)",
       "zone": "Zone",
@@ -268,7 +297,8 @@
       "M": "Medium (M)",
       "L": "Large (L)",
       "oversize": "Oversize parcel fee (₪)",
-      "nonConveyable": "Heavy parcel fee (25–70 kg) (₪)"
+      "nonConveyable": "Heavy parcel fee (25–70 kg) (₪)",
+      "fallback": "In Israel these are your courier's prices: copy them from the courier's price list. Abroad they are used only when the DHL estimate is off or DHL's price list has no price for the destination; the surcharges below apply only to these table prices."
     },
     "surcharges": {
       "title": "Surcharges (fuel, season and more)",

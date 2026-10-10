@@ -138,11 +138,17 @@ export default async function ArtworkPage({
   if (!isLocale(locale)) notFound();
   const data = await getArtworkPage(locale, slug);
   if (!data) notFound();
-  const { artwork, shipSpec, seo } = data;
+  const { artwork, shipSpec, seo, declaredValueIlsMinor } = data;
   const sp = await searchParams;
   const [delivery, profile, t, tb, cartIds, checkoutSettings] =
     await Promise.all([
-      getDeliveryEstimates(locale, shipSpec),
+      getDeliveryEstimates(
+        locale,
+        shipSpec,
+        undefined,
+        undefined,
+        declaredValueIlsMinor,
+      ),
       getPublicProfile(locale),
       getTranslations({ locale, namespace: "artwork" }),
       getTranslations({ locale, namespace: "common" }),
