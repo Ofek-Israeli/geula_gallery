@@ -47,12 +47,17 @@ test.describe("without JavaScript", () => {
       "aria-invalid",
     );
 
-    // Haifa: the three options for Israel.
+    // Haifa: the three options for Israel: the courier, Israel Post (the parcel fits its limits)
+    // and pickup. The painter does not deliver works herself.
     await chooseDestination(page, { locale: "en", city: "Haifa" });
     await expect(current).toContainText(en.steps.delivery);
+    const radios = page.getByTestId("delivery-form").getByRole("radio");
+    await expect(radios).toHaveCount(3);
     await expect(
-      page.getByTestId("delivery-form").getByRole("radio"),
-    ).toHaveCount(3);
+      page.getByRole("radio", {
+        name: new RegExp(`^${en.delivery.method.ISRAEL_POST}`),
+      }),
+    ).toBeVisible();
     await expect(page.getByTestId("checkout-recap")).toContainText("Haifa");
     await chooseDelivery(page, { locale: "en", method: "LOCAL_PICKUP" });
 

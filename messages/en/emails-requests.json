@@ -30,6 +30,8 @@
     },
     "artwork": "Artwork: {title}",
     "from": "From {name}",
+    "phone": "Phone:",
+    "whatsapp": "WhatsApp",
     "offer": "Offer amount:",
     "open": "Open in the inbox"
   }

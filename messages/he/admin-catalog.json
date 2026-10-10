@@ -87,7 +87,7 @@
     "confirmPriceChange": "אני מאשרת את שינוי המחיר",
     "confirmPriceChangeHint": "שינוי מחיר נרשם ביומן הפעולות. הזמנות פתוחות שומרות על המחיר שננעל בהן.",
     "packagingType": "סוג אריזה",
-    "canBeRolled": "אפשר לגלגל את הבד לשליחה בגליל",
+    "canBeRolled": "אפשר לגלגל את הבד לשליחה בגליל (הקונה יכול לבחור משלוח מגולגל)",
     "packedLengthCm": "אורך האריזה (ס״מ)",
     "packedWidthCm": "רוחב האריזה (ס״מ)",
     "packedHeightCm": "גובה האריזה (ס״מ)",
@@ -158,7 +158,8 @@
     "quote": "לפי הצעת מחיר",
     "unavailable": "לא זמין",
     "from": "החל מ-{price}",
-    "insured": "כולל ביטוח"
+    "insured": "כולל ביטוח",
+    "rolled": "מגולגל בגליל"
   },
   "sale": {
     "status": "מצב: {status}",

@@ -177,6 +177,29 @@ describe("the document's price table (painting + 12 cm per side, 11 cm deep)", (
   });
 });
 
+describe("the document's comparison with Israel Post (an 80×80 canvas)", () => {
+  it("costs ₪3,209 to the UK, ₪2,621 to Canada and the US, ₪4,512 to Japan by DHL", () => {
+    const p = demoPackaging({
+      heightMm: 800,
+      widthMm: 800,
+      surface: "CANVAS",
+      canBeRolled: false,
+      crate: false,
+    });
+    const piece: DhlPieceInput = {
+      lengthMm: p.packedLengthMm,
+      widthMm: p.packedWidthMm,
+      heightMm: p.packedHeightMm,
+      weightG: p.packedWeightG,
+      nonConveyablePackaging: false,
+    };
+    const totals = ["GB", "CA", "US", "JP"].map(
+      (country) => detail({ pieces: [piece], country }).totalMinor / 100,
+    );
+    expect(totals).toEqual([3209, 2621, 2621, 4512]);
+  });
+});
+
 describe("billing weight and transport", () => {
   it("rounds each piece up to 0.5 kg and a shipment above 30 kg up to whole kg", () => {
     const thirty: DhlPieceInput = {

@@ -52,11 +52,6 @@ export default async function AboutPage({
       />
       <h1 className="text-4xl">{t("title")}</h1>
       <ArtistBio headingLevel={2} />
-      {env.DEMO_MODE ? (
-        <p className="max-w-prose border-s-2 border-hold ps-4 text-sm text-ink-muted">
-          {t("demoNote")}
-        </p>
-      ) : null}
       <section aria-labelledby="studio-title" className="flex flex-col gap-2">
         <h2 id="studio-title" className="text-2xl">
           {t("studioTitle")}

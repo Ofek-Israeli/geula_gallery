@@ -43,7 +43,8 @@ import type { CronJob, CronJobContext } from "./index";
  *    expired attempts and, in live mode with an ApiPassword, the ListTransactions sweep (unmatched
  *    money → CRITICAL alert). Stats: `cardcomTail`, `cardcomSweep`.
  * 4. `checkInvariants()` (Tier B) → one CRITICAL alert per violation.
- * 5. Go-live digest (outside demo mode): CRITICAL alert listing the blockers.
+ * 5. Go-live digest (outside demo mode, while online sales are open): CRITICAL alert listing the
+ *    blockers. A showcase site (`SALES_OPEN=false`) takes no payments, so it has none to report.
  * 6. `admin-alert` emails for open CRITICAL alerts (once per alert), last so that the alerts of
  *    the earlier steps are mailed the same day.
  */
@@ -406,7 +407,7 @@ async function invariantAlerts(db: DbOrTx) {
 
 async function goLiveDigest(db: DbOrTx, now: Date) {
   const report = await goLiveBlockers({ db });
-  if (env.DEMO_MODE || report.ok) {
+  if (env.DEMO_MODE || !env.SALES_OPEN || report.ok) {
     return { blockers: report.blockers.length, alerted: false };
   }
   const { created } = await raiseAlert(

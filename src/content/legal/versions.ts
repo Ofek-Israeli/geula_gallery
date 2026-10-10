@@ -2,16 +2,16 @@
  * Versions of the legal texts a buyer accepts at checkout (spec §1.2 "Checkout": click-to-accept
  * with stored versions; spec §4.7 `versions.ts`). Each order stores the versions it was accepted
  * under. `approved: false` shows a DRAFT banner until the lawyer signs the texts off (WS6 owns
- * the texts and bumps these values).
+ * the texts and bumps these values). The lawyer approved the texts on 2026-10-10.
  */
 export const LEGAL_VERSIONS = {
-  terms: "2026-10-01-draft",
-  returns: "2026-10-09-draft",
-  privacy: "2026-10-01-draft",
+  terms: "2026-10-10",
+  returns: "2026-10-10",
+  privacy: "2026-10-10",
   /** DAP duties notice acknowledged by international buyers. */
-  dutiesNotice: "2026-10-01-draft",
+  dutiesNotice: "2026-10-10",
   /** Pre-contract disclosure / s.14C(b) disclosure document. */
-  disclosure: "2026-10-01-draft",
+  disclosure: "2026-10-10",
 } as const;
 
-export const LEGAL_TEXTS_APPROVED = false;
+export const LEGAL_TEXTS_APPROVED = true;

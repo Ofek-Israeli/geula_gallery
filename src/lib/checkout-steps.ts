@@ -2,7 +2,8 @@
  * The address-first checkout (spec §5.1 step 2) as one URL contract, in three steps:
  *   1. destination: the country (`to`), `city` and `zip`, enough to quote (prices depend on the
  *      country only);
- *   2. delivery: the priced options (`ship`) and, abroad, the currency (`cur=USD`);
+ *   2. delivery: the priced options (`ship`), the packing (`pack=rolled`: the canvas rolled in a
+ *      tube, when a work allows it) and, abroad, the currency (`cur=USD`);
  *   3. details: the buyer, the street address (only for a delivery; pickup buyers type none), the
  *      consents and the payment method.
  * `step` is the step the buyer *asked for*: each GET form submits the next step's name and the
@@ -24,8 +25,8 @@ import {
 /** Delivery methods a buyer can pick at checkout (QUOTED is for link orders only). */
 export const CHECKOUT_METHODS = [
   "CARRIER_TABLE",
+  "ISRAEL_POST",
   "LOCAL_PICKUP",
-  "ARTIST_DELIVERY",
 ] as const;
 export type CheckoutMethod = (typeof CHECKOUT_METHODS)[number];
 
@@ -65,6 +66,8 @@ export interface CheckoutParams {
   /** Any non-empty `ship`, including junk and QUOTED. */
   shipGiven: boolean;
   cur: "USD" | null;
+  /** "rolled": the buyer wants the works rolled in a tube; null: as listed (stretched). */
+  pack: "rolled" | null;
   /** The step the buyer asked for, or null. */
   step: CheckoutStep | null;
 }
@@ -88,6 +91,7 @@ export function parseCheckoutParams(sp: CheckoutSearchParams): CheckoutParams {
     ship: isCheckoutMethod(ship) ? ship : null,
     shipGiven: ship !== "",
     cur: first(sp.cur) === "USD" ? "USD" : null,
+    pack: first(sp.pack) === "rolled" ? "rolled" : null,
     step: isCheckoutStep(step) ? step : null,
   };
 }
@@ -165,6 +169,7 @@ export interface CheckoutState {
   zip: string;
   ship: string | null;
   cur: "USD" | null;
+  pack?: "rolled" | null;
   step?: CheckoutStep | null;
 }
 
@@ -180,6 +185,7 @@ export function checkoutQuery(s: CheckoutState): CheckoutQuery {
     query.zip = s.zip;
   }
   if (s.ship) query.ship = s.ship;
+  if (s.pack) query.pack = s.pack;
   if (s.cur) query.cur = s.cur;
   if (s.step) query.step = s.step;
   return query;
@@ -192,13 +198,16 @@ export interface StepLinks {
   delivery: string;
   /** Step 2 priced in shekels / in dollars (abroad, when the works have USD prices). */
   currency: { ILS: string; USD: string };
+  /** Step 2 priced as listed (stretched, in a box) / rolled in a tube. */
+  packing: { STRETCHED: string; ROLLED: string };
   /** No `step`, so as far as the data allows: the "show the updated total" link. */
   details: string;
 }
 
 /**
  * The checkout's own links for the current state. Pass the offered method as `ship` (a method the
- * destination does not offer is not carried on) and the effective currency as `cur`.
+ * destination does not offer is not carried on), the effective currency as `cur` and the effective
+ * packing as `pack`.
  */
 export function stepLinks(
   href: (query: CheckoutQuery) => string,
@@ -212,6 +221,10 @@ export function stepLinks(
     currency: {
       ILS: at({ cur: null, step: "delivery" }),
       USD: at({ cur: "USD", step: "delivery" }),
+    },
+    packing: {
+      STRETCHED: at({ pack: null, step: "delivery" }),
+      ROLLED: at({ pack: "rolled", step: "delivery" }),
     },
     details: at({ step: null }),
   };

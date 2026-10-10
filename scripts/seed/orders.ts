@@ -216,7 +216,6 @@ async function seedOrder(
       returnsVersion: DRAFT,
       privacyVersion: DRAFT,
       termsAcceptedAt: created,
-      ageConfirmedAt: created,
       ...(international
         ? { dutiesNoticeVersion: DRAFT, dutiesAckAt: created }
         : {}),

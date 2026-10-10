@@ -9,9 +9,11 @@
     "sellerTitle": "פרטי העוסק",
     "seller": "{tradeName} · {address}",
     "contact": "דוא״ל: {email} · טלפון: {phone}",
+    "contactPhone": "טלפון: {phone}",
     "merchantCountry": "מדינת העוסק: ישראל",
     "cancelTitle": "ביטול עסקה",
     "cancelChannels": "אפשר לבטל עסקה באתר ({url}), בדוא״ל ({email}) או בטלפון ({phone}).",
+    "cancelChannelsNoEmail": "אפשר לבטל עסקה באתר ({url}) או בטלפון ({phone}).",
     "transactional": "הודעה זו נשלחה בקשר להזמנה או לפנייה שלך. אין זו הודעה פרסומית.",
     "demo": "חנות הדגמה – לא בוצע חיוב אמיתי."
   }

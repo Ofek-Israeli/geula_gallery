@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations } from "next-intl/server";
-import { DemoBanner } from "@/components/site/DemoBanner";
 import { dirOf, routing } from "@/i18n/routing";
 import { env } from "@/server/env";
 import { fontVariables } from "../fonts";
@@ -47,10 +46,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dirOf(locale)} className={fontVariables}>
       <body className="flex min-h-dvh flex-col bg-paper text-ink antialiased">
-        <NextIntlClientProvider>
-          {env.DEMO_MODE ? <DemoBanner locale={locale} /> : null}
-          {children}
-        </NextIntlClientProvider>
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
   );

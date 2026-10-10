@@ -211,7 +211,7 @@ describe("paying a link order", () => {
     const other = await buyableArtwork(db);
     const locked = await linkOrder(other, {
       lockedShippingMinor: 0,
-      shippingMethod: "ARTIST_DELIVERY",
+      shippingMethod: "LOCAL_PICKUP",
     });
     expect(
       await completeDetails(locked.orderId, { method: "CARRIER_TABLE" }),

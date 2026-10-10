@@ -219,6 +219,8 @@ export interface EmailTemplateProps {
     kind: "QUESTION" | "OFFER" | "QUOTE";
     name: string;
     email: string;
+    /** E.164, when the sender gave one (to answer by phone or WhatsApp). */
+    phone?: string;
     country?: string;
     artworkTitle?: string;
     message: string;

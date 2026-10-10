@@ -1,11 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "regions": ["fra1"],
+  "installCommand": "npm ci",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = production ]; then npm run db:migrate && npm run build; else npm run build; fi",
   "crons": [
-    { "path": "/api/cron/reconcile", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/outbox", "schedule": "*/5 * * * *" },
-    { "path": "/api/cron/tracking", "schedule": "0 * * * *" },
-    { "path": "/api/cron/daily", "schedule": "0 5 * * *" },
-    { "path": "/api/cron/purge", "schedule": "30 2 * * *" }
+    { "path": "/api/cron/purge", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/outbox", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/reconcile", "schedule": "30 3 * * *" },
+    { "path": "/api/cron/tracking", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/daily", "schedule": "0 5 * * *" }
   ]
 }

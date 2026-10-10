@@ -160,7 +160,7 @@ export function LiveBuyBox({
             {t("buy.makeOffer")}
           </Link>
         ) : null}
-        {locale === "en" && price.usdMinor !== null && available ? (
+        {locale === "en" && price.usdMinor !== null && buyable ? (
           <p className="text-sm text-ink-muted">{t("buy.usdAbroad")}</p>
         ) : null}
       </div>
@@ -171,9 +171,14 @@ export function LiveBuyBox({
           {israelPrice ? (
             <p>
               <Link href={paths.legal("shipping")}>
-                {t("delivery.israelFrom", {
-                  price: formatMoney(israelPrice.fromIlsMinor, "ILS", locale),
-                })}
+                {t(
+                  israelPrice.rolled
+                    ? "delivery.israelFromRolled"
+                    : "delivery.israelFrom",
+                  {
+                    price: formatMoney(israelPrice.fromIlsMinor, "ILS", locale),
+                  },
+                )}
               </Link>
               {pickupFree ? <> · {t("delivery.freePickup")}</> : null}
             </p>
@@ -193,6 +198,7 @@ export function LiveBuyBox({
                       {t("delivery.from", {
                         price: formatMoney(e.fromIlsMinor, "ILS", locale),
                       })}
+                      {e.rolled ? <> · {t("delivery.rolled")}</> : null}
                       {zoneIsInsured(e) ? (
                         <> · {t("delivery.insured")}</>
                       ) : null}

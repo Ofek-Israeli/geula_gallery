@@ -15,8 +15,8 @@ One Next.js app and one PostgreSQL database run four things:
    - payments: Cardcom (primary) and PayPal (secondary);
    - tax documents: Morning (Green Invoice) or Cardcom gateway documents;
    - shipping: DHL Express MyDHL, a manual carrier, a DHL Express estimate from DHL's published
-     Israel tariff for shipments abroad, and a table-rate engine the painter edits (Israel, and the
-     fallback abroad);
+     Israel tariff for shipments abroad, Israel Post (home delivery in Israel, EMS abroad) at its
+     published prices, and a table-rate engine the painter edits (Israel, and the fallback abroad);
    - email: Resend.
 4. **The Israeli consumer-law flows:** the pre-contract disclosure, the cancellation form (per
    work: the buyer may cancel some works of an order), refund deadlines and data retention.
@@ -115,7 +115,8 @@ need no cron at all.
 | `db:reset -- [--db <name>] [--seed demo\|fixtures\|none] --yes` | drops, migrates and seeds a database (`fixtures`: only the 16 test works) |
 | `db:seed` | runs the idempotent seed modules |
 | `db:generate` | generates a migration from the schema (integrator only) |
-| `admin:create` | creates the painter's account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` |
+| `admin:create` | creates the painter's account from `ADMIN_EMAIL` and `ADMIN_PASSWORD` (asks in the terminal, password hidden, when unset) |
+| `prod:migrate`, `prod:seed`, `prod:upload`, `prod:admin` | production setup from `.env.production.local` (`vercel env pull`): migrations, the settings and the painter's catalog, the catalog images to Blob, the admin account ([`docs/deploy.md`](docs/deploy.md) §0) |
 | `env:init` | writes `.env.local` |
 | `cron -- <job> [--watch]` | calls a cron job over HTTP |
 | `gen:api-types` | regenerates the provider types from `openapi/` (for DHL, from the current MyDHL spec) |
@@ -222,8 +223,9 @@ in `data/catalog/manifest.json` with their images in `data/catalog/images/`.
   (statuses, sample orders and shipping flags), but only in the `fixtures` seed. The `demo` seed
   shows the real catalog: every work available, with no invented sales.
 
-In demo mode (`DEMO_MODE=true`) payments are test payments, sales are not real and the business
-details are placeholders, and a banner on every page says so.
+In demo mode (`DEMO_MODE=true`) payments are test payments and sales are not real. The site shows
+no demo banner (the painter removed it); checkout's only payment option is labelled as a test
+payment.
 
 Fonts: Frank Ruhl Libre and Assistant, under the SIL Open Font License (`assets/fonts/OFL.txt`).
 

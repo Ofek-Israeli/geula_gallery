@@ -41,8 +41,13 @@ test.describe("minimal storefront @smoke", () => {
       "href",
       "/en/checkout/the-path",
     );
-    await expect(page.getByText("Delivery in Israel from ₪120")).toBeVisible();
-    await expect(page.getByText(/72 × 52 × 3\s*cm/)).toBeVisible();
+    // Israel Post home delivery (₪73) beats the courier table's ₪120.
+    await expect(page.getByText("Delivery in Israel from ₪73")).toBeVisible();
+    // No depth was measured, so the dimensions are H × W only.
+    await expect(page.getByText(/72 × 52\s*cm/)).toBeVisible();
+    await expect(
+      page.getByText("Dimensions (H × W)", { exact: true }),
+    ).toBeVisible();
     // The painter's own photographs carry no image credit line.
     await expect(page.locator("figcaption")).toHaveCount(0);
   });

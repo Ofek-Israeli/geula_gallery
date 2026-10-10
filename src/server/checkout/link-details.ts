@@ -37,13 +37,12 @@ export type LinkDetailsOrder = Pick<
   | "shipLine1"
   | "shipCity"
   | "termsAcceptedAt"
-  | "ageConfirmedAt"
   | "dutiesAckAt"
 >;
 
 /** Everything the payment flow needs from the buyer is on the order (WEB orders always are). */
 export function orderDetailsComplete(o: LinkDetailsOrder): boolean {
-  if (!o.termsAcceptedAt || !o.ageConfirmedAt) return false;
+  if (!o.termsAcceptedAt) return false;
   if (o.shipCountry !== "IL" && !o.dutiesAckAt) return false;
   if (o.shippingMethod === "LOCAL_PICKUP") return true;
   return Boolean(o.shipName && o.shipLine1 && o.shipCity);
@@ -59,7 +58,6 @@ export interface LinkDetailsInput {
     termsVersion: string;
     returnsVersion: string;
     privacyVersion: string;
-    ageConfirmed: true;
     dutiesNoticeVersion?: string;
     receiptEmailConsent: boolean;
   };
@@ -211,7 +209,6 @@ async function saveDetailsTx(
       returnsVersion: c.returnsVersion,
       privacyVersion: c.privacyVersion,
       termsAcceptedAt: now,
-      ageConfirmedAt: now,
       dutiesNoticeVersion: c.dutiesNoticeVersion ?? null,
       dutiesAckAt: c.dutiesNoticeVersion ? now : null,
       receiptEmailConsent: c.receiptEmailConsent,

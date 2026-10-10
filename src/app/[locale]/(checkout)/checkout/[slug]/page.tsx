@@ -34,10 +34,11 @@ import {
 import { startCheckoutAction } from "./actions";
 
 /**
- * `/[locale]/checkout/[slug]?to=&city=&zip=&ship=&cur=&step=` ("Buy now", spec §5.1 step 2):
+ * `/[locale]/checkout/[slug]?to=&city=&zip=&ship=&pack=&cur=&step=` ("Buy now", spec §5.1 step 2):
  * dynamic and noindex (checkout layout); `strict-origin` keeps the destination in the query out of
  * Referer headers. The address-first steps of `src/lib/checkout-steps.ts`: 1. country, city and
- * postal code (GET form) → 2. the priced delivery options and the currency (GET form) → 3. the
+ * postal code (GET form) → 2. the priced delivery options, the packing (stretched or rolled in a
+ * tube, when a work allows it) and the currency (GET form) → 3. the
  * details form with the street address only for a delivery, the pre-contract disclosure, the
  * unticked consents and the provider radios. Blocked states keep their CTAs and, for destination
  * reasons, the step 1 form. No hold exists until "Continue to payment".
@@ -89,6 +90,7 @@ export default async function CheckoutPage({
       country: p.country,
       method: p.ship ?? undefined,
       currency: p.cur ?? undefined,
+      packing: p.pack === "rolled" ? "ROLLED" : undefined,
     }),
   ]);
   if (!data || (quote.kind === "blocked" && quote.artworkId === null)) {
@@ -170,7 +172,7 @@ export default async function CheckoutPage({
               locale={locale}
               countries={countries}
               value={{ country: p.country, city: p.city, zip: p.zip }}
-              carry={{ ship: p.ship, cur: p.cur }}
+              carry={{ ship: p.ship, cur: p.cur, pack: p.pack }}
               issues={{}}
             />
           </section>
@@ -193,6 +195,7 @@ export default async function CheckoutPage({
     zip: p.zip,
     ship: r.offeredShip,
     cur: quote.currency === "USD" ? "USD" : null,
+    pack: quote.packing === "ROLLED" ? "rolled" : null,
   });
   const destination = {
     country: p.country,
@@ -211,7 +214,7 @@ export default async function CheckoutPage({
           locale={locale}
           countries={countries}
           value={{ country: p.country, city: p.city, zip: p.zip }}
-          carry={{ ship: p.ship, cur: p.cur }}
+          carry={{ ship: p.ship, cur: p.cur, pack: p.pack }}
           issues={r.showDestinationErrors ? r.issues : {}}
         />
       </div>
@@ -279,6 +282,7 @@ export default async function CheckoutPage({
           country: quote.country,
           method: s.method,
           currency: quote.currency,
+          ...(quote.packing === "ROLLED" ? { packing: "ROLLED" as const } : {}),
           ...(needsAddress
             ? { city: p.city, postalCode: p.zip || undefined }
             : {}),

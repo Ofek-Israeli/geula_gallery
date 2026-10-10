@@ -31,6 +31,10 @@ export async function methodName(
   const t = await getTranslations({ locale, namespace: "checkout" });
   // Abroad the courier is priced by DHL's published tariff: name the carrier.
   if (m.rateSource === "DHL_ESTIMATE") return t("delivery.method.DHL_EXPRESS");
+  // Israel Post: home delivery in Israel, EMS abroad.
+  if (m.israelPost?.service === "EMS") {
+    return t("delivery.method.ISRAEL_POST_EMS");
+  }
   return t(`delivery.method.${m.method}`);
 }
 
@@ -75,7 +79,9 @@ export async function MethodChoices({
       {options.map(({ m, name, price }) => {
         const id = `ship-${m.method}`;
         const extras = [
-          m.method === "CARRIER_TABLE" ? t("delivery.tracked") : null,
+          m.method === "CARRIER_TABLE" || m.method === "ISRAEL_POST"
+            ? t("delivery.tracked")
+            : null,
           m.insured
             ? t("delivery.insuredUpTo", {
                 amount: formatMoney(
@@ -314,6 +320,7 @@ export async function preContractDoc(
       vatMinor: quote.vatMinor,
       zeroRatedExport: international,
       shippingMethod: s.method,
+      ...(s.packing === "ROLLED" ? { rolled: true } : {}),
       deliveryEstimate: s.estimate?.[locale] ?? "",
       destinationCountry: quote.country,
       insured: s.insured,

@@ -59,7 +59,7 @@ const finalize = (attemptId: string) =>
   finalizeAttempt(attemptId, { trigger: "webhook" }).then((r) => r.result);
 
 describe("cart quote", () => {
-  it("prices every work in cart order and charges one delivery", async () => {
+  it("prices every work in cart order, with one delivery for the order", async () => {
     const a = await buyableArtwork(db, { priceIlsMinor: 100_000 });
     const b = await buyableArtwork(db, { priceIlsMinor: 250_000 });
     const c = await buyableArtwork(db, { priceIlsMinor: 175_000 });
@@ -67,7 +67,7 @@ describe("cart quote", () => {
       artworkIds: [b.id, a.id, c.id],
       locale: "en",
       country: "IL",
-      method: "ARTIST_DELIVERY",
+      method: "LOCAL_PICKUP",
     });
     if (quote.kind !== "ok") throw new Error(quote.reason);
     expect(quote.items.map((i) => [i.artworkId, i.priceMinor])).toEqual([
@@ -76,8 +76,9 @@ describe("cart quote", () => {
       [c.id, 175_000],
     ]);
     expect(quote.itemsTotalMinor).toBe(525_000);
-    // The artist-delivery fee is one flat fee per order (seed: ₪150).
-    expect(quote.shipping.shippingMinor).toBe(15_000);
+    // Pickup from the studio is one flat fee per order (seed: free).
+    expect(quote.shipping.method).toBe("LOCAL_PICKUP");
+    expect(quote.shipping.shippingMinor).toBe(0);
     expect(quote.totalMinor).toBe(
       525_000 + quote.shipping.shippingMinor + quote.shipping.insuranceMinor,
     );

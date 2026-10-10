@@ -173,6 +173,7 @@ export interface OrganizationJsonLdInput {
   base: string;
   locale: Locale;
   name: string;
+  /** Omitted when empty (no public email). */
   email: string;
   telephone: string;
 }
@@ -194,7 +195,7 @@ export function organizationJsonLd(i: OrganizationJsonLdInput): JsonLdObject {
     "@id": organizationId(i.base),
     name: i.name,
     url: home,
-    email: i.email,
+    ...(i.email ? { email: i.email } : {}),
     telephone: i.telephone,
     address: { "@type": "PostalAddress", addressCountry: "IL" },
     hasMerchantReturnPolicy: {

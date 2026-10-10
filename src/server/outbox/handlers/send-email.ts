@@ -7,7 +7,8 @@ import { cancellations, orders } from "@/server/db/schema";
 import { ensureDisclosurePdf } from "@/server/documents/disclosure-pdf";
 import { buildEmail } from "@/server/email/props";
 import { sendEmail } from "@/server/email/send";
-import type { EmailAttachment } from "@/server/email/types";
+import { type EmailAttachment, isPainterTemplate } from "@/server/email/types";
+import { env } from "@/server/env";
 import { log } from "@/server/log";
 import type { JobHandler } from "../types";
 
@@ -24,11 +25,19 @@ import type { JobHandler } from "../types";
  *    render failure).
  * 4. `cancellation-ack`: once sent, `cancellations.ack_sent_at` is set (first send only); the
  *    on-screen acknowledgement is stored in `ack_snapshot` when the notice is received.
+ *
+ * Notifications only (`EMAIL_TO_VISITORS=false`, no verified sending domain yet): a visitor or
+ * buyer template finishes without sending, so nothing retries, fails or alerts; the painter's
+ * templates still go out.
  */
 export const sendEmailHandler: JobHandler<"SEND_EMAIL"> = async (
   payload,
   ctx,
 ) => {
+  if (!env.EMAIL_TO_VISITORS && !isPainterTemplate(payload.template)) {
+    log.info("email.visitor_skipped", { template: payload.template });
+    return { kind: "done" };
+  }
   const built = await buildEmail(
     payload.template,
     payload.refId,

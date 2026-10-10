@@ -229,7 +229,7 @@ export const shipmentMachine = machine<ShipmentStatus>(
   shipmentStatusEnum.enumValues,
   {
     AWAITING_FULFILLMENT: ["PACKED", "READY_FOR_PICKUP", "CANCELLED"],
-    // Carrier label, manual carrier (LABEL_CREATED / IN_TRANSIT), artist delivery (OUT_FOR_DELIVERY).
+    // Carrier label, or a manual carrier's events (LABEL_CREATED / IN_TRANSIT / OUT_FOR_DELIVERY).
     // AWAITING_FULFILLMENT from PACKED / LABEL_CREATED / PICKUP_SCHEDULED: a work of the parcel was
     // cancelled before dispatch, so the rest is packed again (the unused label is discarded).
     PACKED: [

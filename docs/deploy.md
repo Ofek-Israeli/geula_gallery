@@ -1,12 +1,66 @@
 # Deploying Geula Gallery
 
 This guide covers the target production setup: **Vercel Pro, Neon Postgres, Vercel Blob and
-Resend**. Nothing has been deployed yet; the deployment itself is deferred (spec §1.3). Steps
-that need an account, a credential or a legal sign-off are marked **(owner)**, **(accountant)**
-or **(lawyer)**.
+Resend**. The site first launches as a showcase on the free Hobby plan (§0); §1–13 describe the
+full store. Steps that need an account, a credential or a legal sign-off are marked **(owner)**,
+**(accountant)** or **(lawyer)**.
 
 > Never commit secrets. All credentials live in the Vercel project's environment variables and
 > in your local `.env.local`, which git ignores. The repository is public.
+
+## 0. First launch: a showcase on Vercel Hobby
+
+The site goes public before Cardcom exists: works, prices, "Ask about this work" and the contact
+form, with no online purchase (`SALES_OPEN=false`). Emails go only to the painter's notification
+address (`EMAIL_TO_VISITORS=false`), because Resend's test sender `onboarding@resend.dev` can only
+email the Resend account's owner. See `docs/architecture.md`, "Showcase launch".
+
+- **Plan: Hobby** (free). Its terms allow non-commercial use only, so move to Pro before sales
+  open. Hobby runs each cron job once a day, within the hour; `vercel.json` is set up for that.
+- **Steps:**
+  1. `npx vercel login` **(owner)**, then `npx vercel link` (project `geula-levi`). Do not
+     connect the Git repository: only CLI deployments build.
+  2. In the project **(owner)**:
+     - Storage: create **Neon Postgres** (Frankfurt) and connect it;
+     - create a **public Blob store** and connect it;
+     - create a **private Blob store** and connect it with the env prefix `BLOB_PRIVATE`;
+     - Analytics: enable **Web Analytics**.
+  3. A **Resend** account with the notification address, an API key, and `RESEND_API_KEY` in
+     Settings → Environment Variables, Production **(owner)**.
+  4. Production variables (`vercel env add <name> production`):
+
+     | Variable | Value |
+     |---|---|
+     | `APP_ENV` | `production` |
+     | `APP_URL` | `https://<project>.vercel.app` |
+     | `DEMO_MODE` | `false` |
+     | `SALES_OPEN`, `EMAIL_TO_VISITORS` | `false`, `false` |
+     | `EMAIL_DRIVER`, `EMAIL_FROM` | `resend`, `Geula Levi <onboarding@resend.dev>` |
+     | `STORAGE_DRIVER` | `blob` |
+     | `TAX_DOCUMENTS_MODE`, `SHIPPING_CARRIER` | `none`, `manual` |
+     | `APP_SECRET`, `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MOCK_WEBHOOK_SECRET` | `openssl rand -base64 48` each |
+     | `PII_ENCRYPTION_KEY` | `openssl rand -base64 32` (back it up) |
+     | `NEXT_PUBLIC_BLOB_HOST` | printed by `npm run prod:upload` |
+     | `GOOGLE_SITE_VERIFICATION` | Search Console's "HTML tag" code, once you have it |
+
+     `PAYMENT_PROVIDERS` stays unset: production outside demo mode never builds the mock provider.
+  5. `npx vercel env pull .env.production.local --environment=production` (ignored by git and
+     by Vercel), then `npm run prod:migrate`, `npm run prod:seed` (the settings and the painter's
+     catalog; images into `.data/prod-seed`) and `npm run prod:upload` (the images to the two
+     stores). Set `NEXT_PUBLIC_BLOB_HOST`.
+  6. `npm run prod:admin` in a terminal **(owner)**: it asks for the admin email and the password
+     (hidden, twice).
+  7. `npx vercel deploy --prod`. Sign in at `/he/admin`, set up two-step verification, and fill
+     in Settings → Business (phone, addresses, notification email).
+  8. Google Search Console **(owner)**: add a URL-prefix property for the `vercel.app` URL and
+     choose "HTML tag". Put its code in `GOOGLE_SITE_VERIFICATION`, redeploy, press Verify, then
+     submit `/sitemap.xml`. Indexing takes days to weeks.
+- **Checks:**
+  - `curl -sI` on `/he` and an artwork page: 200, with no `X-Robots-Tag: noindex`;
+  - `/robots.txt` and `/sitemap.xml` use the `vercel.app` URL;
+  - images come from the Blob host;
+  - `/he/checkout/<slug>` shows the closed notice;
+  - a contact message reaches the notification address and the admin inbox.
 
 ## 1. Vercel project
 
@@ -16,11 +70,11 @@ or **(lawyer)**.
 - **Runtime: Node 24.x**, from `engines.node` in `package.json`. Development used Node 26.7;
   the code avoids Node-26-only APIs.
 - **Region: `fra1`** (Frankfurt), set in `vercel.json`, next to the Neon database.
-- **Build command** (Project → Settings → Build): `npm run db:migrate && npm run build`.
-  Migrations run before the build against `DATABASE_URL_UNPOOLED`, so a failing migration stops
-  the deployment before any new code goes live. Migrations are additive. Never edit a committed
-  `drizzle/*.sql` file.
-- **Install command:** the default `npm ci`. `.npmrc` keeps versions exact.
+- **Build command** (`vercel.json`): `npm run db:migrate && npm run build` on production
+  deployments (`VERCEL_ENV=production`); other deployments only build. Migrations run before the
+  build against `DATABASE_URL_UNPOOLED`, so a failing migration stops the deployment before any
+  new code goes live. Migrations are additive. Never edit a committed `drizzle/*.sql` file.
+- **Install command** (`vercel.json`): `npm ci`. `.npmrc` keeps versions exact.
 - **Crons** are declared in `vercel.json`. Vercel calls `GET /api/cron/<job>` with
   `Authorization: Bearer $CRON_SECRET`, and only on the **production** deployment:
 
@@ -32,8 +86,13 @@ or **(lawyer)**.
   | `daily` | 05:00 | deadlines and alerts, COMPLETED transitions, the Cardcom tail poll and live sweep, invariants, the go-live digest |
   | `purge` | 02:30 | retention purge (spec §7) |
 
-  Each run is recorded in `cron_runs`. The dashboard warns when a job has not run for 15
-  minutes. Every job is idempotent, so a skipped or doubled run is harmless.
+  Each run is recorded in `cron_runs`. Every job is idempotent, so a skipped or doubled run is
+  harmless. **On Hobby (§0)** `vercel.json` runs every job daily (purge 02:30, outbox 03:00,
+  reconcile 03:30, tracking 04:00, daily 05:00) and the dashboard warns after 26 h. On Pro,
+  restore the schedules above and the dashboard's thresholds (20 min for `reconcile` and
+  `outbox`, 3 h for `tracking`) in `src/server/admin/dashboard.ts`.
+- **Upload:** `.vercelignore` keeps local data (`.data/`), env files, build output, tests and the
+  seed input out of a CLI deployment.
 
 ## 2. Database: Neon (through the Vercel Marketplace)
 
@@ -61,8 +120,9 @@ or **(lawyer)**.
   `BLOB_PRIVATE_READ_WRITE_TOKEN` (private store), and `NEXT_PUBLIC_BLOB_HOST`, the public
   store's host (for example `abc123.public.blob.vercel-storage.com`). `next/image` and the CSP
   use it. `NEXT_PUBLIC_*` values are inlined at build time, so redeploy after changing it.
-- The catalog seed supports only the local driver. Production starts from an empty catalog, and the
-  painter uploads her works in the admin.
+- The catalog seed writes images with the local driver only. Production gets the painter's
+  catalog with `npm run prod:seed`, and `npm run prod:upload` copies its images to the two stores
+  under the same keys (§0).
 - Admin uploads go through `POST /api/admin/uploads`, which is limited to 4.5 MB per request on
   Vercel. See §11.
 
@@ -88,8 +148,10 @@ Rules enforced when `APP_ENV=production`:
 - `RATE_LIMIT_SCALE=1`;
 - `FORM_MIN_AGE_MS` of at least 3000;
 - secrets of at least 32 characters;
-- with `DEMO_MODE=false`: no `mock` provider, tax documents set to `morning` or `gateway`, a
-  carrier other than `mock`, `EMAIL_DRIVER=resend` and `STORAGE_DRIVER=blob`.
+- with `DEMO_MODE=false`: `EMAIL_DRIVER=resend` and `STORAGE_DRIVER=blob`, and while
+  `SALES_OPEN=true` also no `mock` provider, tax documents set to `morning` or `gateway`, and a
+  carrier other than `mock`;
+- with `STORAGE_DRIVER=blob`: both tokens and `NEXT_PUBLIC_BLOB_HOST`.
 
 `DEMO_MODE=true` forbids every `live` provider mode. `ADMIN_REQUIRE_2FA` is forced on whenever
 `APP_URL` is https.
@@ -227,9 +289,9 @@ live provider is refused while any blocker exists. The blocker codes are `DEMO_M
       real works.
 - [ ] Business profile completed in Settings → Business: legal name, ID or business number,
       addresses, phones **(owner)**.
-- [ ] Legal texts approved by the lawyer **(lawyer)**. This is a code change in
-      `src/content/legal/versions.ts`: set `LEGAL_TEXTS_APPROVED = true` and replace each
-      `-draft` version with the approval date. Orders store the versions the buyer accepted.
+- [x] Legal texts approved by the lawyer **(lawyer)**: `LEGAL_TEXTS_APPROVED = true` and every
+      version in `src/content/legal/versions.ts` is the approval date, 2026-10-10. Orders store
+      the versions the buyer accepted.
 - [ ] Tax-document mode and document types confirmed **(accountant)**.
 - [ ] Shipping rates calibrated (Settings → Shipping → "Mark calibrated today") and insurance
       coverage confirmed in writing **(owner)**.

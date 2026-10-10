@@ -138,7 +138,7 @@ describe("checkInvariants", () => {
 
 describe("goLiveBlockers", () => {
   it("lists the demo-mode blockers", async () => {
-    const r = await goLiveBlockers({ db });
+    const r = await goLiveBlockers({ db, legalApproved: false });
     expect(r.ok).toBe(false);
     for (const b of [
       "DEMO_MODE",
@@ -151,5 +151,10 @@ describe("goLiveBlockers", () => {
     ]) {
       expect(r.blockers).toContain(b);
     }
+  });
+
+  it("drops LEGAL_NOT_APPROVED once the legal texts are approved", async () => {
+    const r = await goLiveBlockers({ db });
+    expect(r.blockers).not.toContain("LEGAL_NOT_APPROVED");
   });
 });

@@ -1,3 +1,5 @@
+import { Link } from "react-email";
+import { formatPhone, telHref, whatsappHref } from "@/lib/phone";
 import { Layout } from "../Layout";
 import { ButtonLink, money, P, Title } from "../parts";
 import type { EmailTemplate, EmailTemplateProps } from "../types";
@@ -9,7 +11,8 @@ const kindKey = (p: Props) =>
 
 /**
  * `painter-new-request` (spec §4.5, §5.8): a new buyer question, quote request or offer, with a
- * link to the admin inbox. Always Hebrew (painter template).
+ * link to the admin inbox and, when the sender gave a phone, call and WhatsApp links. Always
+ * Hebrew (painter template).
  */
 export const painterNewRequest: EmailTemplate<Props> = {
   audience: "painter",
@@ -42,6 +45,18 @@ export const painterNewRequest: EmailTemplate<Props> = {
           {t("from", { name: p.name })} · <span dir="ltr">{p.email}</span>
           {p.country ? ` · ${p.country}` : ""}
         </P>
+        {p.phone ? (
+          <P>
+            {t("phone")}{" "}
+            <Link href={telHref(p.phone)} style={{ color: "#1a1a1a" }}>
+              <span dir="ltr">{formatPhone(p.phone, "he")}</span>
+            </Link>
+            {" · "}
+            <Link href={whatsappHref(p.phone)} style={{ color: "#1a1a1a" }}>
+              {t("whatsapp")}
+            </Link>
+          </P>
+        ) : null}
         {p.offerAmountMinor && p.offerCurrency ? (
           <P>
             {t("offer")}{" "}

@@ -10,7 +10,9 @@ import { countryName, countryOptions } from "@/lib/countries";
 import { formatDateTime } from "@/lib/format";
 import { isLocale } from "@/lib/locale";
 import { toDecimalString } from "@/lib/money";
+import { formatPhone, telHref, whatsappHref } from "@/lib/phone";
 import { paths } from "@/lib/routes";
+import { env } from "@/server/env";
 import { requireAdmin } from "@/server/next/guards";
 import { getRequest } from "@/server/requests/service";
 import { getSetting } from "@/server/settings";
@@ -19,6 +21,7 @@ import {
   closeAction,
   counterOfferAction,
   declineAction,
+  markAnsweredAction,
   replyAction,
   sendQuoteAction,
 } from "../actions";
@@ -37,7 +40,10 @@ const TEMPLATES = ["available", "sold", "quoteSoon", "moreDetails"] as const;
 /**
  * `/admin/inbox/[id]` (spec §6.10, §5.8): the request, the conversation history of that address,
  * a templated reply (emailed in the buyer's language), decline / close, and for a new quote request
- * "Send quote" → `createLinkOrder({ kind: 'QUOTE' })`.
+ * "Send quote" → `createLinkOrder({ kind: 'QUOTE' })`. While online sales are closed
+ * (`SALES_OPEN=false`) quotes and offers get a notice instead of the payment-link forms; while
+ * visitor emails are off (`EMAIL_TO_VISITORS=false`) "Mark as answered" (answered by phone or
+ * WhatsApp) replaces the emailed reply.
  */
 export default async function RequestDetailPage({
   params,
@@ -71,14 +77,11 @@ export default async function RequestDetailPage({
       ? artwork.priceIlsMinor
       : artwork.priceUsdMinor
     : null;
-  const canAnswerOffer =
-    r.kind === "OFFER" &&
-    r.status === "NEW" &&
-    artwork?.saleStatus === "AVAILABLE";
-  const canQuote =
-    r.kind === "QUOTE" &&
-    r.status === "NEW" &&
-    artwork?.saleStatus === "AVAILABLE";
+  const linkable = r.status === "NEW" && artwork?.saleStatus === "AVAILABLE";
+  const canAnswerOffer = env.SALES_OPEN && linkable && r.kind === "OFFER";
+  const canQuote = env.SALES_OPEN && linkable && r.kind === "QUOTE";
+  const salesClosedNotice =
+    !env.SALES_OPEN && linkable && r.kind !== "QUESTION";
 
   /** The link-order fields shared by "send quote", "accept" and "counter" (price null = fixed). */
   const linkFields = (o: { currency: "ILS" | "USD"; price: string | null }) => (
@@ -142,12 +145,7 @@ export default async function RequestDetailPage({
           type="select"
           defaultValue="QUOTED"
           options={(
-            [
-              "QUOTED",
-              "CARRIER_TABLE",
-              "LOCAL_PICKUP",
-              "ARTIST_DELIVERY",
-            ] as const
+            ["QUOTED", "CARRIER_TABLE", "ISRAEL_POST", "LOCAL_PICKUP"] as const
           ).map((m) => ({
             value: m,
             label: t(`methods.${m}`),
@@ -239,8 +237,23 @@ export default async function RequestDetailPage({
             <bdi dir="ltr">{r.email}</bdi>
           </dd>
           <dt className="text-ink-muted">{t("phone")}</dt>
-          <dd>
-            <bdi dir="ltr">{r.phone ?? "—"}</bdi>
+          <dd className="flex flex-wrap gap-x-3">
+            {r.phone ? (
+              <>
+                <a href={telHref(r.phone)} className="underline">
+                  <bdi dir="ltr">{formatPhone(r.phone, locale)}</bdi>
+                </a>
+                <a
+                  href={whatsappHref(r.phone)}
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {t("whatsapp")}
+                </a>
+              </>
+            ) : (
+              "—"
+            )}
           </dd>
           <dt className="text-ink-muted">{t("country")}</dt>
           <dd>{r.country ? countryName(r.country, locale) : "—"}</dd>
@@ -262,8 +275,20 @@ export default async function RequestDetailPage({
               <bdi>{r.adminReply}</bdi>
             </p>
           </>
+        ) : r.repliedAt ? (
+          <p data-testid="answered-offline">
+            {t("answeredOffline", {
+              date: formatDateTime(r.repliedAt, locale),
+            })}
+          </p>
         ) : null}
       </section>
+
+      {salesClosedNotice ? (
+        <p className="border border-line p-4" data-testid="sales-closed">
+          {t("salesClosed")}
+        </p>
+      ) : null}
 
       {canQuote ? (
         <section
@@ -354,37 +379,62 @@ export default async function RequestDetailPage({
       ) : null}
 
       <section className="flex flex-col gap-3 border border-line p-4">
-        <h2 className="text-xl">{t("reply")}</h2>
-        <ActionForm
-          action={replyAction}
-          locale={locale}
-          hidden={hidden}
-          submitLabel={t("send")}
-          successText={t("sent")}
-          errorNamespace={err}
-          testId="reply-form"
-          resetOnSuccess
-        >
-          <ReplyTemplatePicker
-            label={t("replyTemplate")}
-            placeholder={t("replyTemplatePick")}
-            target="reply"
-            templates={TEMPLATES.map((k) => ({
-              key: k,
-              label: t(`replyTemplates.${k}`),
-              text: tb(k, { name: r.name }),
-            }))}
-          />
-          <FormField
-            name="reply"
-            label={t("reply")}
-            hint={t("replyHint", { language: tl(r.locale) })}
-            type="textarea"
-            rows={8}
-            dir={r.locale === "he" ? "rtl" : "ltr"}
-            required
-          />
-        </ActionForm>
+        <h2 className="text-xl">
+          {env.EMAIL_TO_VISITORS ? t("reply") : t("answer")}
+        </h2>
+        {!env.EMAIL_TO_VISITORS && r.status === "NEW" ? (
+          <>
+            <p className="text-sm text-ink-muted">{t("markAnsweredIntro")}</p>
+            <ActionForm
+              action={markAnsweredAction}
+              locale={locale}
+              hidden={hidden}
+              submitLabel={t("markAnswered")}
+              successText={t("markedAnswered")}
+              errorNamespace={err}
+              testId="mark-answered-form"
+            >
+              <FormField
+                name="note"
+                label={t("answerNote")}
+                type="textarea"
+                rows={3}
+              />
+            </ActionForm>
+          </>
+        ) : null}
+        {env.EMAIL_TO_VISITORS ? (
+          <ActionForm
+            action={replyAction}
+            locale={locale}
+            hidden={hidden}
+            submitLabel={t("send")}
+            successText={t("sent")}
+            errorNamespace={err}
+            testId="reply-form"
+            resetOnSuccess
+          >
+            <ReplyTemplatePicker
+              label={t("replyTemplate")}
+              placeholder={t("replyTemplatePick")}
+              target="reply"
+              templates={TEMPLATES.map((k) => ({
+                key: k,
+                label: t(`replyTemplates.${k}`),
+                text: tb(k, { name: r.name }),
+              }))}
+            />
+            <FormField
+              name="reply"
+              label={t("reply")}
+              hint={t("replyHint", { language: tl(r.locale) })}
+              type="textarea"
+              rows={8}
+              dir={r.locale === "he" ? "rtl" : "ltr"}
+              required
+            />
+          </ActionForm>
+        ) : null}
         {r.kind !== "QUESTION" && r.status === "NEW" ? (
           <ActionForm
             action={declineAction}
@@ -402,7 +452,11 @@ export default async function RequestDetailPage({
           >
             <FormField
               name="reply"
-              label={t("declineHint")}
+              label={
+                env.EMAIL_TO_VISITORS
+                  ? t("declineHint")
+                  : t("declineHintOffline")
+              }
               type="textarea"
               rows={3}
             />

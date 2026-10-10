@@ -93,7 +93,9 @@ export default async function OrderPage({
           ? tc("delivery.free")
           : formatMoney(m.priceMinor, view.currency, locale);
       const extras = [
-        m.method === "CARRIER_TABLE" ? tc("delivery.tracked") : null,
+        m.method === "CARRIER_TABLE" || m.method === "ISRAEL_POST"
+          ? tc("delivery.tracked")
+          : null,
         m.insured
           ? tc("delivery.insuredUpTo", {
               amount: formatMoney(m.insuredValueMinor, view.currency, locale),

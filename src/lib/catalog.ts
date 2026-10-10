@@ -114,6 +114,8 @@ export type ZoneEstimateDTO =
       kind: "price";
       fromIlsMinor: number;
       insured: boolean;
+      /** The price is for the work rolled in a tube (a choice at checkout). */
+      rolled: boolean;
       estimate: string | null;
     }
   | {

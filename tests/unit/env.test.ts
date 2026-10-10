@@ -34,6 +34,26 @@ function productionEnv(): Record<string, string> {
     STORAGE_DRIVER: "blob",
     BLOB_READ_WRITE_TOKEN: "placeholder-blob",
     BLOB_PRIVATE_READ_WRITE_TOKEN: "placeholder-blob-private",
+    NEXT_PUBLIC_BLOB_HOST: "store.public.blob.vercel-storage.com",
+  };
+}
+
+/**
+ * The showcase launch (docs/architecture.md "Showcase launch"): production with online sales
+ * closed and emails only to the painter; no payment provider, tax documents or carrier.
+ */
+function showcaseEnv(): Record<string, string> {
+  return {
+    ...productionEnv(),
+    SALES_OPEN: "false",
+    EMAIL_TO_VISITORS: "false",
+    PAYMENT_PROVIDERS: "",
+    CARDCOM_MODE: "disabled",
+    CARDCOM_TERMINAL_NUMBER: "",
+    CARDCOM_API_NAME: "",
+    CARDCOM_API_PASSWORD: "",
+    TAX_DOCUMENTS_MODE: "none",
+    SHIPPING_CARRIER: "manual",
   };
 }
 
@@ -193,5 +213,49 @@ describe("parseEnv cross-field rules (spec §4.8)", () => {
       { ...testEnv(), PII_ENCRYPTION_KEY: "test-too-short" },
       "PII_ENCRYPTION_KEY",
     );
+  });
+
+  it("blob storage needs the public store's host", () => {
+    expectProblem(
+      { ...productionEnv(), NEXT_PUBLIC_BLOB_HOST: "" },
+      "NEXT_PUBLIC_BLOB_HOST",
+    );
+  });
+});
+
+describe("the showcase switches", () => {
+  it("default to an open store that emails visitors", () => {
+    const e = parseEnv(testEnv());
+    expect(e.SALES_OPEN).toBe(true);
+    expect(e.EMAIL_TO_VISITORS).toBe(true);
+    expect(e.GOOGLE_SITE_VERIFICATION).toBeUndefined();
+  });
+
+  it("a showcase production needs no payment, tax-document or carrier setup", () => {
+    expect(problems(showcaseEnv())).toEqual([]);
+    const e = parseEnv({ ...showcaseEnv(), GOOGLE_SITE_VERIFICATION: "abc" });
+    expect(e.SALES_OPEN).toBe(false);
+    expect(e.EMAIL_TO_VISITORS).toBe(false);
+    expect(e.GOOGLE_SITE_VERIFICATION).toBe("abc");
+    // Mock is the parsed default, but production outside demo mode never builds it.
+    expect(e.PAYMENT_PROVIDERS).toEqual(["mock"]);
+  });
+
+  it("a showcase production still needs Resend, Blob and strong secrets", () => {
+    expectProblem({ ...showcaseEnv(), EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
+    expectProblem(
+      { ...showcaseEnv(), STORAGE_DRIVER: "local" },
+      "STORAGE_DRIVER",
+    );
+    expectProblem(
+      { ...showcaseEnv(), CRON_SECRET: "x".repeat(20) },
+      "CRON_SECRET",
+    );
+  });
+
+  it("opening sales brings back the real-store rules", () => {
+    const open = { ...showcaseEnv(), SALES_OPEN: "true" };
+    expectProblem(open, "PAYMENT_PROVIDERS");
+    expectProblem(open, "TAX_DOCUMENTS_MODE");
   });
 });

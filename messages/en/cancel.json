@@ -12,6 +12,7 @@
     "rights4m": "Senior citizens (65+), people with disabilities and new immigrants (up to 5 years): if the purchase involved a conversation with the seller, you may cancel within 4 months.",
     "rightsFee": "A cancellation that is not due to a defect or a mismatch may carry a fee of up to 5% of the price or ₪100, whichever is lower.",
     "rightsRefund": "Refunds are made within 14 days of receiving your notice, to the original payment method. If the work was already delivered, we will send return instructions.",
+    "fullPolicy": "The full cancellation and returns policy",
     "channelsTitle": "How to give notice",
     "channelForm": "With the online form on this page",
     "channelPhone": "By phone: <ltr>{phone}</ltr> (from abroad: <ltr>{phoneIntl}</ltr>)",
@@ -28,6 +29,7 @@
     "orderNumber": "Order number",
     "orderHint": "For example GG-7K3M9Q. Leave empty if you give your ID number.",
     "email": "Email (for an emailed acknowledgement)",
+    "emailPlain": "Email",
     "phone": "Phone",
     "reason": "Reason for cancelling",
     "reasonNone": "Optional",
@@ -76,6 +78,7 @@
     "refundDue": "Any refund will be made no later than {date}.",
     "emailSent": "An acknowledgement was also sent to the email address you gave.",
     "noEmail": "No email address was given, so this acknowledgement is shown here only.",
+    "shownHereOnly": "This acknowledgement is shown here only, so please keep or print it.",
     "print": "Print the acknowledgement",
     "another": "Send another notice"
   },

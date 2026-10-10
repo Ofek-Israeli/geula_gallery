@@ -217,7 +217,11 @@ function requireStatus(
 }
 
 function isCarrierMethod(s: Pick<Shipment, "method">): boolean {
-  return s.method === "CARRIER_TABLE" || s.method === "QUOTED";
+  return (
+    s.method === "CARRIER_TABLE" ||
+    s.method === "ISRAEL_POST" ||
+    s.method === "QUOTED"
+  );
 }
 
 const done = <T>(result: T, outbox = true) =>
@@ -668,7 +672,8 @@ export function shipperFromProfile(
   return {
     name,
     companyName: profile.tradeName.en,
-    email: profile.email,
+    // DHL's shipper contact; without a public email, the painter's notification address.
+    email: profile.email || profile.notificationEmail,
     address: {
       name,
       line1,
@@ -1334,7 +1339,7 @@ export async function recordManualTracking(
         if (!isCarrierMethod(shipment)) {
           throw new ConflictError(
             "NOT_A_CARRIER_SHIPMENT",
-            "pickup and artist delivery have no tracking",
+            "pickup has no tracking",
           );
         }
         if (
@@ -1533,7 +1538,7 @@ export async function addManualEvent(
   return done({ status });
 }
 
-// ---------------------------------------------------------------- pickup and artist delivery
+// ---------------------------------------------------------------- pickup
 
 /**
  * Step 3c "Pickup" (spec §5.5): AWAITING_FULFILLMENT → READY_FOR_PICKUP; the `ready-for-pickup`
@@ -1614,70 +1619,6 @@ export async function markCollected(
     { db: deps.db, name: "shipment.collected" },
   );
   return done({ status: "COLLECTED" as ShipmentStatus });
-}
-
-/** Step 3d "Artist delivery": PACKED → OUT_FOR_DELIVERY. */
-export async function startArtistDelivery(
-  orderId: string,
-  ctx: AdminContext,
-  deps: ShipmentDeps = {},
-): Promise<ServiceResult<{ status: ShipmentStatus }>> {
-  await withTx(
-    async (tx) => {
-      const { order, shipment } = await lockForFulfillment(tx, orderId);
-      if (shipment.method !== "ARTIST_DELIVERY") {
-        throw new ConflictError(
-          "NOT_ARTIST_DELIVERY",
-          "not an artist delivery",
-        );
-      }
-      requireStatus(shipment, ["PACKED"]);
-      await applyShipmentStatus(tx, {
-        order,
-        shipment,
-        from: ["PACKED"],
-        to: "OUT_FOR_DELIVERY",
-        actor: ctx.actor,
-        ipHash: ctx.ipHash,
-        source: "MANUAL",
-      });
-    },
-    { db: deps.db, name: "shipment.artist_out" },
-  );
-  return done({ status: "OUT_FOR_DELIVERY" as ShipmentStatus });
-}
-
-/** Artist delivery OUT_FOR_DELIVERY → DELIVERED, behind the disclosure guard. */
-export async function markArtistDelivered(
-  orderId: string,
-  input: { disclosureHandedOver: boolean },
-  ctx: AdminContext,
-  deps: ShipmentDeps = {},
-): Promise<ServiceResult<{ status: ShipmentStatus }>> {
-  await withTx(
-    async (tx) => {
-      const { order, shipment } = await lockForFulfillment(tx, orderId);
-      if (shipment.method !== "ARTIST_DELIVERY") {
-        throw new ConflictError(
-          "NOT_ARTIST_DELIVERY",
-          "not an artist delivery",
-        );
-      }
-      requireStatus(shipment, ["OUT_FOR_DELIVERY"]);
-      await disclosureGuard(tx, order, input.disclosureHandedOver);
-      await applyShipmentStatus(tx, {
-        order,
-        shipment,
-        from: ["OUT_FOR_DELIVERY"],
-        to: "DELIVERED",
-        actor: ctx.actor,
-        ipHash: ctx.ipHash,
-        source: "MANUAL",
-      });
-    },
-    { db: deps.db, name: "shipment.artist_delivered" },
-  );
-  return done({ status: "DELIVERED" as ShipmentStatus });
 }
 
 // ---------------------------------------------------------------- cancellation (WS6 hook)

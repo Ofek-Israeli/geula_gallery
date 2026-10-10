@@ -1,9 +1,9 @@
-import { H2, L, type LegalDocModule, P, UL } from "../types";
+import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
 /** הצהרת נגישות (וולונטרית) – טיוטה (spec §6.7). */
 export const accessibility: LegalDocModule = {
   title: "הצהרת נגישות",
-  Body: ({ profile: p, versionDate }) => (
+  Body: ({ profile: p, links, versionDate }) => (
     <>
       <P>
         אנו רואים חשיבות בכך שהאתר יהיה נגיש לכולם. האתר נבנה במטרה לעמוד
@@ -26,13 +26,17 @@ export const accessibility: LegalDocModule = {
           מסמכי PDF (כגון מסמך הגילוי המצורף לדוא״ל) אינם מתויגים לנגישות; לכל
           מסמך כזה קיימת גרסת HTML נגישה באתר.
         </li>
-        <li>תמונות ההדגמה הן ציורים מאוסף מוזיאון ומשמשות כממלא מקום.</li>
       </UL>
 
       <H2>פנייה בנושא נגישות</H2>
       <P>
-        נתקלת בבעיה? נשמח לשמוע ולתקן: <L>{p.accessibilityContact}</L>, טלפון{" "}
-        <L>{p.phoneLocal}</L>.
+        נתקלת בבעיה? נשמח לשמוע ולתקן:{" "}
+        {p.accessibilityContact ? (
+          <L>{p.accessibilityContact}</L>
+        ) : (
+          <A href={links.contact}>טופס יצירת הקשר</A>
+        )}
+        , טלפון <L>{p.phoneLocal}</L>.
       </P>
       <P>ההצהרה עודכנה ב-{versionDate}.</P>
     </>

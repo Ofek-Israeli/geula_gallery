@@ -104,11 +104,15 @@ export interface GoLiveItem {
 const DAY = 24 * 60 * 60_000;
 const ITEMS = 5;
 
-/** Expected cadence of each cron job (spec §5.11), with slack. */
+/**
+ * Expected cadence of each cron job (spec §5.11), with slack. It follows `vercel.json`: daily on
+ * the Hobby plan (a showcase site). With online sales on Pro, `reconcile` and `outbox` go back to
+ * every 5 minutes (20 min here) and `tracking` to hourly (3 h); see `docs/deploy.md`.
+ */
 const CRON_MAX_AGE_MS: Record<string, number> = {
-  reconcile: 20 * 60_000,
-  outbox: 20 * 60_000,
-  tracking: 3 * 60 * 60_000,
+  reconcile: 26 * 60 * 60_000,
+  outbox: 26 * 60 * 60_000,
+  tracking: 26 * 60 * 60_000,
   daily: 26 * 60 * 60_000,
   purge: 26 * 60 * 60_000,
 };

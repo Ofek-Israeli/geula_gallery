@@ -813,6 +813,7 @@ export default async function ArtworkEditorPage({
                           locale={locale}
                         />
                         {e.insured ? ` · ${t("shipping.insured")}` : ""}
+                        {e.rolled ? ` · ${t("shipping.rolled")}` : ""}
                       </>
                     )}
                   </dd>

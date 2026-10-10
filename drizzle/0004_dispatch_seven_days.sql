@@ -1,0 +1,1 @@
+ALTER TABLE "artworks" ALTER COLUMN "dispatch_days" SET DEFAULT 7;

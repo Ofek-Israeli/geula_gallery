@@ -47,23 +47,29 @@ type Action = (
 /**
  * The cancellation flow (spec §5.7 steps 3–4): form → review → acknowledgement. The Server Action
  * is passed to `useActionState` directly, so every step is a plain POST that also works without
- * JavaScript. The ID number is never echoed back in full after the form step.
+ * JavaScript. The ID number is never echoed back in full after the form step. Without visitor
+ * emails (`visitorEmail` false) neither the form nor the acknowledgement promises an email.
  */
 export function CancelFlow({
   action,
   locale,
   formStart,
   prefillOrder,
+  visitorEmail = true,
 }: {
   action: Action;
   locale: Locale;
   formStart: string;
   prefillOrder?: string;
+  /** `EMAIL_TO_VISITORS`: the acknowledgement is also emailed. */
+  visitorEmail?: boolean;
 }) {
   const [state, formAction] = useActionState(action, null);
   const data = state?.ok ? state.data : null;
 
-  if (data?.step === "ack") return <Acknowledgement ack={data.ack} />;
+  if (data?.step === "ack") {
+    return <Acknowledgement ack={data.ack} visitorEmail={visitorEmail} />;
+  }
   if (data?.step === "review") {
     return (
       <Review
@@ -87,6 +93,7 @@ export function CancelFlow({
       }
       errors={data?.step === "form" ? (data.errors ?? {}) : {}}
       banner={data?.step === "form" ? (data.banner ?? null) : failure}
+      visitorEmail={visitorEmail}
     />
   );
 }
@@ -132,6 +139,7 @@ function NoticeForm({
   values,
   errors,
   banner,
+  visitorEmail,
 }: {
   formAction: (fd: FormData) => void;
   locale: Locale;
@@ -139,6 +147,7 @@ function NoticeForm({
   values: CancelFormValues;
   errors: Record<string, string>;
   banner: string | null;
+  visitorEmail: boolean;
 }) {
   const t = useTranslations("cancel");
   const errorText = (field: string): string | undefined => {
@@ -220,7 +229,7 @@ function NoticeForm({
         </Field>
         <Field
           id={IDS.email ?? ""}
-          label={t("form.email")}
+          label={t(visitorEmail ? "form.email" : "form.emailPlain")}
           error={errorText("email")}
         >
           {(c) => (
@@ -455,8 +464,10 @@ function Review({
 
 function Acknowledgement({
   ack,
+  visitorEmail,
 }: {
   ack: Extract<CancelFlowState, { step: "ack" }>["ack"];
+  visitorEmail: boolean;
 }) {
   const t = useTranslations("cancel");
   return (
@@ -515,7 +526,11 @@ function Acknowledgement({
         })}
       </p>
       <p className="text-ink-muted">
-        {ack.email ? t("ack.emailSent") : t("ack.noEmail")}
+        {!visitorEmail
+          ? t("ack.shownHereOnly")
+          : ack.email
+            ? t("ack.emailSent")
+            : t("ack.noEmail")}
       </p>
       <div className="flex flex-wrap gap-3 print:hidden">
         <button

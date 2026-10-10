@@ -147,7 +147,7 @@ const detailsSchema = base
   .extend({
     country: countrySchema,
     method: z
-      .enum(["CARRIER_TABLE", "LOCAL_PICKUP", "ARTIST_DELIVERY", "QUOTED"])
+      .enum(["CARRIER_TABLE", "ISRAEL_POST", "LOCAL_PICKUP", "QUOTED"])
       .optional(),
     recipient: optionalText(120),
     phone: optionalText(40),
@@ -160,7 +160,6 @@ const detailsSchema = base
     vatId: optionalText(40),
     needsAddress: checkboxSchema,
     terms: checkboxSchema.refine((v) => v),
-    age: checkboxSchema.refine((v) => v),
     dap: checkboxSchema,
     receiptEmail: checkboxSchema,
   })
@@ -243,7 +242,6 @@ const runDetails = publicAction(
         termsVersion: LEGAL_VERSIONS.terms,
         returnsVersion: LEGAL_VERSIONS.returns,
         privacyVersion: LEGAL_VERSIONS.privacy,
-        ageConfirmed: true,
         ...(input.country !== "IL"
           ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
           : {}),

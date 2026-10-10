@@ -14,6 +14,7 @@ import {
   answerOffer,
   closeRequest,
   declineRequest,
+  markAnsweredOffline,
   replyToRequest,
   sendQuote,
 } from "@/server/requests/service";
@@ -32,6 +33,13 @@ export const replyAction = adminAction(
   async (i, ctx) =>
     domainErrors(() => replyToRequest(ctx, i.requestId, i.reply)),
   { name: "inbox.reply" },
+);
+
+export const markAnsweredAction = adminAction(
+  id.extend({ note: nullableText(2000) }),
+  async (i, ctx) =>
+    domainErrors(() => markAnsweredOffline(ctx, i.requestId, i.note)),
+  { name: "inbox.mark_answered" },
 );
 
 export const declineAction = adminAction(
@@ -57,9 +65,9 @@ const linkSchema = id
     itemPrice: amountMinorSchema,
     shippingMethod: z.enum([
       "CARRIER_TABLE",
+      "ISRAEL_POST",
       "QUOTED",
       "LOCAL_PICKUP",
-      "ARTIST_DELIVERY",
     ]),
     lockedShipping: optionalAmountMinorSchema,
     expiresInHours: intSchema(1, 24 * 14, 48),

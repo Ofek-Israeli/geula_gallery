@@ -34,9 +34,9 @@ export const createManualOrderAction = adminAction(
       priceChangeReason: nullableText(500),
       shippingMethod: z.enum([
         "CARRIER_TABLE",
+        "ISRAEL_POST",
         "QUOTED",
         "LOCAL_PICKUP",
-        "ARTIST_DELIVERY",
       ]),
       lockedShipping: optionalAmountMinorSchema,
       buyerLocale: z.enum(LOCALE_VALUES),

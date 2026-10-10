@@ -16,8 +16,8 @@ import type { Currency } from "@/lib/money";
 export type VatModeValue = "OSEK_PATUR" | "OSEK_MURSHE";
 export type ShippingMethodValue =
   | "CARRIER_TABLE"
+  | "ISRAEL_POST"
   | "LOCAL_PICKUP"
-  | "ARTIST_DELIVERY"
   | "QUOTED";
 
 export interface SellerIdentity {
@@ -67,6 +67,8 @@ export interface PreContractInput {
   /** Zero-rated export (VAT 0) — accountant-confirmed wording. */
   zeroRatedExport: boolean;
   shippingMethod: ShippingMethodValue;
+  /** The buyer chose to have the works rolled in a tube (off the stretcher). */
+  rolled?: boolean;
   /** Localized estimate, e.g. "3–5 business days". */
   deliveryEstimate: string;
   destinationCountry: string;
@@ -150,6 +152,7 @@ const PRE_TEXT = {
     merchantCountry: "מדינת העוסק",
     israel: "ישראל",
     service: "שירות לקוחות בטלפון ובדוא״ל, בימים א׳–ה׳.",
+    serviceNoEmail: "שירות לקוחות בטלפון ובטופס יצירת הקשר באתר, בימים א׳–ה׳.",
     works: "המוצר",
     original: "יצירה מקורית, עותק יחיד.",
     inventory: "מספר מלאי",
@@ -169,9 +172,12 @@ const PRE_TEXT = {
     total: "סה״כ לתשלום",
     vatPatur: "עוסק פטור: המחיר אינו כולל מע״מ.",
     vatMurshe: "המחיר כולל מע״מ.",
-    vatExport: "ייצוא: מע״מ בשיעור אפס (לאישור רואה החשבון).",
+    vatExport: "ייצוא: מע״מ בשיעור אפס.",
     delivery: "אספקה",
     method: "אופן המסירה",
+    packing: "אריזה",
+    packingRolled:
+      "מגולגל בגליל, ללא מסגרת המתיחה (בחירת הקונה). מתיחה מחדש על מסגרת אינה כלולה.",
     estimate: "מועד משוער",
     destination: "יעד",
     insured: "המשלוח מבוטח עד לערך היצירה (בכפוף לתקרה).",
@@ -189,6 +195,8 @@ const PRE_TEXT = {
     noFee: "ללא דמי ביטול.",
     channels:
       'הודעת ביטול: בטופס המקוון "ביטול עסקה", בטלפון, בדוא״ל או בדואר רשום.',
+    channelsNoEmail:
+      'הודעת ביטול: בטופס המקוון "ביטול עסקה", בטלפון או בדואר רשום.',
     duties: "מכס ומסים",
     dap: "המשלוח לחו״ל הוא DAP: מכס, מע״מ יבוא ועמלות שחרור, אם יחולו, ישולמו על ידי הקונה ביעד.",
     privacy: "פרטיות",
@@ -202,8 +210,8 @@ const PRE_TEXT = {
     cancelForm: "טופס ביטול עסקה",
     methods: {
       CARRIER_TABLE: "שליח עד הבית",
+      ISRAEL_POST: "דואר ישראל",
       LOCAL_PICKUP: "איסוף עצמי מהסטודיו",
-      ARTIST_DELIVERY: "מסירה אישית על ידי האמנית",
       QUOTED: "משלוח לפי הצעת מחיר",
     },
   },
@@ -220,6 +228,8 @@ const PRE_TEXT = {
     merchantCountry: "Merchant country",
     israel: "Israel",
     service: "Customer service by phone and email, Sunday to Thursday.",
+    serviceNoEmail:
+      "Customer service by phone and through the site's contact form, Sunday to Thursday.",
     works: "The work",
     original: "An original work; a single copy.",
     inventory: "Inventory number",
@@ -239,10 +249,12 @@ const PRE_TEXT = {
     total: "Total to pay",
     vatPatur: "VAT-exempt dealer: the price includes no VAT.",
     vatMurshe: "The price includes VAT.",
-    vatExport:
-      "Export: zero-rated for VAT (to be confirmed by the accountant).",
+    vatExport: "Export: zero-rated for VAT.",
     delivery: "Delivery",
     method: "Method",
+    packing: "Packing",
+    packingRolled:
+      "Rolled in a tube, off its stretcher (the buyer's choice). Re-stretching is not included.",
     estimate: "Estimated delivery",
     destination: "Destination",
     insured:
@@ -261,6 +273,8 @@ const PRE_TEXT = {
     noFee: "No cancellation fee.",
     channels:
       'Cancel through the online "Cancel a purchase" form, by phone, by email or by registered mail.',
+    channelsNoEmail:
+      'Cancel through the online "Cancel a purchase" form, by phone or by registered mail.',
     duties: "Duties and taxes",
     dap: "International shipments are DAP: import duties, VAT and clearance fees, if any, are paid by the buyer on delivery.",
     privacy: "Privacy",
@@ -274,8 +288,8 @@ const PRE_TEXT = {
     cancelForm: "Cancellation form",
     methods: {
       CARRIER_TABLE: "Courier delivery",
+      ISRAEL_POST: "Israel Post",
       LOCAL_PICKUP: "Pickup from the studio",
-      ARTIST_DELIVERY: "Hand delivery by the artist",
       QUOTED: "Quoted shipping",
     },
   },
@@ -329,7 +343,7 @@ export function buildPreContract(
     {
       id: "seller",
       heading: t.seller,
-      paragraphs: [t.service],
+      paragraphs: [s.email ? t.service : t.serviceNoEmail],
       rows: [
         { label: t.legalName, value: s.legalName },
         { label: t.tradeName, value: s.tradeName },
@@ -337,7 +351,7 @@ export function buildPreContract(
         { label: t.address, value: s.address },
         { label: t.phoneLocal, value: s.phoneLocal },
         { label: t.phoneIntl, value: s.phoneIntl },
-        { label: t.email, value: s.email },
+        ...(s.email ? [{ label: t.email, value: s.email }] : []),
         { label: t.merchantCountry, value: t.israel },
       ],
     },
@@ -394,6 +408,7 @@ export function buildPreContract(
       paragraphs: [input.insured ? t.insured : t.notInsured],
       rows: [
         { label: t.method, value: t.methods[input.shippingMethod] },
+        ...(input.rolled ? [{ label: t.packing, value: t.packingRolled }] : []),
         {
           label: t.destination,
           value: regionName(input.destinationCountry, locale),
@@ -420,7 +435,7 @@ export function buildPreContract(
         t.cancel14,
         t.cancel4m,
         input.changeOfMindFee === "STATUTORY_MAX" ? t.fee : t.noFee,
-        t.channels,
+        input.seller.email ? t.channels : t.channelsNoEmail,
       ],
     },
     ...(input.international
@@ -469,6 +484,8 @@ const DOC_TEXT = {
       "ניתן לבטל תוך 14 ימים מקבלת היצירה או מסמך זה, המאוחר מביניהם (4 חודשים לזכאים לאחר שיחה עם העוסק).",
     summaryChannels:
       'ביטול: בטופס "ביטול עסקה" באתר, בטלפון, בדוא״ל או בדואר רשום.',
+    summaryChannelsNoEmail:
+      'ביטול: בטופס "ביטול עסקה" באתר, בטלפון או בדואר רשום.',
     summarySeller: "העוסק: {name}, {id}, {address}",
   },
   en: {
@@ -489,6 +506,8 @@ const DOC_TEXT = {
       "You may cancel within 14 days of receiving the work or this document, whichever is later (4 months for eligible buyers after a conversation with the seller).",
     summaryChannels:
       'Cancel through the "Cancel a purchase" form on the site, by phone, by email or by registered mail.',
+    summaryChannelsNoEmail:
+      'Cancel through the "Cancel a purchase" form on the site, by phone or by registered mail.',
     summarySeller: "Seller: {name}, {id}, {address}",
   },
 } as const;
@@ -562,7 +581,7 @@ export function buildDisclosure(
         address: s.address,
       }),
       t.summaryCancel,
-      t.summaryChannels,
+      s.email ? t.summaryChannels : t.summaryChannelsNoEmail,
     ],
   };
 }

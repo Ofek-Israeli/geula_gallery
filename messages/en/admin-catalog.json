@@ -87,7 +87,7 @@
     "confirmPriceChange": "I confirm the price change",
     "confirmPriceChangeHint": "Price changes are recorded in the audit log. Open orders keep the price they locked.",
     "packagingType": "Packaging",
-    "canBeRolled": "The canvas can be rolled for a tube",
+    "canBeRolled": "The canvas can be rolled for a tube (buyers can choose rolled shipping)",
     "packedLengthCm": "Packed length (cm)",
     "packedWidthCm": "Packed width (cm)",
     "packedHeightCm": "Packed height (cm)",
@@ -158,7 +158,8 @@
     "quote": "By quote",
     "unavailable": "Not available",
     "from": "From {price}",
-    "insured": "insured"
+    "insured": "insured",
+    "rolled": "rolled in a tube"
   },
   "sale": {
     "status": "Status: {status}",

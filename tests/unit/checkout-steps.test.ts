@@ -12,7 +12,7 @@ import { paths } from "@/lib/routes";
 
 const OFFERED = new Set(["IL", "US", "HK", "GB"]);
 const METHODS: Record<string, string[]> = {
-  IL: ["CARRIER_TABLE", "LOCAL_PICKUP", "ARTIST_DELIVERY"],
+  IL: ["CARRIER_TABLE", "ISRAEL_POST", "LOCAL_PICKUP"],
   US: ["CARRIER_TABLE"],
   HK: ["CARRIER_TABLE"],
   AQ: ["CARRIER_TABLE"],
@@ -51,9 +51,17 @@ describe("parseCheckoutParams", () => {
       ship: null,
       shipGiven: false,
       cur: null,
+      pack: null,
       step: null,
     });
     expect(parseCheckoutParams({ to: "  " }).country).toBe("IL");
+  });
+
+  it("reads the packing: rolled, or as listed", () => {
+    expect(parseCheckoutParams({ pack: "rolled" }).pack).toBe("rolled");
+    expect(parseCheckoutParams({ pack: " rolled " }).pack).toBe("rolled");
+    expect(parseCheckoutParams({ pack: "ROLLED" }).pack).toBeNull();
+    expect(parseCheckoutParams({ pack: "stretched" }).pack).toBeNull();
   });
 
   it("keeps known methods only, but notes that a method was asked for", () => {
@@ -283,6 +291,34 @@ describe("checkoutQuery and stepLinks", () => {
       `${base}&ship=LOCAL_PICKUP&cur=USD&step=delivery`,
     );
     expect(links.currency.ILS).toBe(`${base}&ship=LOCAL_PICKUP&step=delivery`);
+    expect(links.packing.ROLLED).toBe(
+      `${base}&ship=LOCAL_PICKUP&pack=rolled&step=delivery`,
+    );
+    expect(links.packing.STRETCHED).toBe(
+      `${base}&ship=LOCAL_PICKUP&step=delivery`,
+    );
+  });
+
+  it("keeps the rolled packing on every link but the stretched one", () => {
+    const links = stepLinks((q) => paths.checkout("the-path", q), {
+      country: "CA",
+      city: "Toronto",
+      zip: "M5V 2T6",
+      ship: "ISRAEL_POST",
+      cur: null,
+      pack: "rolled",
+    });
+    const base = "/checkout/the-path?to=CA&city=Toronto&zip=M5V+2T6";
+    expect(links.destination).toBe(
+      `${base}&ship=ISRAEL_POST&pack=rolled&step=destination`,
+    );
+    expect(links.details).toBe(`${base}&ship=ISRAEL_POST&pack=rolled`);
+    expect(links.currency.USD).toBe(
+      `${base}&ship=ISRAEL_POST&pack=rolled&cur=USD&step=delivery`,
+    );
+    expect(links.packing.STRETCHED).toBe(
+      `${base}&ship=ISRAEL_POST&step=delivery`,
+    );
   });
 
   it("keeps the effective currency on every link but the shekel one", () => {

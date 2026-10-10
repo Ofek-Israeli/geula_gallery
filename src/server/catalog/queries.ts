@@ -22,6 +22,7 @@ import type {
 import type { Locale } from "@/lib/locale";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import { artworkImages, artworks, series } from "@/server/db/schema";
+import { env } from "@/server/env";
 import { getSetting } from "@/server/settings";
 import { zoneEstimates } from "@/server/shipping/rates";
 import type { ArtworkShipSpec } from "@/server/shipping/types";
@@ -111,7 +112,7 @@ function cardDto(r: CardRow, locale: Locale, now: Date): ArtworkCardDTO {
     orientation: r.orientation,
     sizeBucket: r.sizeBucket,
     saleStatus: r.saleStatus,
-    state: commerceStateOf(r, now),
+    state: commerceStateOf(r, now, env.SALES_OPEN),
     price: {
       ilsMinor: r.priceOnRequest ? null : r.priceIlsMinor,
       usdMinor: r.priceOnRequest ? null : r.priceUsdMinor,
@@ -638,7 +639,9 @@ export async function getDeliveryEstimates(
       kind: "price",
       fromIlsMinor: e.fromIlsMinor,
       insured: e.insured,
-      estimate,
+      rolled: e.rolled === true,
+      // The time of the option that gives the price (Israel Post's own), else the zone's.
+      estimate: e.estimate?.[locale] || estimate,
     };
   });
   return {

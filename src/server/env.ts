@@ -69,6 +69,21 @@ const rawSchema = z.object({
   /** base64 or base64url encoding of exactly 32 random bytes (AES-256-GCM). */
   PII_ENCRYPTION_KEY: str(),
   DEMO_MODE: bool(false),
+  /** Set by Vercel on its deployments; turns on Vercel Web Analytics on the public pages. */
+  VERCEL: bool(false),
+  /**
+   * False: a showcase site. Works, prices, "Ask about this work" and the contact form stay; online
+   * purchase does not (no checkout, cart or payment links), and production then needs no payment,
+   * tax-document or carrier setup.
+   */
+  SALES_OPEN: bool(true),
+  /**
+   * False: emails go only to the painter (notifications and alerts); emails to visitors and buyers
+   * are skipped. For a Resend account without a verified domain, which can only email its owner.
+   */
+  EMAIL_TO_VISITORS: bool(true),
+  /** Google Search Console's "HTML tag" verification code (the `content` value), if any. */
+  GOOGLE_SITE_VERIFICATION: optStr(),
   NEXT_DIST_DIR: optStr(),
 
   // Database
@@ -244,17 +259,20 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
     }
   }
 
-  // Real production store.
+  // Real production store. A showcase (SALES_OPEN=false) sells nothing online, so it needs no
+  // payment provider, tax documents or carrier; email and storage stay real.
   if (isProduction && !e.DEMO_MODE) {
-    if (e.PAYMENT_PROVIDERS.includes("mock"))
-      issue("PAYMENT_PROVIDERS", "must not include mock in production");
-    if (
-      e.TAX_DOCUMENTS_MODE !== "morning" &&
-      e.TAX_DOCUMENTS_MODE !== "gateway"
-    )
-      issue("TAX_DOCUMENTS_MODE", "must be morning or gateway in production");
-    if (e.SHIPPING_CARRIER === "mock")
-      issue("SHIPPING_CARRIER", "must not be mock in production");
+    if (e.SALES_OPEN) {
+      if (e.PAYMENT_PROVIDERS.includes("mock"))
+        issue("PAYMENT_PROVIDERS", "must not include mock in production");
+      if (
+        e.TAX_DOCUMENTS_MODE !== "morning" &&
+        e.TAX_DOCUMENTS_MODE !== "gateway"
+      )
+        issue("TAX_DOCUMENTS_MODE", "must be morning or gateway in production");
+      if (e.SHIPPING_CARRIER === "mock")
+        issue("SHIPPING_CARRIER", "must not be mock in production");
+    }
     if (e.EMAIL_DRIVER !== "resend")
       issue("EMAIL_DRIVER", "must be resend in production");
     if (e.STORAGE_DRIVER !== "blob")
@@ -331,6 +349,9 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
         "BLOB_PRIVATE_READ_WRITE_TOKEN",
         "required when STORAGE_DRIVER=blob",
       );
+    // Public image URLs are built from it (storage/blob.ts) and next/image allows only it.
+    if (!e.NEXT_PUBLIC_BLOB_HOST)
+      issue("NEXT_PUBLIC_BLOB_HOST", "required when STORAGE_DRIVER=blob");
   }
 
   // APP_ENV=test ⇒ derived/explicit auth and webhook hosts equal APP_URL's host

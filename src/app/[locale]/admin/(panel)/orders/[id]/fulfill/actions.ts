@@ -12,7 +12,6 @@ import { ActionFailure, adminAction } from "@/server/next/actions";
 import {
   addManualEvent,
   MANUAL_EVENT_STATUSES,
-  markArtistDelivered,
   markCollected,
   markHandedOver,
   markLabelRequestUnknown,
@@ -23,7 +22,6 @@ import {
   resolveUnknownLabel,
   saveCustoms,
   savePacking,
-  startArtistDelivery,
 } from "@/server/shipping/shipments";
 
 /**
@@ -267,23 +265,4 @@ export const collectedAction = adminAction(
       ),
     ),
   { name: "fulfill.collected" },
-);
-
-export const artistOutAction = adminAction(
-  z.object({ orderId }),
-  (i, ctx) => run(() => startArtistDelivery(i.orderId, ctx)),
-  { name: "fulfill.artist_out" },
-);
-
-export const artistDeliveredAction = adminAction(
-  z.object({ orderId, disclosureHandedOver: checkbox }),
-  (i, ctx) =>
-    run(() =>
-      markArtistDelivered(
-        i.orderId,
-        { disclosureHandedOver: i.disclosureHandedOver },
-        ctx,
-      ),
-    ),
-  { name: "fulfill.artist_delivered" },
 );

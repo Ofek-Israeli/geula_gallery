@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { ADMIN_STORAGE_STATE } from "./e2e-env";
 
 /**
- * Smoke (spec §10.4): locale redirects, `html[dir][lang]`, demo banner, X-Robots-Tag, the
+ * Smoke (spec §10.4): locale redirects, `html[dir][lang]`, no demo banner, X-Robots-Tag, the
  * cancellation link on every public page (home, works, artwork, about, legal, contact, checkout;
  * the order page in purchase-il), and the admin guard.
  */
@@ -34,21 +34,15 @@ test.describe("locale routing @smoke", () => {
     ["he", "rtl"],
     ["en", "ltr"],
   ] as const) {
-    test(`/${locale} renders lang=${locale} dir=${dir} with the demo banner`, async ({
+    test(`/${locale} renders lang=${locale} dir=${dir}, with no demo banner`, async ({
       page,
     }) => {
       const res = await page.goto(`/${locale}`);
       expect(res?.status()).toBe(200);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator("html")).toHaveAttribute("dir", dir);
-      // DEMO_MODE=true: bilingual banner in both languages, current locale first.
-      const banner = page.locator("aside").first();
-      await expect(banner.locator('[lang="he"]')).toBeVisible();
-      await expect(banner.locator('[lang="en"]')).toBeVisible();
-      await expect(banner.locator("span").first()).toHaveAttribute(
-        "lang",
-        locale,
-      );
+      // The painter removed the demo banner (DEMO_MODE still guards the payment providers).
+      await expect(page.getByText(/Demo store|חנות הדגמה/)).toHaveCount(0);
     });
   }
 
@@ -66,16 +60,43 @@ test.describe("locale routing @smoke", () => {
 });
 
 test.describe("cancellation link on public pages @smoke", () => {
-  const cancelName = { he: "ביטול עסקה", en: "Cancel a purchase" } as const;
+  // "Cancel a purchase" (checkout footer, contact, legal and order pages), or the public footer's
+  // "Cancellations and returns" item, which opens the same page (spec §1.2, at the painter's
+  // request).
+  const cancelName = {
+    he: /^ביטול עסקה( והחזרות)?$/,
+    en: /^(Cancel a purchase|Cancellations and returns)$/,
+  } as const;
+  const footerItem = {
+    he: "ביטול עסקה והחזרות",
+    en: "Cancellations and returns",
+  };
 
   for (const locale of ["he", "en"] as const) {
     test(`home (${locale}) links to /${locale}/cancel`, async ({ page }) => {
       await page.goto(`/${locale}`);
-      const links = page.getByRole("link", { name: cancelName[locale] });
-      // The footer (spec §1.2; the header no longer carries it).
-      await expect(links.first()).toBeVisible();
-      expect(await links.count()).toBeGreaterThanOrEqual(1);
-      await expect(links.first()).toHaveAttribute("href", `/${locale}/cancel`);
+      const footer = page.getByTestId("site-footer");
+      // The footer's "Cancellations and returns" is the cancellation link; there is no separate
+      // "Cancel a purchase" line (and the header no longer carries it).
+      const link = footer.getByRole("link", {
+        name: footerItem[locale],
+        exact: true,
+      });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", `/${locale}/cancel`);
+      await expect(
+        page.getByRole("link", {
+          name: locale === "he" ? "ביטול עסקה" : "Cancel a purchase",
+          exact: true,
+        }),
+      ).toHaveCount(0);
+      // The cancellation page links to the full policy.
+      await link.click();
+      await expect(page).toHaveURL(new RegExp(`/${locale}/cancel$`));
+      await expect(page.getByTestId("cancel-policy-link")).toHaveAttribute(
+        "href",
+        `/${locale}/legal/returns`,
+      );
     });
   }
 

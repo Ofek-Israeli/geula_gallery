@@ -203,22 +203,6 @@ describe("manual carrier path (IL courier)", () => {
     );
     expect((await eventsOf(s.id)).at(-1)?.status).toBeNull();
   });
-
-  it("artist delivery: packed → out for delivery → delivered behind the disclosure guard", async () => {
-    const o = await paidShipmentOrder({ method: "ARTIST_DELIVERY" });
-    await svc.savePacking(o.orderId, fullPacking([]), ctx);
-    await svc.startArtistDelivery(o.orderId, ctx);
-    await expect(
-      svc.markArtistDelivered(o.orderId, { disclosureHandedOver: false }, ctx),
-    ).rejects.toMatchObject({ code: "DISCLOSURE_REQUIRED" });
-    await svc.markArtistDelivered(
-      o.orderId,
-      { disclosureHandedOver: true },
-      ctx,
-    );
-    expect((await shipmentOf(o.orderId)).status).toBe("DELIVERED");
-    expect((await orderOf(o.orderId)).disclosureHandedOverAt).not.toBeNull();
-  });
 });
 
 describe("customs values in the declared currency", () => {

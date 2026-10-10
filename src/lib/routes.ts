@@ -67,6 +67,7 @@ export const CHECKOUT_QUERY_KEYS = [
   "city",
   "zip",
   "ship",
+  "pack",
   "cur",
   "step",
 ] as const;

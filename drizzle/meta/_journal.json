@@ -15,6 +15,27 @@
       "when": 1791560164666,
       "tag": "0001_per_item_cancellation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791621404024,
+      "tag": "0002_israel_post_method",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791627847844,
+      "tag": "0003_drop_artist_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791631040084,
+      "tag": "0004_dispatch_seven_days",
+      "breakpoints": true
     }
   ]
 }

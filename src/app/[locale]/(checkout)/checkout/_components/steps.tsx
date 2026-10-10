@@ -34,8 +34,8 @@ import {
 
 /**
  * The address-first checkout's steps (`src/lib/checkout-steps.ts`), shared by "Buy now" and the
- * cart checkout: the progress list, step 1 (destination GET form), step 2 (recap, currency links,
- * delivery GET form) and the top of step 3 (recap with "Change" links). Both GET forms work
+ * cart checkout: the progress list, step 1 (destination GET form), step 2 (recap, packing and
+ * currency links, delivery GET form) and the top of step 3 (recap with "Change" links). Both GET forms work
  * without JavaScript, and the server validates every step (the forms are `noValidate`).
  */
 
@@ -135,8 +135,8 @@ export interface DestinationFormProps {
   locale: Locale;
   countries: readonly CountryOption[];
   value: { country: string; city: string; zip: string };
-  /** Kept through step 1 so "Change destination" does not forget the method or currency. */
-  carry: { ship: string | null; cur: "USD" | null };
+  /** Kept through step 1 so "Change destination" does not forget the method, packing or currency. */
+  carry: { ship: string | null; cur: "USD" | null; pack: "rolled" | null };
   /** Shown inline (empty on arrival and after "Change"). */
   issues: DestinationIssues;
 }
@@ -223,6 +223,9 @@ export async function DestinationForm({
       </Field>
       {carry.ship ? (
         <input type="hidden" name="ship" value={carry.ship} />
+      ) : null}
+      {carry.pack ? (
+        <input type="hidden" name="pack" value={carry.pack} />
       ) : null}
       {carry.cur ? <input type="hidden" name="cur" value={carry.cur} /> : null}
       <input type="hidden" name="step" value="delivery" />
@@ -358,6 +361,9 @@ export async function DeliveryRecap({
       value={
         <>
           {name} · <bdi>{price}</bdi>
+          {quote.packing === "ROLLED" ? (
+            <> · {t("delivery.packingRolledShort")}</>
+          ) : null}
         </>
       }
       change={{
@@ -410,6 +416,63 @@ export async function CurrencyToggle({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Stretched (as listed, in a box) or rolled in a tube, as links like the currency: the prices on
+ * the page are always for the packing shown as current. Rolled suits large canvases: the tube is
+ * far smaller than the box (Israel Post takes it, and DHL bills less volume).
+ */
+export async function PackingToggle({
+  current,
+  hrefs,
+  locale,
+}: {
+  current: "STRETCHED" | "ROLLED";
+  hrefs: StepLinks["packing"];
+  locale: Locale;
+}) {
+  const t = await getTranslations({ locale, namespace: "checkout" });
+  return (
+    <div className="flex flex-col gap-2">
+      <p id="packing-label" className="font-medium">
+        {t("delivery.packing")}
+      </p>
+      <ul
+        aria-labelledby="packing-label"
+        className="flex flex-wrap gap-2"
+        data-testid="packing-toggle"
+      >
+        {(["STRETCHED", "ROLLED"] as const).map((p) => (
+          <li key={p}>
+            <Link
+              href={hrefs[p]}
+              scroll={false}
+              aria-current={current === p ? "true" : undefined}
+              className={buttonClasses(
+                current === p ? "secondary" : "ghost",
+                "sm",
+              )}
+              data-testid={`packing-${p}`}
+            >
+              {t(
+                p === "STRETCHED"
+                  ? "delivery.packingStretched"
+                  : "delivery.packingRolled",
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <p className="max-w-prose text-sm text-ink-muted">
+        {t(
+          current === "ROLLED"
+            ? "delivery.packingRolledNote"
+            : "delivery.packingStretchedNote",
+        )}
+      </p>
     </div>
   );
 }
@@ -476,6 +539,13 @@ export async function DeliveryStep({
           locale={locale}
         />
       </p>
+      {quote.rollable ? (
+        <PackingToggle
+          current={quote.packing}
+          hrefs={links.packing}
+          locale={locale}
+        />
+      ) : null}
       {quote.usdAvailable ? (
         <CurrencyToggle
           current={quote.currency}
@@ -503,6 +573,9 @@ export async function DeliveryStep({
           ilsPerUsd={ilsPerUsd}
           checked={checked}
         />
+        {quote.packing === "ROLLED" ? (
+          <input type="hidden" name="pack" value="rolled" />
+        ) : null}
         {quote.currency === "USD" ? (
           <input type="hidden" name="cur" value="USD" />
         ) : null}

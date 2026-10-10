@@ -22,13 +22,13 @@ describe("pricing", () => {
     expect(itemPriceMinor({ ...art, priceOnRequest: true }, "ILS")).toBeNull();
   });
 
-  it("offers pickup and artist delivery only in Israel", () => {
+  it("offers the courier and Israel Post everywhere, pickup only in Israel", () => {
     expect(candidateMethods("IL")).toEqual([
       "CARRIER_TABLE",
+      "ISRAEL_POST",
       "LOCAL_PICKUP",
-      "ARTIST_DELIVERY",
     ]);
-    expect(candidateMethods("US")).toEqual(["CARRIER_TABLE"]);
+    expect(candidateMethods("US")).toEqual(["CARRIER_TABLE", "ISRAEL_POST"]);
   });
 
   it("totals items + shipping + insurance; VAT is included in IL and 0 on exports", () => {

@@ -166,7 +166,6 @@ test("auto-decline below the threshold; accept an offer → link order", async (
       .getByLabel(new RegExp(`^${ec.details.postalCode}`))
       .fill("02101");
     await details.getByLabel(ec.consent.terms).check();
-    await details.getByLabel(ec.consent.age).check();
     await details.getByLabel(ec.consent.dap).check();
     await details.getByTestId("link-details-submit").click();
     await expect(page.getByTestId("link-details-result")).toHaveText(

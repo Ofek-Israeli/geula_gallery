@@ -214,7 +214,6 @@ test("quote link: requote by a method change, then pay", async ({
     .fill("1 Example Street");
   await details.getByLabel(new RegExp(`^${ec.details.city}`)).fill("Haifa");
   await details.getByLabel(ec.consent.terms).check();
-  await details.getByLabel(ec.consent.age).check();
   await details.getByTestId("link-details-submit").click();
   await expect(page.getByTestId("link-details-result")).toHaveText(
     en.link.requoted,

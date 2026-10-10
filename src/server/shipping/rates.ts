@@ -11,6 +11,12 @@ import {
   dhlPriceKey,
   dhlZoneOf,
 } from "./dhl-estimate";
+import {
+  emsGroupOf,
+  emsInsurance,
+  israelPostEstimate,
+  type PostPieceInput,
+} from "./israel-post";
 import { evaluateDestination } from "./rules";
 import type {
   ArtworkShipSpec,
@@ -44,7 +50,9 @@ import type {
  * (25–70 kg actual) overridden out of QUOTE pays the non-conveyable fee.
  *
  * Rolled tube (only if `can_be_rolled`): length = the shorter artwork side + 100 mm, cross-section
- * 260 × 260 mm; the stored `packed_weight_g` is used.
+ * 260 × 260 mm. A work listed as a tube uses the stored `packed_weight_g`. A boxed work the buyer
+ * asks to have rolled (`rolledSpec`, for works `rollableAtCheckout`) is priced as that tube with
+ * the assumed rolled weight (`rolledWeightG`: no stretcher bars, no box).
  *
  * Price per piece = `classRatesIls[zone][class]` + per-piece fees + active surcharges (`enabled`
  * and `startsOn ≤ date ≤ endsOn`, inclusive Jerusalem calendar days; PCT of the base class rate or
@@ -66,6 +74,12 @@ import type {
 
 export const TUBE_EXTRA_MM = 100;
 export const TUBE_SECTION_MM = 260;
+/**
+ * Assumed weight of a canvas rolled off its stretcher, in its tube: 1.5 kg for the tube and the
+ * wrapping, plus 1.2 kg per m² of painted canvas. An assumption until the painter weighs one.
+ */
+export const ROLLED_BASE_G = 1500;
+export const ROLLED_G_PER_M2 = 1200;
 const KG = 1000;
 
 const CLASS_ORDER: Record<SizeClass, number> = { S: 0, M: 1, L: 2, QUOTE: 3 };
@@ -85,6 +99,49 @@ export function rolledTubeBox(a: {
     lengthMm: Math.min(a.heightMm, a.widthMm) + TUBE_EXTRA_MM,
     widthMm: TUBE_SECTION_MM,
     heightMm: TUBE_SECTION_MM,
+  };
+}
+
+/** A rolled canvas in its tube (`ROLLED_BASE_G` + `ROLLED_G_PER_M2` × the painting's area). */
+export function rolledWeightG(a: {
+  heightMm: number;
+  widthMm: number;
+}): number {
+  const areaM2 = (a.heightMm / 1000) * (a.widthMm / 1000);
+  return Math.round(ROLLED_BASE_G + ROLLED_G_PER_M2 * areaM2);
+}
+
+/**
+ * Whether the buyer may have the work rolled in a tube instead of sent as listed: the painter
+ * allows it (`can_be_rolled`), it is not already a tube, and nothing rigid comes with it (no
+ * crate, frame or glazing).
+ */
+export function rollableAtCheckout(a: ArtworkShipSpec): boolean {
+  return (
+    a.canBeRolled &&
+    !a.framed &&
+    a.glazing === "NONE" &&
+    a.packagingType !== "ROLLED_TUBE" &&
+    a.packagingType !== "CRATE" &&
+    a.packagingType !== "FRAMED_BOX"
+  );
+}
+
+/**
+ * The work rolled in a tube, as the buyer may choose at checkout: the tube's size, the rolled
+ * weight, and no class override (the override was set for the box).
+ */
+export function rolledSpec(a: ArtworkShipSpec): ArtworkShipSpec {
+  const tube = rolledTubeBox(a);
+  return {
+    ...a,
+    packagingType: "ROLLED_TUBE",
+    canBeRolled: true,
+    packedLengthMm: tube.lengthMm,
+    packedWidthMm: tube.widthMm,
+    packedHeightMm: tube.heightMm,
+    packedWeightG: rolledWeightG(a),
+    sizeClassOverride: null,
   };
 }
 
@@ -177,6 +234,22 @@ export function dhlPieceOf(a: ArtworkShipSpec): DhlPieceInput {
   };
 }
 
+/** Israel Post takes ordinary cardboard parcels: no wooden crate and no glazing. */
+function postParcelOk(a: ArtworkShipSpec): boolean {
+  return a.packagingType !== "CRATE" && a.glazing === "NONE";
+}
+
+/** A packed artwork as Israel Post measures it (the box `packedBox` gives, its actual weight). */
+export function postPieceOf(a: ArtworkShipSpec): PostPieceInput {
+  const box = packedBox(a);
+  return {
+    lengthMm: box.lengthMm,
+    widthMm: box.widthMm,
+    heightMm: box.heightMm,
+    weightG: a.packedWeightG,
+  };
+}
+
 /** The export declaration is required: the same rule fulfilment applies (`customs.ts`). */
 function exportDeclarationDue(
   valueIlsMinor: number,
@@ -247,9 +320,9 @@ function piecePrice(
 }
 
 /**
- * Whether a shipment includes insurance: never for Israel (manual domestic courier), pickup or
- * artist delivery; abroad when insurance is enabled and either a third-party policy covers it or
- * the provider is DHL and the carrier is DHL (or the mock, which simulates DHL).
+ * Whether a shipment includes insurance: never for Israel (manual domestic courier) or pickup;
+ * abroad when insurance is enabled and either a third-party policy covers it or the provider is
+ * DHL and the carrier is DHL (or the mock, which simulates DHL).
  */
 export function insuranceSupported(
   settings: ShippingSettings,
@@ -330,24 +403,38 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
   const domestic = i.country === "IL";
   const usd = i.currency === "USD";
 
+  /**
+   * `insurance`: true = the settings' insurance on the capped value; false = none; or an explicit
+   * covered value and premium (Israel Post's EMS liability extension).
+   */
   const build = (
     evaluation: DestinationEvaluation,
     carrier: CarrierCode | null,
     breakdown: PiecePrice,
-    insurable: boolean,
-    extra: Pick<ShippingQuoteResult, "rateSource" | "dhl"> = {},
+    insurance: boolean | { valueMinor: number; premiumMinor: number },
+    extra: Pick<
+      ShippingQuoteResult,
+      "rateSource" | "dhl" | "israelPost" | "estimate"
+    > = {},
   ): ShippingQuoteResult => {
     const shipIls =
       breakdown.baseMinor +
       breakdown.pieceFeesMinor +
       breakdown.surchargesMinor;
-    const insuredValue = insurable
-      ? insuredValueMinor(i.declaredValueIlsMinor, i.items, settings)
-      : 0;
+    const insuredValue =
+      insurance === true
+        ? insuredValueMinor(i.declaredValueIlsMinor, i.items, settings)
+        : insurance === false
+          ? 0
+          : insurance.valueMinor;
     const insured = insuredValue > 0;
-    const insuranceIls = insured
-      ? insurancePremiumMinor(insuredValue, settings)
-      : 0;
+    const insuranceIls = !insured
+      ? 0
+      : insurance === true
+        ? insurancePremiumMinor(insuredValue, settings)
+        : insurance === false
+          ? 0
+          : insurance.premiumMinor;
     return {
       ...evaluation,
       zone,
@@ -379,11 +466,8 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
 
   if (method === "QUOTED") return refuse("quote_only", "QUOTE_ONLY");
 
-  if (method === "LOCAL_PICKUP" || method === "ARTIST_DELIVERY") {
-    const option =
-      method === "LOCAL_PICKUP"
-        ? settings.localPickup
-        : settings.artistDelivery;
+  if (method === "LOCAL_PICKUP") {
+    const option = settings.localPickup;
     // Offered only in Israel; a disabled option is reported as ZONE_DISABLED.
     if (!domestic || !option.enabled) return refuse("blocked", "ZONE_DISABLED");
     const fee = Math.round(option.feeIls * 100);
@@ -395,8 +479,15 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
     );
   }
 
+  const post = settings.israelPost;
+  if (method === "ISRAEL_POST" && !(domestic ? post.domestic : post.abroad)) {
+    return refuse("blocked", "ZONE_DISABLED");
+  }
+
   // CARRIER_TABLE: the manual domestic courier in Israel, the configured carrier abroad.
-  const carrier: CarrierCode = domestic ? "MANUAL" : i.carrier;
+  // ISRAEL_POST: booked at the post office and tracked by hand (the manual carrier).
+  const carrier: CarrierCode =
+    domestic || method === "ISRAEL_POST" ? "MANUAL" : i.carrier;
   const destination = evaluateDestination({
     country: i.country,
     declaredValueIlsMinor: i.declaredValueIlsMinor,
@@ -432,6 +523,46 @@ export function quoteShipping(i: QuoteShippingInput): ShippingQuoteResult {
   }
   if (i.items.some((a) => a.quoteOnly)) {
     return refuse("quote_only", "QUOTE_ONLY", notices, carrier);
+  }
+
+  if (method === "ISRAEL_POST") {
+    // Israel Post takes ordinary cardboard parcels: no wooden crate, no glazing.
+    if (i.items.some((a) => !postParcelOk(a))) {
+      return refuse("blocked", "SIZE_QUOTE", notices, carrier);
+    }
+    const est = israelPostEstimate({
+      pieces: i.items.map(postPieceOf),
+      country: i.country,
+    });
+    if (!est.ok) {
+      return refuse(
+        "blocked",
+        est.reason === "NOT_SERVED" ? "ZONE_DISABLED" : "SIZE_QUOTE",
+        notices,
+        carrier,
+      );
+    }
+    if (!domestic) notices.push("TRANSIT_ESTIMATE");
+    const insure = !domestic && post.insureAbroad && settings.insurance.enabled;
+    return build(
+      { mode: "ok", notices },
+      carrier,
+      {
+        baseMinor: est.detail.totalMinor,
+        pieceFeesMinor: 0,
+        surchargesMinor: 0,
+      },
+      insure
+        ? emsInsurance(
+            insuredValueMinor(i.declaredValueIlsMinor, i.items, settings),
+          )
+        : false,
+      {
+        rateSource: "ISRAEL_POST",
+        israelPost: est.detail,
+        estimate: domestic ? post.estimate.domestic : post.estimate.abroad,
+      },
+    );
   }
 
   if (
@@ -569,13 +700,80 @@ function dhlFromIlsMinor(
 }
 
 /**
- * "Delivery from ₪X" per zone for one work (artwork page). `fromIlsMinor` is the lowest shipping
- * price on `date` plus, when insured, the minimum premium (the real premium depends on the value);
- * international zones assume the DHL carrier for the insurance flag. Abroad the price is the
- * cheapest DHL estimate among the zone's listed countries (`dhlFromIlsMinor`; the table when none
- * is listed or the estimate is off); `value` adds the export declaration when it is due. A
- * disabled zone, a quote-only work or a piece needing a quote → `'QUOTE'`; a work that cannot be
- * shipped there → `'UNAVAILABLE'`. Value caps are not applied; checkout applies them.
+ * Israel Post's cheapest price for one work in a site zone: home delivery in Israel, or the
+ * cheapest EMS destination of the zone where the parcel fits (offered countries only), plus the
+ * EMS liability extension when it applies (`value` gives the work's value; without it, the
+ * minimum), with Israel Post's delivery time. Null when Israel Post cannot take it there.
+ */
+function postFromIlsMinor(
+  a: ArtworkShipSpec,
+  settings: ShippingSettings,
+  zone: ZoneId,
+  value?: { declaredValueIlsMinor: number; fx: FxReference },
+): Exclude<ZoneEstimate, string> | null {
+  const post = settings.israelPost;
+  if (a.quoteOnly || !postParcelOk(a)) return null;
+  const pieces = [postPieceOf(a)];
+  if (zone === "IL") {
+    if (!post.domestic) return null;
+    const est = israelPostEstimate({ pieces, country: "IL" });
+    return est.ok
+      ? {
+          fromIlsMinor: est.detail.totalMinor,
+          insured: false,
+          estimate: post.estimate.domestic,
+        }
+      : null;
+  }
+  if (!post.abroad) return null;
+  // One country per (EMS group, size limit): they cost the same.
+  const tried = new Set<string>();
+  let best: number | null = null;
+  for (const code of COUNTRY_CODES) {
+    if (
+      code === "IL" ||
+      settings.deniedCountries.includes(code) ||
+      settings.quoteOnlyCountries.includes(code) ||
+      zoneOf(code, settings.zones) !== zone
+    ) {
+      continue;
+    }
+    const group = emsGroupOf(code);
+    if (group === null) continue;
+    const est = israelPostEstimate({ pieces, country: code });
+    const key = `${group}|${est.ok ? "fits" : est.reason}`;
+    if (tried.has(key)) continue;
+    tried.add(key);
+    if (est.ok && (best === null || est.detail.totalMinor < best)) {
+      best = est.detail.totalMinor;
+    }
+  }
+  if (best === null) return null;
+  const insured = post.insureAbroad && settings.insurance.enabled;
+  const premium = !insured
+    ? 0
+    : value
+      ? emsInsurance(
+          insuredValueMinor(value.declaredValueIlsMinor, [a], settings),
+        ).premiumMinor
+      : emsInsurance(1).premiumMinor;
+  return {
+    fromIlsMinor: best + premium,
+    insured,
+    estimate: post.estimate.abroad,
+  };
+}
+
+/**
+ * "Delivery from ₪X" per zone for one work (artwork page): the cheaper of the courier and Israel
+ * Post (`postFromIlsMinor`, which also gives Israel Post's delivery time), as listed and, when the
+ * buyer may choose it (`rollableAtCheckout`), rolled in a tube (`rolled: true`). The courier is the table in Israel and, abroad, the cheapest DHL
+ * estimate among the zone's listed countries (`dhlFromIlsMinor`; the table when none is listed or
+ * the estimate is off), plus the minimum premium when insured (international zones assume the
+ * DHL carrier for the insurance flag); `value` adds the export declaration when it is due. A
+ * disabled zone or a quote-only work → `'QUOTE'`; a piece only a quote can price → `'QUOTE'`
+ * unless Israel Post takes it; a work that cannot be shipped there → `'UNAVAILABLE'`. Value caps
+ * are not applied; checkout applies them.
  */
 export function zoneEstimates(
   a: ArtworkShipSpec,
@@ -583,10 +781,17 @@ export function zoneEstimates(
   date: Date,
   value?: { declaredValueIlsMinor: number; fx: FxReference },
 ): Record<ZoneId, ZoneEstimate> {
-  const c = classify(a, settings.divisor);
   const exportDeclaration = value
     ? exportDeclarationDue(value.declaredValueIlsMinor, settings, value.fx)
     : false;
+  // As listed, and rolled in a tube when the buyer may choose it (stretched wins a tie).
+  const variants = [{ spec: a, rolled: false }];
+  if (rollableAtCheckout(a))
+    variants.push({ spec: rolledSpec(a), rolled: true });
+  const classified = variants.map((v) => ({
+    ...v,
+    c: classify(v.spec, settings.divisor),
+  }));
   const out = {} as Record<ZoneId, ZoneEstimate>;
   for (const zone of ZONE_IDS) {
     const cfg = settings.zones.find((z) => z.id === zone);
@@ -599,36 +804,64 @@ export function zoneEstimates(
       out[zone] = "QUOTE";
       continue;
     }
-    const dhl =
-      !domestic && settings.dhlEstimate.enabled
-        ? dhlFromIlsMinor(a, c, settings, zone, date, exportDeclaration)
-        : null;
-    let shipMinor: number;
-    if (dhl === "QUOTE") {
-      out[zone] = "QUOTE";
-      continue;
-    }
-    if (dhl !== null) {
-      shipMinor = dhl;
-    } else {
-      const p = piecePrice(c, settings, zone, date);
-      if (!p) {
-        out[zone] = "QUOTE";
-        continue;
-      }
-      shipMinor = p.baseMinor + p.pieceFeesMinor + p.surchargesMinor;
-    }
+    const candidates = classified.flatMap((v) =>
+      zoneCandidates(
+        v.spec,
+        v.c,
+        settings,
+        zone,
+        date,
+        value,
+        exportDeclaration,
+      ).map((x) => (v.rolled ? { ...x, rolled: true } : x)),
+    );
+    const best = candidates.reduce<(typeof candidates)[number] | null>(
+      (m, x) => (m === null || x.fromIlsMinor < m.fromIlsMinor ? x : m),
+      null,
+    );
+    out[zone] = best ?? "QUOTE";
+  }
+  return out;
+}
+
+/** One packing's "from" prices in a zone: the courier (DHL estimate or table) and Israel Post. */
+function zoneCandidates(
+  a: ArtworkShipSpec,
+  c: ClassifyResult,
+  settings: ShippingSettings,
+  zone: ZoneId,
+  date: Date,
+  value: { declaredValueIlsMinor: number; fx: FxReference } | undefined,
+  exportDeclaration: boolean,
+): Exclude<ZoneEstimate, string>[] {
+  const domestic = zone === "IL";
+  const candidates: Exclude<ZoneEstimate, string>[] = [];
+  const dhl =
+    !domestic && settings.dhlEstimate.enabled
+      ? dhlFromIlsMinor(a, c, settings, zone, date, exportDeclaration)
+      : null;
+  let courierMinor: number | null = null;
+  if (typeof dhl === "number") {
+    courierMinor = dhl;
+  } else if (dhl === null) {
+    const p = piecePrice(c, settings, zone, date);
+    if (p) courierMinor = p.baseMinor + p.pieceFeesMinor + p.surchargesMinor;
+  }
+  if (courierMinor !== null) {
     const insured = insuranceSupported(
       settings,
       "CARRIER_TABLE",
       zone,
       domestic ? "MANUAL" : "DHL",
     );
-    out[zone] = {
+    candidates.push({
       fromIlsMinor:
-        shipMinor + (insured ? Math.round(settings.insurance.minIls * 100) : 0),
+        courierMinor +
+        (insured ? Math.round(settings.insurance.minIls * 100) : 0),
       insured,
-    };
+    });
   }
-  return out;
+  const post = postFromIlsMinor(a, settings, zone, value);
+  if (post) candidates.push(post);
+  return candidates;
 }

@@ -131,6 +131,9 @@ export async function shippingChoicesForOrder(
     .from(artworks)
     .where(inArray(artworks.id, ids));
   const country = i.country ?? order.shipCountry;
+  // A re-price keeps the packing the order was quoted with.
+  const rolled =
+    (order.shippingQuote as ShippingQuoteResult | null)?.packing === "ROLLED";
   return shippingOptions({
     items,
     country,
@@ -139,6 +142,7 @@ export async function shippingChoicesForOrder(
     shipping: await getSetting("shipping", db),
     checkout: await getSetting("checkout", db),
     carrier: carrierFor(country, { env: deps.env ?? defaultEnv }),
+    ...(rolled ? { packing: "ROLLED" as const } : {}),
   }).all;
 }
 

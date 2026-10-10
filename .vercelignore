@@ -1,0 +1,20 @@
+# Never uploaded to Vercel. Vercel installs and builds from the sources, so local data (database
+# files, private originals and documents), secrets, build output and test artifacts stay here.
+.data/
+.env*
+!.env.example
+.next/
+.next*/
+node_modules/
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+blob-report/
+tests/
+# Seed input: the catalog is seeded and uploaded from a local machine (npm run prod:seed).
+data/
+openapi/
+.DS_Store
+*.pem
+docs/pricing/*.pdf

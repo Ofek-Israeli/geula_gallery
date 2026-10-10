@@ -370,7 +370,12 @@ test.describe("about and contact", () => {
     test(`about and contact render with the cancel link and Person JSON-LD (${locale})`, async ({
       page,
     }) => {
-      const cancel = locale === "he" ? "ביטול עסקה" : "Cancel a purchase";
+      // "Cancel a purchase" on the contact page; on both pages the footer's "Cancellations and
+      // returns" item opens the same page.
+      const cancel =
+        locale === "he"
+          ? /^ביטול עסקה( והחזרות)?$/
+          : /^(Cancel a purchase|Cancellations and returns)$/;
       for (const path of ["/about", "/contact"]) {
         const res = await page.goto(`/${locale}${path}`);
         expect(res?.status()).toBe(200);

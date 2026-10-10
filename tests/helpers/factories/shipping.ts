@@ -166,7 +166,7 @@ export function testAdminContext(userId = "u-ship"): AdminContext {
 
 export interface PaidOrderOptions {
   country?: string;
-  method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY";
+  method?: "CARRIER_TABLE" | "LOCAL_PICKUP";
   currency?: "ILS" | "USD";
   artwork?: Partial<ArtworkInsert>;
 }

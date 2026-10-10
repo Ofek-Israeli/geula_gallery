@@ -25,7 +25,8 @@ export function ArtworkFacts({
   const rows: [string, ReactNode][] = [
     [t("medium"), artwork.mediumText],
     [
-      t("dimensions"),
+      // "H × W × D" only when a depth was measured; otherwise the row shows H × W.
+      artwork.depthMm ? t("dimensions") : t("dimensionsHW"),
       <Dimensions
         key="d"
         locale={locale}

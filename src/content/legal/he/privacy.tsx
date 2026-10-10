@@ -1,14 +1,22 @@
-import { H2, L, type LegalDocModule, P, UL } from "../types";
+import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
 /** מדיניות פרטיות – טיוטה (תיקון 13; spec §7). */
 export const privacy: LegalDocModule = {
   title: "מדיניות פרטיות",
-  Body: ({ profile: p }) => (
+  Body: ({ profile: p, links }) => (
     <>
       <H2>מי אחראי למידע</H2>
       <P>
         בעל השליטה במאגר: {p.legalName}, {p.address}. לפניות בנושא פרטיות:{" "}
-        <L>{p.privacyContact}</L>.
+        {p.privacyContact ? (
+          <L>{p.privacyContact}</L>
+        ) : (
+          <>
+            <A href={links.contact}>טופס יצירת הקשר</A> או בטלפון{" "}
+            <L>{p.phoneLocal}</L>
+          </>
+        )}
+        .
       </P>
 
       <H2>איזה מידע נאסף ולמה</H2>
@@ -24,7 +32,12 @@ export const privacy: LegalDocModule = {
         </li>
         <li>
           כתובת IP נשמרת רק כקוד מוצפן חד-כיווני, למניעת שימוש לרעה. איננו
-          משתמשים בכלי סטטיסטיקה, בפרסום או בעוגיות שאינן הכרחיות.
+          משתמשים בפרסום או בעוגיות שאינן הכרחיות.
+        </li>
+        <li>
+          לסטטיסטיקת ביקורים אנו משתמשים ב-Vercel Web Analytics: נספרים העמודים
+          שנצפו, מאיזה אתר הגיעו ומאיזו מדינה, בלי עוגיות ובלי לזהות את המבקר.
+          כתובת העמוד נשמרת בלי פרטי הזמנה או כתובת.
         </li>
         <li>
           כשמוסיפים יצירה לעגלה, עוגייה הכרחית אחת זוכרת אילו יצירות נמצאות בה
@@ -58,7 +71,17 @@ export const privacy: LegalDocModule = {
       <H2>הזכויות שלך</H2>
       <P>
         אפשר לבקש לעיין במידע עליך, לתקן אותו או למחוק אותו (בכפוף לחובות שמירה
-        לפי דין), בפנייה ל-<L>{p.privacyContact}</L>. נשיב תוך 30 יום.
+        לפי דין), בפנייה{" "}
+        {p.privacyContact ? (
+          <>
+            ל-<L>{p.privacyContact}</L>
+          </>
+        ) : (
+          <>
+            ב<A href={links.contact}>טופס יצירת הקשר</A>
+          </>
+        )}
+        . נשיב תוך 30 יום.
       </P>
 
       <H2>אבטחה</H2>

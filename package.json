@@ -25,6 +25,10 @@
     "db:seed": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/seed/index.ts",
     "auth:generate": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/auth-generate.ts",
     "admin:create": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/admin-create.ts",
+    "prod:migrate": "node --conditions=react-server --env-file=.env.production.local --import tsx scripts/db-migrate.ts",
+    "prod:seed": "node --conditions=react-server --env-file=.env.production.local --import tsx scripts/seed/index.ts --remote --yes",
+    "prod:upload": "node --env-file=.env.production.local --import tsx scripts/blob-upload.ts",
+    "prod:admin": "node --conditions=react-server --env-file=.env.production.local --import tsx scripts/admin-create.ts",
     "env:init": "node --import tsx scripts/env-init.ts",
     "gen:api-types": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/gen-api-types.ts",
     "cron": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/cron.ts",
@@ -36,6 +40,7 @@
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.7",
     "@react-pdf/renderer": "4.9.0",
+    "@vercel/analytics": "2.0.1",
     "@vercel/blob": "2.8.0",
     "@vercel/functions": "3.9.9",
     "better-auth": "1.7.7",

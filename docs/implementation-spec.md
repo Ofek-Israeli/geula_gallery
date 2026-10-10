@@ -99,9 +99,9 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - Exactly once is guaranteed by a DB claim plus a search for our marker in Morning.
 
 *Shipping*
-- Table rates the painter edits: zones, size classes S/M/L/QUOTE, per-piece rules, time-boxed surcharges, insurance on a capped insured value, and a declared-value cap per carrier. Abroad, a DHL Express estimate from DHL's published Israel tariff replaces the table (§4.4); the table stays for Israel and as the fallback.
+- Table rates the painter edits: zones, size classes S/M/L/QUOTE, per-piece rules, time-boxed surcharges, insurance on a capped insured value, and a declared-value cap per carrier. Abroad, a DHL Express estimate from DHL's published Israel tariff replaces the table (§4.4); the table stays for Israel and as the fallback. Israel Post (home delivery in Israel, EMS abroad) is offered next to the courier at its published prices when the parcel fits its limits (§4.4). The buyer may have a canvas rolled in a tube instead of sent stretched (§4.4 packing choice).
 - Country rules and the DAP notice.
-- Methods: CARRIER_TABLE, LOCAL_PICKUP, ARTIST_DELIVERY, QUOTED.
+- Methods: CARRIER_TABLE, ISRAEL_POST, LOCAL_PICKUP, QUOTED. (The painter does not deliver works herself: there is no delivery by the artist.)
 - Carriers: `mock`, `manual`, and `dhl` (built from the OpenAPI types plus fixtures).
 - Fulfillment screen: packing checklist and photos (a private upload purpose), customs, export declaration, printable packing slip and commercial invoice.
 - Tracking: a cron job plus manual events, with bilingual status emails.
@@ -114,8 +114,8 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 |---|---|
 | Cancellation flow | One POST form for both regimes: name plus (ID/passport **or** order number) required; then review → confirm; on-screen and email acknowledgement with content, date and time; duplicate notices accepted. |
 | Deadlines and fee | 14-day refund deadline counted from the notice, with alerts. 4-month window when eligible and a conversation took place; conversations are detected automatically from earlier buyer requests. Change-of-mind fee suggestion min(5%, ₪100). |
-| Disclosure document | HTML page, inline email summary, and a printed copy in the parcel. Required before packing, pickup handover or artist delivery. |
-| Checkout | Pre-contract disclosures; click-to-accept with stored versions; 18+ checkbox; DAP acknowledgement; receipt-by-email consent. |
+| Disclosure document | HTML page, inline email summary, and a printed copy in the parcel. Required before packing or pickup handover. |
+| Checkout | Pre-contract disclosures; click-to-accept with stored versions; DAP acknowledgement; receipt-by-email consent. (No 18+ checkbox: the painter removed it; it is not a legal requirement.) |
 | Seller identity | Shown at checkout, including "Merchant country: Israel". The ID number appears only on noindex pages, in documents and in emails, never on legal pages or the footer. |
 | Privacy | An s.11 notice at every form; a retention purge job. |
 | Printables | s.4C studio notice. |
@@ -129,7 +129,7 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - Inbox (questions and quotes); cancellations; alerts; settings (business, VAT and pricing, checkout, shipping, cancellation); account.
 
 *Demo*
-- Site-wide banner; `X-Robots-Tag: noindex` on all routes; /credits.
+- `X-Robots-Tag: noindex` on all routes; /credits. (No site-wide banner: removed at the painter's request.)
 - Demo items are refused by live providers. In production, mock payments work only for demo items.
 - Seed: 16 AIC works with statuses, 3 sample orders, placeholder business profile, painter account.
 
@@ -163,7 +163,8 @@ It runs locally on Homebrew postgresql@18, with a deploy guide for Vercel Pro, N
 - **EU:** EUR prices and EU targeting (GPSR). The EUROPE zone exists but is disabled and routes to quote.
 - **Shipping extras:** DHL live rates (until then, the published-tariff estimate of §4.4 prices shipments abroad) and landed cost; DDP; the DHL Unified Tracking API; domestic courier APIs.
 - **Payment extras:** Cardcom iframe and J5 SuspendedDeal; PayPal JS SDK and the disputes API (disputes raise an alert and block fulfillment only); other PSPs and Airwallex.
-- **Other:** analytics, "view on a wall", carousels, buyer accounts, Vercel WAF and BotID, the actual deployment.
+- **Other:** "view on a wall", carousels, buyer accounts, Vercel WAF and BotID. (Vercel Web Analytics was added later.)
+- **Deployment:** the site first launches as a showcase on Vercel Hobby: `SALES_OPEN=false` (no online purchase, cart or payment links; checkout answers `SALES_CLOSED`) and `EMAIL_TO_VISITORS=false` (only the painter's emails are sent; "Mark as answered" in the inbox). See `docs/architecture.md`, "Showcase launch", and `docs/deploy.md` §0.
 
 ### 1.4 Deliberate deviations from the digest
 | Digest | This plan | Why |
@@ -389,7 +390,7 @@ Browser ─► src/proxy.ts  (next-intl routing + optimistic admin-cookie redire
 | image_role | MAIN, DETAIL, EDGE, BACK, FRAMED, IN_ROOM, PROCESS |
 | packaging_type / glazing / size_class | ROLLED_TUBE, FLAT_BOX, STRETCHED_BOX, FRAMED_BOX, CRATE / NONE, GLASS, ACRYLIC / S, M, L, QUOTE |
 | order_status / order_source | AWAITING_PAYMENT, PAYMENT_REVIEW, PAID, EXPIRED, CANCELLED, COMPLETED / WEB, OFFER, QUOTE, MANUAL |
-| shipping_method / vat_mode | CARRIER_TABLE, LOCAL_PICKUP, ARTIST_DELIVERY, QUOTED / OSEK_PATUR, OSEK_MURSHE |
+| shipping_method / vat_mode | CARRIER_TABLE, ISRAEL_POST, LOCAL_PICKUP, QUOTED / OSEK_PATUR, OSEK_MURSHE |
 | payment_provider / provider_mode | MOCK, CARDCOM, PAYPAL, OFFLINE / MOCK, TEST, LIVE, MANUAL |
 | attempt_status | CREATED, PENDING, AWAITING_CAPTURE, CAPTURING, PAYMENT_REVIEW, SUCCEEDED, FAILED, CANCELED, EXPIRED, NEEDS_REFUND, REFUNDED |
 | refund_reason | CANCELLATION, LOST_RESERVATION, DUPLICATE_PAYMENT, ORDER_CANCELLED, STALE_QUOTE, AMOUNT_MISMATCH, ADMIN, EXTERNAL |
@@ -422,7 +423,7 @@ Browser ─► src/proxy.ts  (next-intl routing + optimistic admin-cookie redire
 - Pricing:
   - `price_ils_minor`: the consumer total, including VAT when osek murshe;
   - `price_usd_minor`, `price_on_request`, `price_changed_at`, `offers_enabled`, `offer_auto_decline_below_ils_minor`.
-- Shipping: `packaging_type`, `can_be_rolled`, `packed_length_mm`, `packed_width_mm`, `packed_height_mm`, `packed_weight_g`, `size_class_override`, `ships_internationally`, `local_pickup_only`, `quote_only`, `dispatch_days` (5).
+- Shipping: `packaging_type`, `can_be_rolled`, `packed_length_mm`, `packed_width_mm`, `packed_height_mm`, `packed_weight_g`, `size_class_override`, `ships_internationally`, `local_pickup_only`, `quote_only`, `dispatch_days` (7).
 - Customs: `hs_code` ('9701.91'), `customs_description_en`, `country_of_origin` ('IL'), `declared_value_override_minor`, `max_insurable_value_minor`, `credit_line`.
 - CHECKs:
   - `(reserved_by_order_id IS NULL) = (reserved_until IS NULL)`;
@@ -672,7 +673,6 @@ Publishing requires the publish checklist. Unpublishing is refused while a live 
 - LABEL_UNKNOWN → LABEL_CREATED | LABEL_REQUESTED (after the admin confirms no label exists).
 - Manual: PACKED → LABEL_CREATED | IN_TRANSIT.
 - Pickup: AWAITING_FULFILLMENT → READY_FOR_PICKUP → COLLECTED. Collection requires `disclosure_sent_at` or `disclosure_handed_over_at`.
-- Artist delivery: PACKED → OUT_FOR_DELIVERY → DELIVERED (same disclosure guard).
 - EXCEPTION ⇄ IN_TRANSIT; EXCEPTION → RETURNED | DELIVERED. Before IN_TRANSIT → CANCELLED.
 
 **Cancellation**
@@ -899,7 +899,7 @@ export interface TaxDocumentProvider { id: 'mock' | 'morning' | 'gateway' | 'non
 export function classify(a: ArtworkShipSpec, divisor = 5000): { sizeClass: SizeClass; chargeableG: number; oversizePiece: boolean; nonConveyable: boolean; reasons: string[] };
 export function quoteShipping(i: { items: ArtworkShipSpec[]; country: string; method?: ShippingMethod; currency: Currency; date: Date;
   declaredValueIlsMinor: number; settings: ShippingSettings; fx: FxReference; carrier: 'DHL'|'MANUAL'|'MOCK' }): ShippingQuoteResult; // includes insuredValueMinor, insured: boolean
-export function zoneEstimates(a: ArtworkShipSpec, settings: ShippingSettings, date: Date, value?: { declaredValueIlsMinor: number; fx: FxReference }): Record<ZoneId, { fromIlsMinor: number; insured: boolean } | 'QUOTE' | 'UNAVAILABLE'>;
+export function zoneEstimates(a: ArtworkShipSpec, settings: ShippingSettings, date: Date, value?: { declaredValueIlsMinor: number; fx: FxReference }): Record<ZoneId, { fromIlsMinor: number; insured: boolean; estimate?: { he: string; en: string } } | 'QUOTE' | 'UNAVAILABLE'>;
 export function evaluateDestination(i: { country: string; declaredValueIlsMinor: number; carrier: 'DHL'|'MANUAL'|'MOCK'; settings: ShippingSettings; fx: FxReference }):
   { mode: 'ok' | 'quote_only' | 'blocked'; reason?: BlockReason; notices: NoticeCode[] };
 export type BlockReason = 'DESTINATION_DENIED'|'ZONE_DISABLED'|'NOT_INTERNATIONAL'|'QUOTE_ONLY'|'SIZE_QUOTE'|'VALUE_CAP'|'GB_LOW_VALUE';
@@ -938,6 +938,24 @@ export type NoticeCode = 'DAP_DUTIES'|'EU_LOW_VALUE_DUTY'|'US_DUTY_FREE_CLEARANC
 - `breakdown` = net transport / piece surcharges / everything else (ILS minor, summing to the total); the quote carries `rateSource: 'DHL_ESTIMATE'` and `dhl` (the workings), snapshotted with the order. Table quotes carry `rateSource: 'TABLE'`.
 - `zoneEstimates` abroad: the cheapest estimate among the site zone's offered, DHL-listed countries; `value` adds the export declaration when due.
 
+*Israel Post* (`shipping/israel-post.ts`, the price lists in `shipping/tariff/israel-post-2026.ts`; explained in the same document)
+- The `ISRAEL_POST` method, offered next to the courier in Israel and abroad when `shipping.israelPost.domestic` / `.abroad` is on. The carrier is `MANUAL`: booked at the post office, the tracking number entered by hand.
+- One parcel per work, priced by its **actual** weight; the order pays the sum.
+  - In Israel: home delivery (counter to door), the inter-city price by weight: ₪67 up to 1 kg, ₪73 up to 10 kg, ₪86 up to 20 kg.
+  - Abroad: EMS by the destination's group (1–13): up to 0.5 kg, up to 1 kg, then each further 0.5 kg or part. 171 countries; elsewhere the option is not offered.
+- Limits: 20 kg; sides in whole cm rounded up; no side over the limit and longest + 2 × (the other two) within it: Israel 150/300 cm; abroad the destination's own (150/300, 105/200, Nepal 100/180; unclear entries 105/200). No crates and no glazing.
+- The courier's refusals apply first (denied, not international, destination quote, quote-only work). Israel Post's own refusals are `blocked`, so checkout leaves the option out: crate, glazing, too heavy or too large → `SIZE_QUOTE`; no EMS to the country → `ZONE_DISABLED`.
+- Insurance: none in Israel. Abroad, when `israelPost.insureAbroad` and `insurance.enabled`, EMS's liability extension: ₪6.90 per ₪1,000 or part of the insured value (the usual caps), up to ₪25,000.
+- The quote carries `rateSource: 'ISRAEL_POST'` and `israelPost` (tariff, service `DOMESTIC_DOOR` or `EMS`, group, each parcel), the delivery time from the settings, and abroad `TRANSIT_ESTIMATE`.
+- `zoneEstimates` takes the cheaper of the courier and Israel Post per zone (abroad: the cheapest EMS country of the zone where the parcel fits, plus the premium); when Israel Post gives the price, its delivery time (`estimate`) replaces the zone's on the artwork page.
+
+*Packing choice: stretched or rolled* (`rates.ts#rolledSpec`)
+- A work is `rollableAtCheckout` when `can_be_rolled`, not already a tube, and not crated, framed or glazed. The catalog seed marks the painter's unframed canvases so; they stay listed as `STRETCHED_BOX`.
+- At checkout step 2 the buyer picks "Stretched, in a box" (default) or "Rolled in a tube" (`pack=rolled`). Rolled prices each rollable work as its tube (the shorter side + 100 mm × 260 × 260 mm) at an assumed weight of 1.5 kg + 1.2 kg/m², with no class override; the quotes carry `packing: 'ROLLED'`, snapshotted with the order.
+- A large canvas then fits Israel Post (home delivery and EMS), and DHL bills the tube's smaller volume.
+- The disclosure adds a "Packing" row (rolled off the stretcher; re-stretching not included); the admin order page and the fulfilment screen (tube parcels, tube checklist) follow the snapshot.
+- `zoneEstimates` shows the cheaper of stretched and rolled, marked `rolled`; stretched wins a tie.
+
 *Rolled tube*
 - Only if `can_be_rolled`.
 - Tube length = the shorter artwork side + 100 mm; cross-section 260 × 260 mm (≥ 10 in diameter); oversize above 100 cm.
@@ -961,8 +979,8 @@ export type NoticeCode = 'DAP_DUTIES'|'EU_LOW_VALUE_DUTY'|'US_DUTY_FREE_CLEARANC
 
 **Methods**
 - CARRIER_TABLE: IL uses the manual domestic courier; international uses DHL, or manual when DHL is disabled.
+- ISRAEL_POST: home delivery in Israel, EMS abroad, at Israel Post's published prices; manual carrier.
 - LOCAL_PICKUP: free; the address is revealed after payment.
-- ARTIST_DELIVERY: IL only, at a set price.
 - QUOTED: link orders only.
 
 **Customs**
@@ -1055,10 +1073,11 @@ export interface CarrierAdapter { id: 'mock' | 'manual' | 'dhl'; mode: 'mock' | 
   - `zones[{id, enabled, countries, estimate{he,en}}]`;
   - `classRatesIls`, `oversizeFeeIls`, `nonConveyableFeeIls`, `surcharges[…]`;
   - `dhlEstimate{enabled, fuelSurchargePct, fuelSurchargeAsOf, accountDiscountPct, exportDeclarationByDhl}` (every field defaulted, so older rows parse);
+  - `israelPost{domestic, abroad, insureAbroad, estimate{domestic{he,en}, abroad{he,en}}}` (every field defaulted);
   - `insurance{enabled, provider: 'DHL'|'THIRD_PARTY'|'NONE', ratePct, minIls, maxInsuredIls, coverageConfirmedAt}`;
   - `valueCaps[{carrier, maxUsd}]`, `deniedCountries`, `quoteOnlyCountries`;
   - thresholds `gbLowValueGbp` 135, `euLowValueEur` 150, `usFormalEntryUsd` 2500, `exportDeclarationUsd` 200;
-  - `localPickup`, `artistDelivery`, `domesticCarrierName`.
+  - `localPickup`, `domesticCarrierName`.
 - **`cancellation_policy`**: `changeOfMindFee: 'STATUTORY_MAX' | 'NONE'` (a suggestion; the admin may only lower it).
 - **`site_content`**: P1.
 - **Constants:** `src/lib/vat.ts` (`VAT_RATES=[{from:'2025-01-01', rateBp:1800}]`, `PATUR_CEILING={2026: 12_283_300}`). `versions.ts` with `approved:false` shows a DRAFT banner.
@@ -1114,7 +1133,7 @@ export interface CarrierAdapter { id: 'mock' | 'manual' | 'dhl'; mode: 'mock' | 
 2. **Checkout page** `/[locale]/checkout/[slug]?to=<CC>&city=…&zip=…&ship=<METHOD>&cur=USD&step=<destination|delivery|details>` (address first; `src/lib/checkout-steps.ts`). It is dynamic and noindex, calls `getCheckoutQuote(...)` with the country, method and currency on every step, and renders:
    - **Blocked states** with CTAs ("Request a quote" / "Ask about this work"), and the destination form for destination reasons.
    - **Step 2a, destination** (a GET form, works without JS): the country `<select>` (`Intl.DisplayNames`, `Intl.Collator`), city, and postal code (optional in Israel and where none is used; Latin abroad). Prices depend on the country only; city and postal code go into the address.
-   - **Step 2b, delivery** (a GET form, works without JS): the destination with a "Change" link; method radios with price, estimate, and "tracked" plus "insured up to ₪X" only when the quote includes insurance (abroad the courier is "DHL Express", priced by the §4.4 estimate); currency links when USD is possible; notices; Continue.
+   - **Step 2b, delivery** (a GET form, works without JS): the destination with a "Change" link; method radios with price, estimate, and "tracked" plus "insured up to ₪X" only when the quote includes insurance (abroad the courier is "DHL Express", priced by the §4.4 estimate; Israel Post is "Israel Post – home delivery" in Israel and "Israel Post EMS" abroad); packing links ("Stretched, in a box" / "Rolled in a tube") when a work can be rolled; currency links when USD is possible; notices; Continue.
    - **Step 2c, details**, only when the chosen method is offered and selected: the destination and method with "Change" links, then the **details form** (`useActionState`): name, email, phone, the street address only for a delivery (pickup buyers type none; city and postal code come from step 2a), optional company name and VAT ID.
    - **`PreContractDisclosure`**, built from `content/disclosure.ts` `buildPreContract()`:
      - seller legal name, ID/company number, address, phones (local and +972), email, **"Merchant country: Israel"**, customer service;
@@ -1124,7 +1143,7 @@ export interface CarrierAdapter { id: 'mock' | 'manual' | 'dhl'; mode: 'mock' | 
      - payment terms including installments;
      - cancellation rights (14 days; 4 months when eligible and a conversation took place);
      - fee and channels; DAP notice; links; s.11 notice.
-   - **Checkboxes**, all unticked: terms + returns (required), 18+ (required), DAP (international, required), receipt by email (optional).
+   - **Checkboxes**, all unticked: terms + returns (required), DAP (international, required), receipt by email (optional).
    - **Provider radios**, with labels built from capabilities. For example, "Card – Cardcom secure page" adds "Bit / Apple Pay / Google Pay" only when `CARDCOM_WALLETS` lists them, and Bit only for ILS ≤ ₪5,000.
    - Hidden fields: `expectedTotalMinor`, `checkoutNonce`, `locale`, and a signed form timestamp.
    - "When you continue, the work is reserved for you for 35 minutes."
@@ -1323,7 +1342,6 @@ Reconcile also replays unprocessed events (§5.11).
    - **(a) Manual tracking** → LABEL_CREATED; "handed over" → IN_TRANSIT.
    - **(b) Buy label:** claim PACKED → LABEL_REQUESTED (`label_attempt+1`, `idempotency_key=<orderId>:<n>`, a new `message_reference`); commit; `createShipment`. Success → LABEL_CREATED, files private. Definitive error → PACKED. Timeout → LABEL_UNKNOWN plus an alert.
    - **(c) Pickup:** READY_FOR_PICKUP (the email reveals the address) → COLLECTED. This requires `disclosure_sent_at` or the "printed disclosure handed over" checkbox (`disclosure_handed_over_at`).
-   - **(d) Artist delivery:** OUT_FOR_DELIVERY → DELIVERED, with the same disclosure guard.
 4. **Every status change:**
    - inserts a `shipment_events` row;
    - enqueues `email:shipment-update:<id>:<status>`;
@@ -1517,7 +1535,7 @@ Reconcile also replays unprocessed events (§5.11).
 - Lighthouse targets: LCP ≤ 2.5 s mobile, CLS < 0.05.
 
 ### 6.9 Demo mode (`DEMO_MODE=true`)
-- A bilingual banner: "חנות הדגמה – תשלומי בדיקה בלבד; התמונות הן ציורים ברשות הציבור מאוסף מוזיאון ומשמשות כממלא מקום / Demo store – test payments only; images are public-domain museum paintings used as placeholders".
+- No banner: the painter removed the site-wide demo banner and the About page's demo note (2026-10-10). The test payment option and the fake payment page still say "test payment".
 - `X-Robots-Tag: noindex, nofollow` on **all** routes via `headers()`.
 - Demo items are purchasable only via mock or sandbox, and in production via mock only.
 - A go-live blocker requires no unvoided mock sales on non-demo works.
@@ -1641,7 +1659,7 @@ Reconcile also replays unprocessed events (§5.11).
 - s.11 notices at every form.
 - The privacy policy lists the processors: Vercel, Neon, Resend (US storage), Cardcom, PayPal, Morning, DHL.
 - Retention and the data-subject request procedure are documented.
-- No analytics and no non-essential cookies.
+- Vercel Web Analytics on the public pages (cookieless; paths only, query strings dropped, order numbers masked; only on Vercel); no other analytics and no non-essential cookies.
 - Admin MFA.
 
 ---
@@ -1704,7 +1722,7 @@ AIC URLs never go through next/image.
 
 - **Alternates:** 40549, 66144, 65920, 62393. Sold share: 3/16 ≈ 19%.
 - **Packaging defaults** (explicit):
-  - canvas → STRETCHED_BOX (depth 30 mm); board or cardboard → FLAT_BOX (10 mm); paper → FLAT_BOX (2 mm); 109693 → CRATE;
+  - canvas → STRETCHED_BOX (depth 30 mm); board or cardboard → FLAT_BOX (10 mm); paper → FLAT_BOX (2 mm); 109693 → CRATE. These depths only size the box: the painter's catalog has no measured depths, so `depth_mm` stays null and pages show H × W;
   - **packed length and width = artwork + 120 mm total** (canvas or board) or **+ 80 mm total** (paper); packed height = depth + 80 mm;
   - packed weight = 1,500 g + 6,000 g × artwork area (m²);
   - rolled tube = the shorter side + 100 mm, × 260 × 260 mm.
@@ -1724,7 +1742,7 @@ AIC URLs never go through next/image.
 ### 8.4 Seed (`scripts/seed/index.ts` registry; idempotent upserts; called by `db:reset`)
 | Module | Owner | Contents |
 |---|---|---|
-| `settings.ts` | M1 | Business profile placeholders ("Geula Gallery / גלריה גאולה", legal name "(למילוי)", ID `000000018`, phones `03-000-0000` / `+972-3-000-0000`, `studio@example.com`, `notificationEmail=ADMIN_EMAIL`, OSEK_PATUR, `completed=false`); checkout defaults; STATUTORY_MAX; shipping defaults (below) |
+| `settings.ts` | M1 | Business profile placeholders ("Geula Levi / גאולה לוי", legal name "Geula Levi" (Latin script: it also goes on the customs invoice), ID `000000018`, phones `03-000-0000` / `+972-3-000-0000`, `studio@example.com`, `notificationEmail=ADMIN_EMAIL`, OSEK_PATUR, `completed=false`); checkout defaults; STATUTORY_MAX; shipping defaults (below) |
 | `catalog.ts` | **M2** | 5 series and 16 artworks (`is_demo=true`) ingested via `media/ingest.ts` and the StorageAdapter; OG images; 121377 ON_HOLD RESERVED_OFFLINE; 270002 NOT_FOR_SALE; the three sold works get their state from `orders.ts` |
 | `orders.ts` | WS6 (M2 ships a stub that marks the three works SOLD through `sales` OFFLINE `is_mock`) | Sample orders below |
 | `users.ts` | M1 | `admin:create` logic |
@@ -1741,6 +1759,8 @@ AIC URLs never go through next/image.
 
 - Surcharges (table prices only: Israel and the fallback abroad): fuel 20% (placeholder); DHL Demand 2026-10-01 to 2027-02-05 at ₪40 (placeholder, enabled); Elevated Risk disabled.
 - DHL estimate: enabled; fuel 49% as of 2026-10-12 (DHL's value for 12–18 Oct 2026); account discount 0 (list prices); DHL files the export declaration.
+- Israel Post: home delivery and EMS on, EMS insured; delivery times 1–2 and 5–10 business days. The domestic courier is named "Courier" / "שליח".
+- The painter's unframed canvases are `can_be_rolled` (the buyer may choose rolled); they stay `STRETCHED_BOX` and ready to hang.
 - Insurance: enabled for DHL at DHL's published 1% with a ₪45 minimum and `maxInsuredIls` 10,000 (placeholder); `coverageConfirmedAt: null` (a go-live blocker).
 - DHL cap USD 2,500; deny list IR, SY, LB, IQ; dated FX; `calibratedAt: null`.
 
@@ -1947,11 +1967,14 @@ Six agents may run only if Postgres connections and CPU allow.
   - **insured value capped before the premium**; `insured=false` when disabled or for pickup or manual;
   - USD lock; tube maths;
   - **the §8.3 expected-class table with exact numbers;**
-  - the DHL estimate path: whole order priced by the estimate, the table fallback (estimate off, Afghanistan), heavy pieces priced abroad, crates and over 70 kg quoted.
+  - the DHL estimate path: whole order priced by the estimate, the table fallback (estimate off, Afghanistan), heavy pieces priced abroad, crates and over 70 kg quoted;
+  - zone estimates: the cheaper of the courier and Israel Post, and without Israel Post.
 - **`dhl-tariff`:** the published rows agree with the published increments; every selector country has one DHL zone or none; demand regions; restricted and elevated-risk lists.
 - **`dhl-estimate`:** the worked examples and price table of `docs/pricing/shipping-taxes-and-fees.tex`; rounding; surcharge precedence; demand window edges; fuel base; discount; export declaration; failures; stale fuel and tariff review.
+- **`israel-post`:** the published domestic bands and EMS groups; every served country in one group and one size limit; the document's examples (an 80×80 canvas fits the 300 cm countries, not the US; 80×100 fits nowhere); one parcel per work; EMS insurance; the `ISRAEL_POST` quotes (Israel, abroad with insurance and USD, refusals) and the Israel "Delivery from".
+- **`packing`:** the rolled variant (tube size, rolled weight, no override); which works may be rolled; a 100×100 canvas gets Israel Post in Israel and EMS to Canada only rolled, and DHL costs less rolled; "Delivery from" shows the cheaper packing, marked rolled, with stretched winning a tie.
 - **`shipping-rules`:** deny list and IQ toggle; ZONE_DISABLED; GB_LOW_VALUE; EU notice; US notices; formal entry; VALUE_CAP; NOT_INTERNATIONAL; Latin-only addresses.
-- **`pricing`:** IL → ILS; USD rules.
+- **`pricing`:** IL → ILS; USD rules; the methods offered per destination.
 - **`requote`:** a version bump on any amount, method or currency change; refused while in flight.
 - **Utilities:** `il-id`, `aic-dimensions`, `tokens`, `mock-signature`, `redact` (including ID masking in `ack_snapshot` and email props), `crypto`, `state-machines`, `limits` (scale and production guard).
 - **Provider maps:**
@@ -2010,7 +2033,7 @@ Six agents may run only if Postgres connections and CPU allow.
 
 | Spec | Scenario |
 |---|---|
-| `smoke` | redirects; `html[dir][lang]`; banner; X-Robots-Tag; cancel link on home, works, artwork, about, legal, checkout and order pages |
+| `smoke` | redirects; `html[dir][lang]`; no demo banner; X-Robots-Tag; cancel link on home, works, artwork, about, legal, checkout and order pages |
 | `storefront` | URL filters; Sold as text; strip ≤ 4; JSON-LD availability; keyboard lightbox (mirrored arrows in he, Esc, focus return, live region); "insured" shown only when configured |
 | `purchase-il` | full IL purchase → Sold → emails (PDF attachment once WS6 lands) → mock receipt → admin sees the order |
 | `race` | two contexts → one reaches mock-pay, the other sees "just reserved" → Sold |
@@ -2021,6 +2044,8 @@ Six agents may run only if Postgres connections and CPU allow.
 | `tamper` | duplicate webhooks → one sale; tampered amount → not paid, CRITICAL alert |
 | `international` | US destination: Latin city at step 1, DHL Express priced, USD via the currency links, Latin street address, DAP required, USD total, pay; the locked quote has `rateSource = DHL_ESTIMATE` |
 | `checkout-steps` | address-first steps with JS off (pickup shows no street fields); Change keeps the values; postal code required in the US, not in Hong Kong; a method that isn't offered; currency links; blocked destination prefilled; axe on every step, he + en |
+| `israel-post` | Israel: Israel Post home delivery at ₪73, paid; the order and its MANUAL shipment are `ISRAEL_POST`, the quote's `rateSource = ISRAEL_POST`. Abroad (Canada): Israel Post EMS next to DHL Express |
+| `packing` | a 100×80 canvas: stretched, no Israel Post in Israel; rolled, Israel Post at ₪73, the recap and disclosure say "rolled", paid, and the order's quote has `packing = ROLLED`; abroad, rolled adds Israel Post EMS next to DHL; the artwork page's "from ₪73 (rolled in a tube)" |
 | `admin-shipping` | the DHL Express estimate group: stored values, the tariff panel and DHL's links, he + en |
 | `shipping-rules` | IR hidden; GB low value → quote; VALUE_CAP → quote; crate → quote only |
 | `quote` | quote request → admin quotes → link → requote by method change → pay |

@@ -15,7 +15,8 @@ import {
  *   stored timestamps are kept;
  * - a surcharge row with an empty id is ignored (the blank "new" row), a ticked `remove` drops it;
  * - the DHL estimate fields (`dhl.*`) are read only when the form carries `dhl.present` (a page
- *   opened before they existed keeps the stored values); an empty fuel date keeps the stored one.
+ *   opened before they existed keeps the stored values); an empty fuel date keeps the stored one;
+ * - likewise the Israel Post fields (`post.*`) only with `post.present`.
  */
 export type FormFields = Record<string, string | string[] | undefined>;
 
@@ -91,6 +92,25 @@ export function shippingSettingsFromForm(
           exportDeclarationByDhl: on(f, "dhl.exportDecl"),
         };
 
+  const israelPost =
+    f["post.present"] === undefined
+      ? current.israelPost
+      : {
+          domestic: on(f, "post.domestic"),
+          abroad: on(f, "post.abroad"),
+          insureAbroad: on(f, "post.insure"),
+          estimate: {
+            domestic: {
+              he: one(f, "post.estDomHe"),
+              en: one(f, "post.estDomEn"),
+            },
+            abroad: {
+              he: one(f, "post.estAbrHe"),
+              en: one(f, "post.estAbrEn"),
+            },
+          },
+        };
+
   const candidate = {
     divisor: num(f, "divisor"),
     calibratedAt: on(f, "markCalibrated")
@@ -119,6 +139,7 @@ export function shippingSettingsFromForm(
     nonConveyableFeeIls: num(f, "nonConveyableFeeIls"),
     surcharges,
     dhlEstimate,
+    israelPost,
     insurance: {
       enabled: on(f, "ins.enabled"),
       provider: one(f, "ins.provider") || "NONE",
@@ -143,11 +164,6 @@ export function shippingSettingsFromForm(
     localPickup: {
       enabled: on(f, "pickup.enabled"),
       feeIls: num(f, "pickup.feeIls"),
-    },
-    artistDelivery: {
-      enabled: on(f, "artist.enabled"),
-      feeIls: num(f, "artist.feeIls"),
-      area: { he: one(f, "artist.areaHe"), en: one(f, "artist.areaEn") },
     },
     domesticCarrierName: {
       he: one(f, "domestic.he"),
@@ -185,9 +201,6 @@ export function shippingSettingsToForm(s: ShippingSettings): FormFields {
     "th.usFormalEntryUsd": String(s.thresholds.usFormalEntryUsd),
     "th.exportDeclarationUsd": String(s.thresholds.exportDeclarationUsd),
     "pickup.feeIls": String(s.localPickup.feeIls),
-    "artist.feeIls": String(s.artistDelivery.feeIls),
-    "artist.areaHe": s.artistDelivery.area.he,
-    "artist.areaEn": s.artistDelivery.area.en,
     "domestic.he": s.domesticCarrierName.he,
     "domestic.en": s.domesticCarrierName.en,
     "dhl.present": "1",
@@ -196,10 +209,17 @@ export function shippingSettingsToForm(s: ShippingSettings): FormFields {
     "dhl.discountPct": String(s.dhlEstimate.accountDiscountPct),
   };
   if (s.dhlEstimate.enabled) f["dhl.enabled"] = "on";
+  f["post.present"] = "1";
+  if (s.israelPost.domestic) f["post.domestic"] = "on";
+  if (s.israelPost.abroad) f["post.abroad"] = "on";
+  if (s.israelPost.insureAbroad) f["post.insure"] = "on";
+  f["post.estDomHe"] = s.israelPost.estimate.domestic.he;
+  f["post.estDomEn"] = s.israelPost.estimate.domestic.en;
+  f["post.estAbrHe"] = s.israelPost.estimate.abroad.he;
+  f["post.estAbrEn"] = s.israelPost.estimate.abroad.en;
   if (s.dhlEstimate.exportDeclarationByDhl) f["dhl.exportDecl"] = "on";
   if (s.insurance.enabled) f["ins.enabled"] = "on";
   if (s.localPickup.enabled) f["pickup.enabled"] = "on";
-  if (s.artistDelivery.enabled) f["artist.enabled"] = "on";
   for (const z of s.zones) {
     if (z.enabled) f[`zone.${z.id}.enabled`] = "on";
     f[`zone.${z.id}.countries`] = z.countries.join(", ");

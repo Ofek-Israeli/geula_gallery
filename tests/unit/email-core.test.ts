@@ -113,6 +113,7 @@ const PROPS: { [K in EmailTemplateId]: EmailTemplateProps[K] } = {
     kind: "QUOTE",
     name: "Dana",
     email: "dana@example.test",
+    phone: "+972501234567",
     message: "Quote please",
   },
   "painter-cancellation": {
@@ -151,6 +152,23 @@ describe("email template registry", () => {
     }
     expect(effectiveLocale("order-confirmation", "en")).toBe("en");
   });
+});
+
+describe("renderEmail without a public email", () => {
+  for (const locale of ["he", "en"] as const) {
+    it(`${locale}: the footer gives the phone and the cancellation page, no email`, async () => {
+      const out = await renderEmail(
+        "order-confirmation",
+        PROPS["order-confirmation"] as never,
+        { locale, brand: (l) => ({ ...brand(l), email: "" }), demo: true },
+      );
+      const b = brand(out.locale);
+      expect(out.text).not.toMatch(/@/);
+      expect(out.text).toContain(b.cancelUrl);
+      expect(out.text).toContain(`(${b.phone})`);
+      expect(out.text).not.toMatch(/emails-core\./);
+    });
+  }
 });
 
 describe("renderEmail", () => {

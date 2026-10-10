@@ -83,7 +83,7 @@ Set the `*_CONTRACT` flags in the **shell**, not in `.env.local`. Fixtures are w
 |---|---|
 | Money, VAT, formatting | `money`, `vat`, `format`, `display-format`, `dimensions`, `phone`, `il-id`, `countries` (including the countries without postal codes), `ids`, `validation` (including the checkout destination rules) |
 | Deadlines and fee | `deadlines`, `cancellation-amounts` (works only on a partial cancellation, shipping with the last work, the shared ₪100 cap, the refund clamped by what is still refundable) |
-| Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table, the DHL estimate path and its table fallback), `dhl-tariff` (the published rows agree with DHL's increments; one zone or none per country), `dhl-estimate` (the worked examples and price table of `docs/pricing/shipping-taxes-and-fees.tex`, rounding, surcharges, failures), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` (including the `dhl.*` fields) |
+| Shipping | `shipping-rates` (classes, surcharges, insured value capped before the premium, USD lock, tubes, the §8.3 table, the DHL estimate path and its table fallback, zone estimates with and without Israel Post), `dhl-tariff` (the published rows agree with DHL's increments; one zone or none per country), `dhl-estimate` (the worked examples and price table of `docs/pricing/shipping-taxes-and-fees.tex`, rounding, surcharges, failures), `israel-post` (the published domestic bands and EMS groups, one group and one size limit per served country, the document's examples, EMS insurance, the `ISRAEL_POST` quotes and refusals), `packing` (the rolled variant, which works may be rolled, Israel Post and a cheaper DHL for a large canvas only when rolled, "Delivery from" marked rolled), `shipping-rules`, `shipping-customs` (line values add up to the declared total), `shipping-settings-form` (including the `dhl.*` and `post.*` fields) |
 | Commerce | `pricing`, `reservations`, `commerce-state`, `state-machines` (including the repack edges back to AWAITING_FULFILLMENT), `payments-registry`, `cart` (cookie codec, buy-box decisions), `checkout-steps` (the address-first URL contract: parsing, the step resolver, query and link building) |
 | Provider maps | `cardcom-map`, `paypal-map`, `morning-map` (with the gateway builder), `dhl-builder`, `dhl-map`, `resend-driver` |
 | Platform | `env` (derivations and cross-field rules), `csp`, `security`, `auth-policy`, `storage`, `media-ingest`, `outbox-cron`, `routes`, `script`, `settings-schemas`, `mock-signature`, `test-helpers` |
@@ -122,12 +122,13 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `admin-catalog`, `admin-orders`, `admin-money` | artwork CRUD and publish checklist; Recheck payment and manual tracking; admin refunds, documents, dashboard cards |
 | `storefront-queries`, `catalog-seed` | filters, sitemap and SEO reads; the catalog seed (fixtures) |
 | `limits`, `transition`, `harness` | production rate limits and anti-hoarding caps; `transition()` and `withTx` retries; the test harness itself |
+| `showcase` | sales closed: the quote answers `SALES_CLOSED` (an unknown work stays a 404), no payment link is created or paid; visitor emails off: the acknowledgement is skipped, the painter's email carries the visitor's phone, jobs finish DONE; "Mark as answered" (once, no email, audited; quotes keep their status) |
 
 ### E2E (`tests/e2e`, Playwright)
 
 | Spec | Scenario |
 |---|---|
-| `smoke` (`@smoke`) | locale redirects, `html[dir][lang]`, demo banner, `X-Robots-Tag`; the cancel link on home, works, artwork, about, legal, contact, checkout and order pages; the admin guard |
+| `smoke` (`@smoke`) | locale redirects, `html[dir][lang]`, no demo banner, `X-Robots-Tag`; the cancel link on home, works, artwork, about, legal, contact, checkout and order pages; the admin guard |
 | `storefront`, `storefront-minimal` | URL filters and sorts, "Sold" as text, the recently-sold strip, JSON-LD availability, the keyboard lightbox (arrows mirrored in he, Esc, focus return, live region), "insured" only when configured; `@mobile` sticky bar and scroll-snap |
 | `checkout-minimal`, `purchase-il` | the bare checkout opens on step 1 (destination); full Israeli purchase through the three steps → Sold → emails with the disclosure PDF attachment → mock receipt → the admin sees the order; a pickup purchase types no street address |
 | `checkout-steps` | the address-first steps with JavaScript off (pickup shows no street fields), "Change" keeps the values, postal code required in the US but not in Hong Kong, a carried method that isn't offered, the currency links, a blocked destination with the form prefilled, axe on every step in he and en |
@@ -142,6 +143,8 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `fulfill` | a 5 MB packing photo upload, mock label, tracking cron → DELIVERED, printables, the label only through a signed URL, pickup blocked until the disclosure is confirmed |
 | `admin-artwork`, `admin-offline`, `admin-auth` | create, upload, publish blocked until alt text is filled; an audited price change; offline hold and sale; 6 bad logins → 429; TOTP enrolment |
 | `a11y`, `admin-a11y` | axe on home, works, artwork, checkout, cancel, order, admin login, the editor and the settings pages (including shipping), in he and en → zero serious or critical |
+| `israel-post` | Israel Post home delivery in Israel bought end to end at ₪73 (the order, its quote and its manual shipment are `ISRAEL_POST`); abroad, Israel Post EMS offered next to DHL Express |
+| `packing` | the stretched / rolled choice at checkout: a large canvas gets Israel Post only rolled (in Israel at ₪73, bought end to end with `packing = ROLLED` in the order's quote; abroad, EMS next to DHL), and the artwork page's rolled "Delivery from" |
 | `admin-shipping` | the DHL Express estimate group of the shipping settings: stored values, the tariff panel and DHL's links, in he and en |
 | `not-found` | localized and global 404s |
 

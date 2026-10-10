@@ -150,10 +150,13 @@ describe("catalog queries", () => {
       new Date("2026-10-01T09:00:00Z"),
     );
     expect(d.pickupFree).toBe(true);
+    // Israel Post home delivery (₪73, the parcel fits) beats the table's M class (₪120), and the
+    // row shows Israel Post's delivery time rather than the zone's.
     expect(d.zones.find((z) => z.zone === "IL")).toMatchObject({
       kind: "price",
-      fromIlsMinor: 12000,
+      fromIlsMinor: 7300,
       insured: false,
+      estimate: "1–2 business days",
     });
     expect(d.zones.find((z) => z.zone === "EUROPE")?.kind).toBe("quote");
   });

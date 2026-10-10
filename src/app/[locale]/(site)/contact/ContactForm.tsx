@@ -26,16 +26,20 @@ const FIELDS = ["name", "email", "phone", "message"] as const;
 
 /**
  * The contact form (spec §5.8): a general question. A plain POST before hydration (Server Action
- * with progressive enhancement); after a success it shows the acknowledgement in place.
+ * with progressive enhancement); after a success it shows the acknowledgement in place. Without
+ * visitor emails (`visitorEmail` false) it promises no email and asks for a phone number.
  */
 export function ContactForm({
   action,
   locale,
   formStart,
+  visitorEmail = true,
 }: {
   action: (prev: State, payload: FormData) => Promise<State>;
   locale: Locale;
   formStart: string;
+  /** `EMAIL_TO_VISITORS`: the visitor gets an emailed confirmation and answer. */
+  visitorEmail?: boolean;
 }) {
   const t = useTranslations("requests");
   const [state, formAction] = useActionState(action, null);
@@ -54,7 +58,11 @@ export function ContactForm({
         data-testid="contact-thanks"
       >
         <h3 className="text-2xl">{t("thanks.title")}</h3>
-        <p>{t("thanks.body", { email: state.data.email })}</p>
+        <p>
+          {visitorEmail
+            ? t("thanks.body", { email: state.data.email })
+            : t("thanks.bodyNoEmail")}
+        </p>
       </div>
     );
   }
@@ -105,7 +113,12 @@ export function ContactForm({
       >
         {(c) => <Input {...c} name="email" type="email" autoComplete="email" />}
       </Field>
-      <Field id="contact-phone" label={t("fields.phone")} error={err("phone")}>
+      <Field
+        id="contact-phone"
+        label={t("fields.phone")}
+        hint={visitorEmail ? undefined : t("fields.phoneHint")}
+        error={err("phone")}
+      >
         {(c) => <Input {...c} name="phone" type="tel" autoComplete="tel" />}
       </Field>
       <Field

@@ -66,7 +66,6 @@ test.describe("checkout and order page", () => {
     await page.getByRole("textbox", { name: /^Email/ }).fill(buyer.email);
     await page.getByRole("textbox", { name: /^Phone/ }).fill("+97230000000");
     await page.getByLabel("I have read and accept").check();
-    await page.getByLabel("I am 18 or older.").check();
     await page.getByTestId("checkout-submit").click();
     await expect(page).toHaveURL(/\/en\/mock-pay\//);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(

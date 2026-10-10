@@ -36,10 +36,38 @@ describe("settings schemas", () => {
     expect(shippingSettingsSchema.safeParse(all).success).toBe(true);
   });
 
-  it("reads a shipping row saved before the DHL estimate existed with its defaults", () => {
-    const { dhlEstimate: _omitted, ...old } = shippingSettingsSchema.parse(
+  it("reads a shipping row saved while delivery by the artist existed, dropping it", () => {
+    const seeded = shippingSettingsSchema.parse(
       settingsSeedValues(seedEnv).shipping,
     );
+    const old = {
+      ...seeded,
+      artistDelivery: {
+        enabled: true,
+        feeIls: 150,
+        area: { he: "תל אביב", en: "Tel Aviv" },
+      },
+    };
+    const parsed = shippingSettingsSchema.parse(old);
+    expect(parsed).toEqual(seeded);
+    expect("artistDelivery" in parsed).toBe(false);
+  });
+
+  it("reads a shipping row saved before the DHL estimate existed with its defaults", () => {
+    const {
+      dhlEstimate: _omitted,
+      israelPost: _post,
+      ...old
+    } = shippingSettingsSchema.parse(settingsSeedValues(seedEnv).shipping);
+    expect(shippingSettingsSchema.parse(old).israelPost).toEqual({
+      domestic: true,
+      abroad: true,
+      insureAbroad: true,
+      estimate: {
+        domestic: { he: "1–2 ימי עסקים", en: "1–2 business days" },
+        abroad: { he: "5–10 ימי עסקים", en: "5–10 business days" },
+      },
+    });
     expect(shippingSettingsSchema.parse(old).dhlEstimate).toEqual({
       enabled: true,
       fuelSurchargePct: 49,

@@ -25,7 +25,7 @@ import {
 } from "@/server/storage";
 import { type ChecklistEntry, checklistFor, photosRequired } from "./checklist";
 import { customsDescriptionEn, declaredValueUsdMinor } from "./customs";
-import { packedBox } from "./rates";
+import { packedBox, rollableAtCheckout, rolledSpec } from "./rates";
 import { carrierFor } from "./registry";
 import {
   type FulfillmentBlock,
@@ -37,6 +37,7 @@ import type {
   CarrierCode,
   PackagingType,
   ShipmentPackage,
+  ShippingQuoteResult,
 } from "./types";
 
 /**
@@ -182,7 +183,10 @@ export async function getFulfillment(
       cancellationNumber: cancelledBy.get(item.id) ?? "",
     }));
 
-  const specs = rows.map(
+  // The buyer chose to have the works rolled: the rollable ones are packed as tubes.
+  const rolledOrder =
+    (order.shippingQuote as ShippingQuoteResult | null)?.packing === "ROLLED";
+  const listedSpecs = rows.map(
     ({ art: a }): ArtworkShipSpec => ({
       artworkId: a.id,
       heightMm: a.heightMm,
@@ -204,6 +208,9 @@ export async function getFulfillment(
       dispatchDays: a.dispatchDays,
     }),
   );
+  const specs = listedSpecs.map((s) =>
+    rolledOrder && rollableAtCheckout(s) ? rolledSpec(s) : s,
+  );
   const items: FulfillmentItem[] = rows.map(({ item, art: a }, i) => ({
     title: locale === "he" ? item.titleHe : item.titleEn,
     inventoryNumber: a.inventoryNumber,
@@ -212,9 +219,9 @@ export async function getFulfillment(
         { heightMm: a.heightMm, widthMm: a.widthMm, depthMm: a.depthMm },
         locale,
       );
-      return `${d.cm} (${d.inches})`;
+      return locale === "en" ? `${d.cm} (${d.inches})` : d.cm;
     })(),
-    packagingType: a.packagingType as PackagingType,
+    packagingType: (specs[i] as ArtworkShipSpec).packagingType,
     canBeRolled: a.canBeRolled,
     coaIncluded: a.coaIncluded,
     suggested: suggestedPackage(specs[i] as ArtworkShipSpec),

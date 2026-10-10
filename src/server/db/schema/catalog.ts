@@ -128,7 +128,7 @@ export const artworks = pgTable(
     shipsInternationally: boolean().notNull().default(true),
     localPickupOnly: boolean().notNull().default(false),
     quoteOnly: boolean().notNull().default(false),
-    dispatchDays: smallint().notNull().default(5),
+    dispatchDays: smallint().notNull().default(7),
 
     // Customs
     hsCode: text().notNull().default("9701.91"),

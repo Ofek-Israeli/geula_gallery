@@ -38,6 +38,7 @@ describe("routes", () => {
       "city",
       "zip",
       "ship",
+      "pack",
       "cur",
       "step",
     ]);
@@ -45,13 +46,14 @@ describe("routes", () => {
       paths.checkout("sunset", {
         step: "delivery",
         cur: "USD",
+        pack: "rolled",
         ship: "CARRIER_TABLE",
         zip: "62701",
         city: "Springfield",
         to: "US",
       }),
     ).toBe(
-      "/checkout/sunset?to=US&city=Springfield&zip=62701&ship=CARRIER_TABLE&cur=USD&step=delivery",
+      "/checkout/sunset?to=US&city=Springfield&zip=62701&ship=CARRIER_TABLE&pack=rolled&cur=USD&step=delivery",
     );
     expect(paths.checkout("sunset", { to: "IL", city: "", zip: "" })).toBe(
       "/checkout/sunset?to=IL",

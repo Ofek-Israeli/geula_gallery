@@ -22,7 +22,7 @@ import {
   tariffReviewDue,
 } from "@/server/shipping/dhl-estimate";
 import { shippingSettingsToForm } from "@/server/shipping/settings-form";
-import { dhlTariffOn } from "@/server/shipping/tariff";
+import { dhlTariffOn, ISRAEL_POST_2026 } from "@/server/shipping/tariff";
 import { saveShippingSettingsAction } from "./actions";
 
 export async function generateMetadata({
@@ -48,7 +48,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
  * (fuel surcharge with a "stale" badge, account discount, export declaration, and a read-only
  * summary of the published tariff with its sources), the class-rate grid, piece fees,
  * time-boxed surcharges, insurance (with "coverage confirmed on"), value caps per carrier, the deny
- * and quote-only lists, thresholds, pickup, artist delivery, the domestic courier name, "Mark
+ * and quote-only lists, thresholds, pickup, the domestic courier name, "Mark
  * calibrated today", the dated FX (read only; set in the checkout settings) and a read-only
  * providers panel (modes only, never secrets).
  */
@@ -105,6 +105,12 @@ export default async function ShippingSettingsPage({
   const declFee =
     decl.minor +
     (decl.plusVat ? applyBasisPoints(decl.minor, vatRateBpOn(now)) : 0);
+  const ip = ISRAEL_POST_2026;
+  const emsFrom = (group: number) => {
+    const g = ip.ems.groups[group];
+    return g ? `${ils(g.upTo1000)} + ${ils(g.perExtra500)}` : "";
+  };
+  const postSources = ["domestic", "ems", "postalGuide"] as const;
   const sources = [
     "rateGuide",
     "surcharges",
@@ -302,6 +308,82 @@ export default async function ShippingSettingsPage({
                     rel="noreferrer"
                   >
                     {t(`dhl.source.${k}`)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Group>
+
+        <Group title={t("post.title")}>
+          <p className="text-sm text-ink-muted">{t("post.intro")}</p>
+          <input type="hidden" name="post.present" value="1" />
+          <Checkbox
+            id="post-domestic"
+            name="post.domestic"
+            defaultChecked={s.israelPost.domestic}
+            label={t("post.domestic")}
+          />
+          <Checkbox
+            id="post-abroad"
+            name="post.abroad"
+            defaultChecked={s.israelPost.abroad}
+            label={t("post.abroad")}
+          />
+          <Checkbox
+            id="post-insure"
+            name="post.insure"
+            defaultChecked={s.israelPost.insureAbroad}
+            label={t("post.insure", {
+              fee: ils(ip.ems.insurance.perThousandMinor),
+              per: ils(100_000),
+              max: ils(ip.ems.insurance.maxValueMinor),
+            })}
+          />
+          <div className="grid gap-3 md:grid-cols-2">
+            {text("post-est-dom-he", "post.estDomHe", t("post.estDomHe"))}
+            {text("post-est-dom-en", "post.estDomEn", t("post.estDomEn"))}
+            {text("post-est-abr-he", "post.estAbrHe", t("post.estAbrHe"))}
+            {text("post-est-abr-en", "post.estAbrEn", t("post.estAbrEn"))}
+          </div>
+          <div
+            className="flex flex-col gap-1 text-sm"
+            data-testid="post-tariff"
+          >
+            <p>
+              {t("post.tariff", {
+                domestic: formatDate(ip.domestic.validFrom, locale),
+                ems: formatDate(ip.ems.validFrom, locale),
+                checked: formatDate(ip.checkedOn, locale),
+              })}
+            </p>
+            <p>
+              {t("post.domesticPrices", {
+                a: ils(ip.domestic.bands[0]?.minor ?? 0),
+                b: ils(ip.domestic.bands[1]?.minor ?? 0),
+                c: ils(ip.domestic.bands[2]?.minor ?? 0),
+              })}
+            </p>
+            <p>
+              {t("post.emsPrices", {
+                us: emsFrom(1),
+                eu: emsFrom(3),
+                ca: emsFrom(4),
+                jp: emsFrom(5),
+              })}
+            </p>
+            <p>{t("post.limits")}</p>
+            <p>{t("post.sources")}</p>
+            <ul className="flex flex-wrap gap-x-4 gap-y-1">
+              {postSources.map((k) => (
+                <li key={k}>
+                  <a
+                    href={ip.sources[k]}
+                    className="underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t(`post.source.${k}`)}
                   </a>
                 </li>
               ))}
@@ -557,20 +639,6 @@ export default async function ShippingSettingsPage({
             label={t("pickup.enabled")}
           />
           {number("pu-fee", "pickup.feeIls", t("pickup.fee"))}
-        </Group>
-
-        <Group title={t("artist.title")}>
-          <Checkbox
-            id="ad-on"
-            name="artist.enabled"
-            defaultChecked={s.artistDelivery.enabled}
-            label={t("artist.enabled")}
-          />
-          <div className="grid gap-3 md:grid-cols-3">
-            {number("ad-fee", "artist.feeIls", t("artist.fee"))}
-            {text("ad-he", "artist.areaHe", t("artist.areaHe"))}
-            {text("ad-en", "artist.areaEn", t("artist.areaEn"))}
-          </div>
         </Group>
 
         <Group title={t("domestic.title")}>

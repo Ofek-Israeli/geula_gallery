@@ -18,8 +18,8 @@
   },
   "method": {
     "CARRIER_TABLE": "Carrier delivery",
+    "ISRAEL_POST": "Israel Post",
     "LOCAL_PICKUP": "Studio pickup",
-    "ARTIST_DELIVERY": "Delivery by the artist",
     "QUOTED": "Quoted delivery"
   },
   "packaging": {
@@ -174,10 +174,6 @@
         "disclosureNotSent": "The disclosure document was not emailed: hand over a printed copy.",
         "handedOverCheck": "A printed copy of the disclosure document was handed to the buyer"
       },
-      "artist": {
-        "out": "Out for delivery",
-        "delivered": "Mark as delivered"
-      },
       "done": "Fulfillment complete: {status}."
     },
     "events": {
@@ -226,13 +222,12 @@
     "WAYBILL_INVALID": "Waybill: 6–20 letters or digits.",
     "TRACKING_REQUIRED": "Enter the carrier and the tracking number.",
     "TRACKING_NUMBER_IN_USE": "This tracking number is already recorded for another shipment.",
-    "NOT_A_CARRIER_SHIPMENT": "Pickup and delivery by the artist have no tracking.",
+    "NOT_A_CARRIER_SHIPMENT": "Pickup has no tracking.",
     "NOT_MANUAL_CARRIER": "Manual events are for manual carriers only.",
     "DESCRIPTION_REQUIRED": "Enter a description.",
     "EVENT_TIME_INVALID": "The event time is not valid.",
     "ILLEGAL_TRANSITION": "That status change is not possible from the current status.",
     "NOT_PICKUP": "This is not a pickup order.",
-    "NOT_ARTIST_DELIVERY": "This is not a delivery by the artist.",
     "DISCLOSURE_REQUIRED": "The disclosure document was not emailed: confirm that a printed copy was handed to the buyer.",
     "NOT_FOUND": "Order not found.",
     "INVALID_INPUT": "Check the highlighted fields.",
@@ -288,6 +283,27 @@
         "demandSurcharge": "Peak season surcharge",
         "notices": "Notices",
         "customsServices": "Customs services"
+      }
+    },
+    "post": {
+      "title": "Israel Post",
+      "intro": "Israel Post at its published prices, offered next to the courier when the parcel fits its limits: home delivery in Israel and EMS abroad. Parcels are taken to the post office and tracked by hand.",
+      "domestic": "Offer Israel Post home delivery in Israel",
+      "abroad": "Offer Israel Post EMS abroad",
+      "insure": "Add Israel Post's EMS insurance ({fee} per {per} of value, up to {max})",
+      "estDomHe": "Delivery time in Israel (Hebrew)",
+      "estDomEn": "Delivery time in Israel (English)",
+      "estAbrHe": "Delivery time abroad (Hebrew)",
+      "estAbrEn": "Delivery time abroad (English)",
+      "tariff": "Israel Post's price lists: domestic from {domestic}, EMS from {ems}; checked against Israel Post's pages on {checked}.",
+      "domesticPrices": "In Israel (home delivery, between cities): up to 1 kg {a}, up to 10 kg {b}, up to 20 kg {c}.",
+      "emsPrices": "Abroad (EMS, up to 1 kg, then each further 0.5 kg): United States {us}; UK, France and Germany {eu}; Canada {ca}; Japan {jp}.",
+      "limits": "Limits: 20 kg; no side over 150 cm and the longest side plus twice the other two at most 300 cm (105 and 200 cm for some countries, such as the United States, Germany, Italy and Australia). Not for crates or glazed works.",
+      "sources": "Israel Post's documents",
+      "source": {
+        "domestic": "Domestic price list (PDF)",
+        "ems": "International price list (PDF)",
+        "postalGuide": "Postal guide (PDF)"
       }
     },
     "rates": {
@@ -358,13 +374,6 @@
       "title": "Studio pickup",
       "enabled": "Pickup available",
       "fee": "Pickup fee (₪)"
-    },
-    "artist": {
-      "title": "Delivery by the artist",
-      "enabled": "Delivery available",
-      "fee": "Price (₪)",
-      "areaHe": "Service area (Hebrew)",
-      "areaEn": "Service area (English)"
     },
     "domestic": {
       "title": "Domestic courier",

@@ -8,13 +8,21 @@ export const shipping: LegalDocModule = {
       <H2>Delivery in Israel</H2>
       <UL>
         <li>Courier delivery to your door, with tracking.</li>
+        <li>
+          Israel Post home delivery, with tracking, when the parcel is within
+          Israel Post's size limits.
+        </li>
         <li>Free pickup from the studio: {p.pickupAddress}.</li>
-        <li>Hand delivery by the artist, in the areas shown at checkout.</li>
       </UL>
       <P>
         The cost and the estimated delivery time are shown on the artwork page
         and at checkout, before you pay. Works usually leave the studio within a
         few business days of payment.
+      </P>
+      <P>
+        At checkout you may choose to receive a painting on canvas rolled in a
+        tube, off its stretcher. Shipping then costs less; re-stretching it on a
+        frame is not included.
       </P>
 
       <H2>International shipping</H2>

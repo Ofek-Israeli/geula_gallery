@@ -445,7 +445,6 @@ describe("quoteShipping", () => {
       quoteShipping(input({ country: "CA", settings: off })),
       quoteShipping(input({ country: "CA", carrier: "MANUAL" })),
       quoteShipping(input({ method: "LOCAL_PICKUP" })),
-      quoteShipping(input({ method: "ARTIST_DELIVERY" })),
     ]) {
       expect(q.insured).toBe(false);
       expect(q.insuranceMinor).toBe(0);
@@ -493,15 +492,12 @@ describe("quoteShipping", () => {
     expect(m.shippingMinor).toBe(12_000 + 15_000);
   });
 
-  it("pickup and artist delivery are Israel-only flat fees", () => {
+  it("pickup is an Israel-only flat fee", () => {
     expect(quoteShipping(input({ method: "LOCAL_PICKUP" }))).toMatchObject({
       mode: "ok",
       shippingMinor: 0,
       carrier: null,
     });
-    expect(
-      quoteShipping(input({ method: "ARTIST_DELIVERY" })).shippingMinor,
-    ).toBe(15_000);
     expect(
       quoteShipping(
         input({ method: "LOCAL_PICKUP", country: "US", currency: "USD" }),
@@ -551,11 +547,44 @@ describe("quoteShipping", () => {
 });
 
 describe("zoneEstimates", () => {
-  it("prices every zone for a small work: the table in Israel, the cheapest DHL estimate abroad", () => {
+  it("prices every zone for a small work: the cheaper of the courier and Israel Post", () => {
     const a = demo(305, 305, "CARDBOARD");
+    // 2,058 g, 43×43×9 cm. Israel: the table's ₪60 beats Israel Post's ₪73. Abroad Israel Post EMS
+    // wins: Canada (group 4) ₪171 + 3 × ₪24 = ₪243, Georgia (group 12, the rest of the world's
+    // cheapest) ₪183 + 3 × ₪11 = ₪216, each + ₪6.90 minimum insurance, with EMS's delivery time.
+    const ems = settings.israelPost.estimate.abroad;
+    expect(zoneEstimates(a, settings, DAY)).toEqual({
+      IL: { fromIlsMinor: 6000, insured: false },
+      EUROPE: "QUOTE",
+      NORTH_AMERICA: {
+        fromIlsMinor: 24_300 + 690,
+        insured: true,
+        estimate: ems,
+      },
+      REST_OF_WORLD: {
+        fromIlsMinor: 21_600 + 690,
+        insured: true,
+        estimate: ems,
+      },
+    });
+    // With the work's value (₪3,200) the EMS insurance is 4 × ₪6.90.
+    expect(
+      zoneEstimates(a, settings, DAY, {
+        declaredValueIlsMinor: 320_000,
+        fx,
+      }).NORTH_AMERICA,
+    ).toEqual({ fromIlsMinor: 24_300 + 2760, insured: true, estimate: ems });
+  });
+
+  it("without Israel Post: the cheapest DHL estimate abroad, or the table", () => {
+    const a = demo(305, 305, "CARDBOARD");
+    const noPost: ShippingSettings = {
+      ...settings,
+      israelPost: { ...settings.israelPost, domestic: false, abroad: false },
+    };
     // 43×43×9 cm → 3.5 kg in zone 1 (₪567.42) + demand ₪5.95 + fuel 49 % → ₪855; + ₪45 minimum
     // premium. Rest of the world's cheapest listed country is Mexico (zone 1).
-    expect(zoneEstimates(a, settings, DAY)).toEqual({
+    expect(zoneEstimates(a, noPost, DAY)).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
       EUROPE: "QUOTE",
       NORTH_AMERICA: { fromIlsMinor: 85_500 + 4500, insured: true },
@@ -563,13 +592,15 @@ describe("zoneEstimates", () => {
     });
     // With the work's value the export declaration (₪129.80) is included.
     expect(
-      zoneEstimates(a, settings, DAY, {
+      zoneEstimates(a, noPost, DAY, {
         declaredValueIlsMinor: 320_000,
         fx,
       }).NORTH_AMERICA,
     ).toEqual({ fromIlsMinor: 98_500 + 4500, insured: true });
-    // With the estimate off: the table everywhere.
-    expect(zoneEstimates(a, tableOnly, DAY)).toEqual({
+    // With the estimate off too: the table everywhere.
+    expect(
+      zoneEstimates(a, { ...tableOnly, israelPost: noPost.israelPost }, DAY),
+    ).toEqual({
       IL: { fromIlsMinor: 6000, insured: false },
       EUROPE: "QUOTE",
       NORTH_AMERICA: {

@@ -8,7 +8,12 @@ import {
   type CreateLinkOrderInput,
   createLinkOrder,
 } from "@/server/checkout/links";
-import { type Db, type DbOrTx, db as defaultDb } from "@/server/db/client";
+import {
+  type Db,
+  type DbOrTx,
+  db as defaultDb,
+  type Tx,
+} from "@/server/db/client";
 import {
   artworks,
   type BuyerRequest,
@@ -41,6 +46,8 @@ import { getSetting } from "@/server/settings";
  *   reply is its own idempotent email. The builder reads the stored `admin_reply`.
  * - "Send quote" calls `createLinkOrder({ kind: 'QUOTE', requestId })` (WS2), which moves the
  *   request to QUOTED with its `order_id` and emails the payment link (`checkout-link`).
+ * - "Mark as answered" (`markAnsweredOffline`) records an answer given by phone or WhatsApp, with
+ *   no email: the inbox offers it instead of the emailed reply while visitor emails are off.
  */
 export type RequestKind = "QUESTION" | "QUOTE" | "OFFER";
 
@@ -403,9 +410,44 @@ async function emailReply(tx: DbOrTx, r: BuyerRequest): Promise<void> {
 }
 
 /**
- * Emails a reply to the buyer. A question moves NEW → REPLIED; quotes and offers keep their status
- * (a reply there is a clarification; the quote itself is "Send quote").
+ * Records an answer: a question moves NEW → REPLIED; quotes and offers keep their status (an
+ * answer there is a clarification; the quote itself is "Send quote").
  */
+async function recordAnswer(
+  tx: Tx,
+  ctx: AdminContext,
+  r: BuyerRequest,
+  patch: { adminReply?: string; repliedAt: Date },
+  action: string,
+): Promise<RequestStatus> {
+  if (r.kind === "QUESTION" && r.status === "NEW") {
+    await transition(
+      tx,
+      "buyerRequest",
+      r.id,
+      ["NEW"],
+      "REPLIED",
+      patch,
+      ctx.actor,
+      {
+        action,
+        ipHash: ctx.ipHash,
+      },
+    );
+    return "REPLIED";
+  }
+  await tx
+    .update(buyerRequests)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(buyerRequests.id, r.id));
+  await audit(
+    { ...auditBy(ctx), action, entity: "buyer_request", entityId: r.id },
+    tx,
+  );
+  return r.status;
+}
+
+/** Emails a reply to the buyer (`recordAnswer` for the status). */
 export async function replyToRequest(
   ctx: AdminContext,
   id: string,
@@ -418,43 +460,43 @@ export async function replyToRequest(
     async (tx) => {
       const r = await lockRequest(tx, id);
       const patch = { adminReply: text, repliedAt: new Date() };
-      let status: RequestStatus = r.status;
-      if (r.kind === "QUESTION" && r.status === "NEW") {
-        await transition(
-          tx,
-          "buyerRequest",
-          r.id,
-          ["NEW"],
-          "REPLIED",
-          patch,
-          ctx.actor,
-          {
-            action: "request.replied",
-            ipHash: ctx.ipHash,
-          },
-        );
-        status = "REPLIED";
-      } else {
-        await tx
-          .update(buyerRequests)
-          .set({ ...patch, updatedAt: new Date() })
-          .where(eq(buyerRequests.id, r.id));
-        await audit(
-          {
-            ...auditBy(ctx),
-            action: "request.replied",
-            entity: "buyer_request",
-            entityId: r.id,
-          },
-          tx,
-        );
-      }
+      const status = await recordAnswer(tx, ctx, r, patch, "request.replied");
       await emailReply(tx, { ...r, ...patch });
       return status;
     },
     { db: deps.db, name: "requests.reply" },
   );
   return withEffects({ status }, { outbox: true });
+}
+
+/**
+ * "Mark as answered": the painter answered by phone or WhatsApp. Like a reply (`recordAnswer`) but
+ * nothing is emailed; the optional note is kept as the latest answer. Only a new request.
+ */
+export async function markAnsweredOffline(
+  ctx: AdminContext,
+  id: string,
+  note: string | null,
+  deps: RequestDeps = {},
+): Promise<ServiceResult<{ status: RequestStatus }>> {
+  const text = note?.trim() || null;
+  const status = await withTx(
+    async (tx) => {
+      const r = await lockRequest(tx, id);
+      if (r.status !== "NEW") {
+        throw new ConflictError(
+          "NOT_NEW",
+          "only a new request is marked answered",
+        );
+      }
+      const patch = text
+        ? { adminReply: text, repliedAt: new Date() }
+        : { repliedAt: new Date() };
+      return recordAnswer(tx, ctx, r, patch, "request.answered_offline");
+    },
+    { db: deps.db, name: "requests.answered_offline" },
+  );
+  return withEffects({ status });
 }
 
 /** Quote or offer NEW → DECLINED, with an optional emailed reply. */
@@ -728,6 +770,7 @@ export async function painterNewRequestEmail(
       kind: r.kind,
       name: r.name,
       email: r.email,
+      ...(r.phone ? { phone: r.phone } : {}),
       ...(r.country ? { country: r.country } : {}),
       ...(row.titleHe ? { artworkTitle: row.titleHe } : {}),
       message: r.message,

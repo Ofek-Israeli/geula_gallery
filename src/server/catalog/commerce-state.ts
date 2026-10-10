@@ -13,7 +13,8 @@ import { artworks } from "@/server/db/schema";
  *   attempt in CAPTURING / PAYMENT_REVIEW (the "in-flight foreign hold") also shows as reserved;
  * - ON_HOLD → `on_hold` ("Reserved" for RESERVED_OFFLINE, else "On hold"); SOLD; NOT_FOR_SALE;
  * - otherwise `available`, `buyable` when published, priced, not quote-only and not price on
- *   request (the WEB checkout preconditions of §3.5).
+ *   request (the WEB checkout preconditions of §3.5), and only while online sales are open
+ *   (`SALES_OPEN`; a showcase site shows the work as available but offers only "Ask").
  */
 export interface CommerceRow {
   saleStatus: "AVAILABLE" | "ON_HOLD" | "SOLD" | "NOT_FOR_SALE";
@@ -44,7 +45,11 @@ export const commerceColumns = {
   holdInFlight: inFlightHoldSql,
 } as const;
 
-export function commerceStateOf(r: CommerceRow, now: Date): CommerceState {
+export function commerceStateOf(
+  r: CommerceRow,
+  now: Date,
+  salesOpen = true,
+): CommerceState {
   switch (r.saleStatus) {
     case "SOLD":
       return { kind: "sold" };
@@ -68,6 +73,7 @@ export function commerceStateOf(r: CommerceRow, now: Date): CommerceState {
   return {
     kind: "available",
     buyable:
+      salesOpen &&
       r.isPublished &&
       r.priceIlsMinor !== null &&
       !r.quoteOnly &&

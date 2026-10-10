@@ -66,7 +66,13 @@ export default async function CoaPage({
         ) : null}
         <dt className="text-ink-muted">{t("dimensions")}</dt>
         <dd>
-          <bdi dir="ltr">{dims.cm} cm</bdi> (<bdi dir="ltr">{dims.inches}</bdi>)
+          <bdi dir="ltr">{dims.cm} cm</bdi>
+          {locale === "en" ? (
+            <>
+              {" "}
+              (<bdi dir="ltr">{dims.inches}</bdi>)
+            </>
+          ) : null}
         </dd>
         <dt className="text-ink-muted">{t("signed")}</dt>
         <dd>{d.signed ? t("yes") : t("no")}</dd>

@@ -37,6 +37,17 @@ describe("commerceStateOf (spec §3.5 Display)", () => {
     }
   });
 
+  it("with online sales closed (SALES_OPEN=false) an available work is shown but not buyable", () => {
+    expect(commerceStateOf(row(), now, false)).toEqual({
+      kind: "available",
+      buyable: false,
+    });
+    // Other states are unchanged.
+    expect(commerceStateOf(row({ saleStatus: "SOLD" }), now, false).kind).toBe(
+      "sold",
+    );
+  });
+
   it("a live foreign hold shows as reserved until reserved_until", () => {
     const until = new Date("2026-10-01T10:20:00Z");
     expect(

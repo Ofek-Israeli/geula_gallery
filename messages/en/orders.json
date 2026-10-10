@@ -90,7 +90,8 @@
     "provider_error": "We could not open the payment page. Please try again.",
     "generic": "Something went wrong. Please try again.",
     "rate_limited": "Too many attempts. Please try again in a few minutes.",
-    "details_required": "Please complete the delivery details first."
+    "details_required": "Please complete the delivery details first.",
+    "SALES_CLOSED": "Online payment isn't open yet. Please contact us."
   },
   "link": {
     "title": "Complete your order",
@@ -104,8 +105,8 @@
     "lockedMethod": "Delivery: {method} (agreed with the painter).",
     "method": {
       "CARRIER_TABLE": "Courier",
+      "ISRAEL_POST": "Israel Post",
       "LOCAL_PICKUP": "Pickup from the studio",
-      "ARTIST_DELIVERY": "Delivered by the artist",
       "QUOTED": "Delivery as agreed"
     },
     "errors": {

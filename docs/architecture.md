@@ -2014,6 +2014,15 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
   - in every buyer email and in documents.
 - The smoke specs already find it anywhere on the page.
 - Whether a footer link is prominent enough is a question for the lawyer (painter-onboarding §4).
+- **Later, also at the painter's request:** the public footer has no separate "Cancel a purchase"
+  line, because it read as a duplicate of "Cancellations and returns".
+  - That item is now the cancellation link: it opens `/cancel` rather than `/legal/returns`.
+  - `/cancel` links to the full policy (`cancel-policy-link`).
+  - The checkout footer (`variant="minimal"`) has no returns item, so it keeps `CancelPurchaseLink`.
+  - The law asks for a dedicated, prominent link on the home page for sending a cancellation notice
+    (Consumer Protection Law, the 2017 amendment). The footer item still opens that page in one
+    click, and its name starts with "ביטול עסקה". Whether that is prominent enough stays on the
+    lawyer's list.
 
 ### Home page: a quote over "By the Lake", then the bio
 
@@ -2271,3 +2280,316 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
     `dhlPieceOf`.
   - `catalog/queries.ts`: `getDeliveryEstimates(…, declaredValueIlsMinor?)`, and
     `ArtworkPageData.declaredValueIlsMinor`.
+
+### Israel Post at its published prices
+
+- **Why.** At DHL's list prices a canvas abroad costs thousands of shekels, because DHL bills the
+  box's volume. Israel Post prices a parcel by its actual weight. An 80×80 cm canvas (a
+  92×92×11 cm box, 5.34 kg) costs ₪287.50 to the UK by EMS, against ₪3,209 by DHL. In Israel, its
+  home delivery (₪67–₪86) is cheaper than the courier table. It is a method of its own,
+  `ISRAEL_POST`, offered next to the courier when the parcel fits, and the buyer chooses.
+- **Where.**
+  - `src/server/shipping/tariff/israel-post-2026.ts` holds the data and its sources:
+    - the domestic weight bands, from the price list of 1 May 2026;
+    - the 13 EMS groups and the 171 EMS countries by group, from the price list of 1 July 2026;
+    - each country's size limit, from the same list's parcel table;
+    - the EMS insurance terms, and the postal guide's parcel limits.
+  - The numbers were read from the PDFs' text and checked against page renders: the Hebrew tables'
+    column order is easy to misread.
+  - `tests/unit/israel-post.test.ts` pins the bands and spot groups. It also checks that each served
+    country has one group and one limit and is in the selector, and pins the document's examples.
+  - `src/server/shipping/israel-post.ts` is pure: `israelPostEstimate({pieces, country})`,
+    `emsGroupOf`, `israelPostLimitOf` and `emsInsurance`.
+- **How.**
+  - Each work is its own parcel, priced by its actual weight (`postPieceOf`: the `packedBox` and
+    `packed_weight_g`). The order's price is the sum.
+  - **Limits:** 20 kg. Sides are whole cm rounded up, longest first. No side may exceed the limit,
+    and the longest side plus twice the other two may not exceed the length + girth limit.
+    - Israel: 150 cm and 300 cm.
+    - Abroad: the destination's own limit. That is 150/300 for 109 countries, 105/200 for 61 (the
+      US, Germany, Italy, Australia, Spain…) and 100/180 for Nepal. An unclear entry in the list
+      ("-2" or blank) takes 105/200.
+  - **No crates or glazing** (`postParcelOk`): Israel Post takes ordinary cardboard parcels.
+  - **In Israel:** home delivery, counter to door: ₪67 up to 1 kg, ₪73 up to 10 kg, ₪86 up to
+    20 kg. These are the inter-city prices. The cheaper in-city prices (₪45/₪56/₪67) are kept in
+    the data but not used, because the site cannot tell whether the buyer lives in her city.
+  - **Abroad:** EMS. The weight is rounded up to 0.5 kg. The price is the group's "up to 0.5 kg" or
+    "up to 1 kg" price, or the 1 kg price plus each further 0.5 kg.
+  - **Assumptions:**
+    - Abroad, the site uses EMS's counter prices. Preparing the parcel online ("prepare at home")
+      is ₪5 cheaper.
+    - EMS is priced by actual weight: neither the price list nor the guide's EMS chapter mentions
+      volumetric weight. The guide's volumetric rule (3.12) is for a different service. The
+      painter should confirm this at the counter with her first large canvas.
+- **In the rate engine.** `quoteShipping` with `method: "ISRAEL_POST"`:
+  - A switched-off side (`israelPost.domestic` / `.abroad`) → blocked `ZONE_DISABLED`.
+  - The carrier is `MANUAL`: she books the parcel at the post office and enters the tracking number
+    by hand. MANUAL's value cap applies (the seed sets none).
+  - The courier's refusals come first: a denied destination, a work that does not travel abroad, a
+    destination by quote (Europe while its zone is off) and a quote-only work.
+  - Then come Israel Post's own refusals. Each is **blocked**, not quote-only, so checkout leaves the
+    option out and the courier stays:
+    - a crate or glazing → `SIZE_QUOTE`;
+    - too heavy or too large → `SIZE_QUOTE`;
+    - no EMS to the country (e.g. Saudi Arabia, Qatar) → `ZONE_DISABLED`.
+  - An ok quote carries:
+    - the price in `breakdown.baseMinor`, and `rateSource: "ISRAEL_POST"`;
+    - `israelPost` (`IsraelPostDetail`: tariff, service `DOMESTIC_DOOR` or `EMS`, group, and each
+      parcel's sides, weights and price);
+    - the delivery time from the settings;
+    - abroad, `TRANSIT_ESTIMATE` and the DAP notices.
+  - USD conversion is the same as the courier's.
+  - **Insurance:**
+    - In Israel there is none, as with the courier.
+    - Abroad, when `israelPost.insureAbroad` and `insurance.enabled`, the quote includes EMS's
+      liability extension (`emsInsurance`). It costs ₪6.90 per ₪1,000 or part, on the insured value
+      (`insuredValueMinor`), up to ₪25,000.
+- **Checkout.** `candidateMethods` adds `ISRAEL_POST` in Israel (after the courier) and abroad.
+  `methodName` labels it "Israel Post – home delivery" or "Israel Post EMS" from
+  `israelPost.service`. The street address is asked as for the courier.
+- **Artwork page.** `zoneEstimates` shows the cheaper of the courier and Israel Post
+  (`postFromIlsMinor`) per zone.
+  - Abroad, Israel Post's price is the cheapest EMS price among the zone's offered countries where
+    the parcel fits, plus the premium: the exact premium with `value`, else the minimum ₪6.90.
+  - When Israel Post gives the price, the row shows Israel Post's delivery time (the new optional
+    `ZoneEstimate.estimate`, used by `getDeliveryEstimates`) instead of the zone's.
+  - A 60×80 canvas in Israel now starts at ₪73 (1–2 business days) instead of the table's ₪120. A
+    work only a quote can price by courier shows a price when Israel Post takes it.
+- **Fulfilment.** `ISRAEL_POST` counts as a carrier method everywhere:
+  - `isCarrierMethod` creates a `MANUAL` shipment;
+  - the fulfilment page and the order page take a tracking number;
+  - the buyer's order page says "tracked".
+  - The painter takes the parcel to the post office; abroad she also fills in the customs form
+    there.
+- **Database.** Migration `0002_israel_post_method.sql` adds `ISRAEL_POST` to the
+  `shipping_method` enum. The dev database needs it (`npm run db:migrate`, or a reset).
+- **Settings.**
+  - `shipping.israelPost` holds:
+    - `domestic`, `abroad` and `insureAbroad` (on by default);
+    - `estimate.domestic` and `estimate.abroad` (1–2 and 5–10 business days).
+  - Every field has a default and the object is `.prefault({})`, so stored rows parse.
+  - The admin's "Israel Post" group has the toggles, the delivery times and a read-only panel: the
+    domestic bands, example EMS groups, the limits and the sources.
+  - `settings-form.ts` reads `post.*` only with `post.present`.
+- **New price lists.** Copy the new numbers into `tariff/israel-post-2026.ts` (or a new file for a
+  new year). Then update `tests/unit/israel-post.test.ts` and the document.
+- **Contract changes (additive).**
+  - `ShippingMethod` and the `shipping_method` enum gain `ISRAEL_POST`.
+  - `ShippingQuoteResult.rateSource` gains `"ISRAEL_POST"`, and there is a new `.israelPost?`, with
+    the `IsraelPostDetail` and `IsraelPostPiece` types.
+  - `ShippingSettings.israelPost` (`israelPostSettingsSchema`).
+  - `ZoneEstimate`'s price variant gains `estimate?` (Israel Post's delivery time).
+  - `rates.ts` exports `postPieceOf`, and `CHECKOUT_METHODS` gains `ISRAEL_POST`.
+
+### Packing choice: stretched or rolled in a tube
+
+- **Why.** Israel Post refuses parcels over 150 cm on a side or 300 cm in length plus girth.
+  Boxed, a painting from about 80×90 cm up is over that limit, so abroad it could only go by DHL,
+  at ₪3,000 and more. At the painter's request the buyer can choose at checkout to have the canvas
+  rolled in a tube, off its stretcher. A rolled 100×100 cm canvas is a 110×26×26 cm tube that
+  Israel Post takes: ₪73 in Israel and ₪267 by EMS to Canada (plus its insurance).
+- **Which works.**
+  - `rates.ts#rollableAtCheckout`: the painter allows it (`can_be_rolled`), the work is not already
+    a tube, and nothing rigid comes with it (no crate, frame or glazing).
+  - The catalog seed (`demo` mode) marks the painter's unframed canvases `can_be_rolled`, while
+    they stay listed as `STRETCHED_BOX` and ready to hang. The fixtures keep their flags: a
+    fixture's `canBeRolled` still means it is sold rolled.
+  - The admin checkbox ("the canvas can be rolled for a tube") turns the choice off for one work.
+- **Pricing.**
+  - `rolledSpec` turns a work into its tube: the existing tube rule (the shorter side + 10 cm,
+    26×26 cm), no class override, and an assumed rolled weight (`rolledWeightG`). The weight is
+    1.5 kg for the tube and wrapping plus 1.2 kg per m² of canvas, against the box's
+    1.5 kg + 6 kg/m². It is an assumption until the painter weighs a rolled parcel.
+  - `checkout/pricing.ts#shippingOptions({…, packing: "ROLLED"})` prices the rollable works as
+    tubes (the others as listed), and every quote then carries `packing: "ROLLED"`.
+  - `getCheckoutQuote` takes `packing` and returns `rollable` (the toggle is shown) and the
+    effective `packing`.
+  - DHL bills the tube's volume, which is still less than the box's. For a 100×100 to Canada,
+    shipping only, that is ₪2,321 rolled against ₪3,396 boxed (`tests/unit/packing.test.ts` pins
+    the document's table).
+- **Checkout.**
+  - The URL contract gains `pack=rolled`, carried by the step forms, the "Change" links and the
+    currency links, in the key order `to, city, zip, ship, pack, cur, step`.
+  - Step 2 shows `PackingToggle` ("Stretched, in a box" / "Rolled in a tube") as links, like the
+    currency toggle, with a note on what rolled means (the buyer re-stretches at their own cost).
+  - The recap says "rolled in a tube", and the details form posts `packing=ROLLED`.
+  - `startCheckout` re-quotes with it, so the snapshot (`orders.shipping_quote.packing`) is what
+    the painter packs by. `shippingChoicesForOrder` keeps an order's packing on a re-price.
+- **After the order.**
+  - The pre-contract disclosure, the order page and the disclosure document add a "Packing" row:
+    "Rolled in a tube, off its stretcher (the buyer's choice). Re-stretching is not included."
+  - The admin order page appends "rolled in a tube (the buyer's choice)" to the method.
+  - The fulfilment screen packs the rollable works as tubes. It suggests tube parcels, lists them
+    as "tube", and adds the tube checklist items ("tube at least 10 in", "rolled paint side out").
+- **Artwork page.** `zoneEstimates` prices the work as listed and, when rollable, rolled. It
+  shows the cheaper one, marked `rolled` ("from ₪315.30 · rolled in a tube"); stretched wins a
+  tie. Israel's headline says "(rolled in a tube)" too. After the change, one work in the catalog
+  still shows over ₪1,000: a framed 100×80, which cannot be rolled.
+- **Contract changes (additive).**
+  - `shipping/types.ts`: `Packing`, `ShippingQuoteResult.packing?`, and `ZoneEstimate.rolled?`.
+  - `rates.ts`: `rollableAtCheckout`, `rolledSpec`, `rolledWeightG`, `ROLLED_BASE_G` and
+    `ROLLED_G_PER_M2`.
+  - `checkout/types.ts`: `packing?` on the quote request and the start input, and `rollable` and
+    `packing` on an ok quote.
+  - `pricing.ts`: `anyRollable`, and the `packing` option of `shippingOptions`.
+  - `lib/checkout-steps.ts`: `CheckoutParams.pack`, `CheckoutState.pack` and `StepLinks.packing`.
+    `routes.ts#CHECKOUT_QUERY_KEYS` gains `pack`.
+  - `lib/catalog.ts`: `ZoneEstimateDTO.rolled`.
+  - `content/disclosure.ts`: `PreContractInput.rolled?`.
+
+### Dimensions without a measured depth
+
+- The painter's catalog has no measured depths, so the seed stores `depth_mm = null`. Pages show
+  "Dimensions (H × W)" with `H × W cm` (`ArtworkFacts`, cards, the disclosure, documents and
+  JSON-LD already omit a missing depth). Before, they showed the packing assumption (3 cm for
+  canvas) as if it were a measurement.
+- Shipping is unchanged: the packed box keeps the surface's usual depth (`packaging.ts`, canvas
+  30 mm → an 11 cm box). A measured depth entered in the admin shows as "H × W × D".
+
+### No delivery by the artist
+
+- The painter does not deliver works herself, so the site never offers it. The following were
+  removed:
+  - the `ARTIST_DELIVERY` method: checkout's options (`candidateMethods`, `CHECKOUT_METHODS`), the
+    rate engine's flat fee, and the method lists of manual orders, quote replies and link orders;
+  - the `shipping.artistDelivery` setting (fee and service area), its admin group and form fields,
+    and the seed. Stored settings rows that still have it parse, because zod drops unknown keys;
+  - the fulfilment flow (`startArtistDelivery`, `markArtistDelivered`, their admin actions and the
+    "Out for delivery" / "Mark as delivered" buttons) and its integration test;
+  - every label, the disclosure's method name, and the shipping policy's line. That line was
+    replaced by Israel Post home delivery, and a sentence on the rolled option was added.
+    `LEGAL_VERSIONS.disclosure` was bumped to `2026-10-10-draft`, covering today's disclosure
+    changes: Israel Post, the rolled packing row, and this removal.
+- **Database.** Unlike the COMMISSION topic, the value is dropped from the `shipping_method` enum
+  (migration `0003_drop_artist_delivery.sql`, which recreates the type). No order ever used it,
+  since the site was never live, and the compiler then finds every remaining reference.
+- The shipment state machine keeps PACKED → OUT_FOR_DELIVERY for a manual carrier's events.
+
+### No 18+ checkbox; the seller's legal name
+
+- At the painter's request, checkout and the payment-link details form no longer ask "I am 18 or
+  older". It is not a legal requirement; it only recorded the buyer's statement, which does not
+  stop a minor's parents from cancelling a purchase (Legal Capacity and Guardianship Law).
+  - Removed: the checkboxes, the `age` form fields, `consents.ageConfirmed` and the `consent.age`
+    texts.
+  - `orderDetailsComplete` no longer needs `age_confirmed_at`. The column stays, unwritten, for
+    older rows.
+- The seed's `business_profile.legalName` is "Geula Levi" (was the "(למילוי)" placeholder). It is
+  one string in Latin script because it also names the shipper on the English customs invoice.
+  The rest of the profile is still placeholders, so `completed` stays false.
+
+### No public email; contact details
+
+- The painter publishes no email address. `business_profile.email` may be empty, and then no email
+  is shown anywhere:
+  - not on the contact page (the email row), in the cancellation page's channels, the terms or the
+    returns page;
+  - not in the pre-contract disclosure (its email row; the service and channel sentences use the
+    `…NoEmail` variants), or the printed studio notice;
+  - not on the packing slip or commercial invoice, in the JSON-LD, or in the buyer email footer
+    (`contactPhone`, `cancelChannelsNoEmail`).
+- Visitors write through the contact form. Messages, order notices and alerts go to
+  `notificationEmail`, which is never shown. DHL's shipper record (not printed for the buyer) falls
+  back to it.
+- `privacyContact` and `accessibilityContact` may be empty too. The privacy policy and the
+  accessibility statement then point to the contact form (`links.contact`) and the phone.
+- The accessibility statement no longer says the images are museum placeholders: they are the
+  painter's own photographs.
+- The real details (phone, address, notification email) live only in the database, entered under
+  Admin → Settings → Business details. The repository is public and never holds personal data.
+- Whether no public email meets the cancellation-channel and disclosure rules is on the lawyer's
+  list.
+
+### No demo banner
+
+- At the painter's request, the site-wide demo banner (`DemoBanner`, `common.demo`) and the About
+  page's demo note (`catalog.about.demoNote`) were removed.
+- `DEMO_MODE` keeps its other duties:
+  - only test or sandbox payment providers (the checkout option reads "Test payment – no real
+    money");
+  - `noindex` on every route;
+  - the demo note in emails;
+  - the go-live blocker.
+- The smoke spec now checks that no banner shows.
+
+### Vercel Web Analytics
+
+- `@vercel/analytics` (`SiteAnalytics`) in the site and checkout layouts, only when `env.VERCEL` is
+  set (Vercel sets `VERCEL=1`). The admin is never counted.
+- It sets no cookies and identifies no one. `beforeSend` keeps the path only:
+  - query strings are dropped (checkout carries the city and postal code, order pages an access
+    key);
+  - `/orders/<number>` becomes `/orders/[number]`.
+- The figures are in the Vercel dashboard → the project → Analytics, once enabled there.
+- Custom click events (`track`) need a paid Vercel plan and are not added.
+- The privacy policy says so; `LEGAL_VERSIONS.privacy` was bumped to `2026-10-10-draft`.
+
+### Showcase launch (free Vercel link, indexed by Google)
+
+The site goes public before online payments exist: works, prices, "Ask about this work" and the
+contact form, with no online purchase. Two switches in `src/server/env.ts` do it, plus the hosting
+and production-data pieces below.
+
+- **`SALES_OPEN=false`** (default `true`):
+  - `commerceStateOf(row, now, salesOpen)` makes no work `buyable`, so there is no Buy now, no
+    Add to cart, and the sticky bar offers Ask. `addToCart` refuses, the cart checkout redirects
+    to `/cart`, `/cart` only says purchase is not open, and the header hides the cart.
+  - `getCheckoutQuote` returns `blocked("SALES_CLOSED")` right after the work lookup (an unknown
+    work stays a 404). `/checkout/[slug]` shows the notice with Ask; `startCheckout` refuses.
+  - `createLinkOrder` throws `SALES_CLOSED` (quotes, offers, manual orders) and
+    `startPaymentForOrder` refuses with it. The admin inbox shows a notice instead of Send quote,
+    Accept and Counter; `/admin/orders/new` points to "Sold outside the site".
+  - The buy box shows "pay in US dollars at checkout" only for a buyable work.
+  - The daily go-live digest raises no alert.
+  - Production without demo mode needs no payment provider, tax-document mode or carrier; Resend,
+    Blob and the secret lengths stay enforced.
+  - Unchanged: prices, "Delivery from", the JSON-LD, the legal pages and the cancellation page.
+- **`EMAIL_TO_VISITORS=false`** (default `true`), for a Resend account without a verified domain,
+  which can only email its owner:
+  - `sendEmailHandler` finishes buyer-audience templates without sending, so nothing retries,
+    fails or alerts. The painter's templates still go to `business_profile.notificationEmail`.
+  - The forms promise no email (`requests.thanks.bodyNoEmail`,
+    `catalog.contact.formIntroNoEmail`, `cancel.form.emailPlain`, `cancel.ack.shownHereOnly`), and
+    the phone field says a number lets the painter answer by phone or WhatsApp.
+  - `painter-new-request` carries the visitor's phone with call and WhatsApp links; the inbox shows
+    the same links.
+  - "Mark as answered" (`markAnsweredOffline`, audit `request.answered_offline`) replaces the
+    emailed reply: a new question moves to REPLIED with an optional internal note; quotes and
+    offers keep their status, as with a reply.
+- **Legal texts approved by the lawyer:** `LEGAL_TEXTS_APPROVED = true` (no Draft banners, no
+  `LEGAL_NOT_APPROVED` blocker) and every version is `2026-10-10`. The internal review notes were
+  removed from the returns page, the disclosure's VAT line, the studio notice and the certificate
+  of authenticity.
+- **Hosting on Vercel Hobby** (non-commercial use; move to Pro before sales open):
+  - `vercel.json` runs the five crons daily: purge 02:30, outbox 03:00, reconcile 03:30, tracking
+    04:00, daily 05:00 (Hobby fires within the hour). Emails still leave right after each form
+    (`after()` drains the outbox). The dashboard's stale-cron thresholds are 26 h.
+  - Install `npm ci`; the build runs `db:migrate` before `next build` on production deployments
+    only (`VERCEL_ENV`).
+  - `.vercelignore` keeps local data (`.data/`), env files, build output, tests and the seed input
+    out of the upload.
+  - `GOOGLE_SITE_VERIFICATION` sets `verification.google` in the `(site)` layout. Search Console
+    follows `/` → `/he`, so the root layout stays untouched.
+- **Production data** (`.env.production.local` from `vercel env pull`; ignored by git and Vercel):
+  - `npm run prod:migrate` applies the migrations.
+  - `npm run prod:seed` (= `db:seed --remote --yes`) seeds the settings and the painter's catalog
+    only, never fixtures, sample orders or users; the images go to `.data/prod-seed`. Without
+    `--yes` a remote database is still refused.
+  - `npm run prod:upload` copies that folder to the two Blob stores under the same keys, skips keys
+    already there, and prints `NEXT_PUBLIC_BLOB_HOST`.
+  - `npm run prod:admin` asks for the email and the password (hidden, twice) when they are not set.
+- **Frozen files touched** (change requests):
+  - `src/server/env.ts`: `SALES_OPEN`, `EMAIL_TO_VISITORS` and `GOOGLE_SITE_VERIFICATION`; the
+    real-store rules apply only while sales are open; `NEXT_PUBLIC_BLOB_HOST` is required with
+    Blob storage.
+  - `package.json`: the four `prod:*` scripts.
+  - `src/emails/types.ts` (§9.3 email contract): an optional `phone` on `painter-new-request`.
+  - `src/server/checkout/types.ts`: `QuoteBlockReason` gains `SALES_CLOSED`.
+- **Tests:** `tests/unit/env.test.ts` (the showcase env), `tests/unit/commerce-state.test.ts`,
+  `tests/integration/showcase.test.ts` (quote, link and payment refusals, the email skip, Mark as
+  answered) and `tests/integration/invariants.test.ts` (the legal approval). The E2E suite runs
+  with sales open, as before.
+- **Before sales open:** Cardcom and Morning, a domain with a verified Resend sender,
+  `SALES_OPEN=true` and `EMAIL_TO_VISITORS=true`, the real ID number, Vercel Pro, and the crons
+  back to `reconcile` and `outbox` every 5 minutes and `tracking` hourly (dashboard thresholds
+  20 min and 3 h).

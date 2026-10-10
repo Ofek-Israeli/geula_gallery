@@ -44,17 +44,24 @@
     "methodLegend": "Delivery method",
     "method": {
       "CARRIER_TABLE": "Courier",
+      "ISRAEL_POST": "Israel Post – home delivery",
       "LOCAL_PICKUP": "Pickup from the studio",
-      "ARTIST_DELIVERY": "Hand delivery by the artist",
       "QUOTED": "Quoted shipping",
-      "DHL_EXPRESS": "DHL Express"
+      "DHL_EXPRESS": "DHL Express",
+      "ISRAEL_POST_EMS": "Israel Post EMS"
     },
     "free": "free",
     "tracked": "tracked",
     "insuredUpTo": "insured up to {amount}",
     "currency": "Currency",
     "currencyIls": "Israeli shekels (₪)",
-    "currencyUsd": "US dollars ($)"
+    "currencyUsd": "US dollars ($)",
+    "packing": "Packing",
+    "packingStretched": "Stretched, in a box",
+    "packingRolled": "Rolled in a tube",
+    "packingStretchedNote": "The painting is sent as it is, stretched on its wooden frame.",
+    "packingRolledNote": "The canvas is taken off its stretcher and sent rolled in a tube: shipping costs far less, and large paintings can go by Israel Post. On arrival it needs re-stretching on a frame (a framer can do it), at the buyer's cost.",
+    "packingRolledShort": "rolled in a tube"
   },
   "notices": {
     "DAP_DUTIES": "Import duties, taxes and clearance fees at the destination, if any, are paid by you on delivery (DAP).",
@@ -82,6 +89,7 @@
     "otherCountry": "Choose another destination",
     "MIXED_DEMO": "Demo works and other works cannot be bought in one order.",
     "TOO_MANY_ITEMS": "Too many works for one order.",
+    "SALES_CLOSED": "Online purchase isn't open yet. Ask about this work and we'll get back to you.",
     "cartTitle": "These works cannot be checked out together right now",
     "VALUE_CAP_CART": "Together these works are above the carrier's value limit for this destination. Remove a work, or ask us for a quote."
   },
@@ -110,7 +118,6 @@
     "termsLinks": "Read the {terms} and the {returns}.",
     "termsLink": "terms of sale",
     "returnsLink": "cancellation and returns policy",
-    "age": "I am 18 or older.",
     "dap": "I understand that import duties, taxes and fees at the destination are mine to pay (DAP).",
     "receiptEmail": "Send my receipt by email.",
     "required": "Please tick this box to continue."
@@ -149,7 +156,8 @@
     "destination": "There is a problem with the destination's city or postal code.",
     "just_reserved_items": "Sorry – another buyer has just reserved: {titles}. Remove {count, plural, one {it} other {them}} from your cart to continue.",
     "TOO_MANY_ITEMS": "Too many works for one order. Please remove some from your cart.",
-    "MIXED_DEMO": "Demo works and other works cannot be bought in one order."
+    "MIXED_DEMO": "Demo works and other works cannot be bought in one order.",
+    "SALES_CLOSED": "Online purchase isn't open yet. Ask about this work and we'll get back to you."
   },
   "returned": {
     "title": "Return from the payment page",
@@ -179,6 +187,7 @@
     "title": "Your cart",
     "empty": "Your cart is empty.",
     "emptyCta": "Browse the works",
+    "salesClosed": "Online purchase isn't open yet. Ask about a work on its page and we'll get back to you.",
     "count": "{count, plural, one {# work} other {# works}}",
     "notReserved": "Works in your cart are not reserved yet: they are reserved for you only when you continue to payment.",
     "limit": "Up to {max} works per order.",

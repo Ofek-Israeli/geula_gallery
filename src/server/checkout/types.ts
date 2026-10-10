@@ -6,6 +6,7 @@ import type { ProviderId, Wallet } from "@/server/payments/types";
 import type {
   BlockReason,
   NoticeCode,
+  Packing,
   ShippingMethod,
   ShippingQuoteResult,
 } from "@/server/shipping/types";
@@ -19,6 +20,8 @@ interface QuoteRequestBase {
   country?: string;
   method?: ShippingMethod;
   currency?: Currency;
+  /** The buyer's packing choice; "ROLLED" only matters when a work is `rollableAtCheckout`. */
+  packing?: Packing;
 }
 export type CheckoutQuoteRequest =
   | (QuoteRequestBase & { slug: string; artworkIds?: undefined })
@@ -56,7 +59,9 @@ export type QuoteBlockReason =
   /** A cart mixing demo works with real works (never one order; spec §1.1 demo rules). */
   | "MIXED_DEMO"
   /** More works than `checkout.maxCartItems`. */
-  | "TOO_MANY_ITEMS";
+  | "TOO_MANY_ITEMS"
+  /** Online purchase is switched off (`SALES_OPEN=false`, a showcase site): ask instead. */
+  | "SALES_CLOSED";
 
 export type CheckoutQuote =
   | {
@@ -82,6 +87,10 @@ export type CheckoutQuote =
       }[];
       notices: NoticeCode[];
       usdAvailable: boolean;
+      /** Whether any work can be rolled in a tube at the buyer's choice (the packing choice). */
+      rollable: boolean;
+      /** The packing the prices are for ("ROLLED" only when `rollable`). */
+      packing: Packing;
     }
   | {
       kind: "blocked";
@@ -105,6 +114,8 @@ interface StartCheckoutBase {
   country: string;
   method: ShippingMethod;
   currency: Currency;
+  /** The packing the buyer chose (absent: as listed). */
+  packing?: Packing;
   providerId: ProviderId;
   buyer: BuyerDetails;
   shipTo: PostalAddress | null;
@@ -116,7 +127,6 @@ interface StartCheckoutBase {
     termsVersion: string;
     returnsVersion: string;
     privacyVersion: string;
-    ageConfirmed: true;
     dutiesNoticeVersion?: string;
     receiptEmailConsent: boolean;
   };

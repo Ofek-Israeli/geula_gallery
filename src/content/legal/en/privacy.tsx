@@ -1,14 +1,22 @@
-import { H2, L, type LegalDocModule, P, UL } from "../types";
+import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
 /** Privacy policy – draft (Amendment 13; spec §7). */
 export const privacy: LegalDocModule = {
   title: "Privacy policy",
-  Body: ({ profile: p }) => (
+  Body: ({ profile: p, links }) => (
     <>
       <H2>Who is responsible</H2>
       <P>
         The database owner is {p.legalName}, {p.address}. Privacy enquiries:{" "}
-        <L>{p.privacyContact}</L>.
+        {p.privacyContact ? (
+          <L>{p.privacyContact}</L>
+        ) : (
+          <>
+            through the <A href={links.contact}>contact form</A> or by phone,{" "}
+            <L>{p.phoneIntl}</L>
+          </>
+        )}
+        .
       </P>
 
       <H2>What we collect and why</H2>
@@ -25,8 +33,13 @@ export const privacy: LegalDocModule = {
         </li>
         <li>
           IP addresses are stored only as a one-way keyed hash, to prevent
-          abuse. We use no analytics, no advertising and no non-essential
-          cookies.
+          abuse. We use no advertising and no non-essential cookies.
+        </li>
+        <li>
+          For visit statistics we use Vercel Web Analytics: it counts the pages
+          viewed, the site a visitor came from and the country, without cookies
+          and without identifying the visitor. Page addresses are recorded
+          without order or address details.
         </li>
         <li>
           When you add a work to your cart, one strictly necessary cookie
@@ -63,8 +76,15 @@ export const privacy: LegalDocModule = {
       <H2>Your rights</H2>
       <P>
         You may ask to see, correct or delete your data (subject to legal
-        retention duties) by writing to <L>{p.privacyContact}</L>. We reply
-        within 30 days.
+        retention duties) by writing to{" "}
+        {p.privacyContact ? (
+          <L>{p.privacyContact}</L>
+        ) : (
+          <>
+            us through the <A href={links.contact}>contact form</A>
+          </>
+        )}
+        . We reply within 30 days.
       </P>
 
       <H2>Security</H2>

@@ -38,7 +38,7 @@ import {
 import { startCartCheckoutAction } from "./actions";
 
 /**
- * `/[locale]/checkout?to=&city=&zip=&ship=&cur=&step=`: the cart checkout. Every ready work of the
+ * `/[locale]/checkout?to=&city=&zip=&ship=&pack=&cur=&step=`: the cart checkout. Every ready work of the
  * cart in one order: one delivery choice for all of them, one payment, through the same
  * address-first steps as "Buy now" (`src/lib/checkout-steps.ts`; `strict-origin` keeps the
  * destination in the query out of Referer headers). Works that are not ready stay in the cart (and
@@ -87,6 +87,7 @@ export default async function CartCheckoutPage({
     country: p.country,
     method: p.ship ?? undefined,
     currency: p.cur ?? undefined,
+    packing: p.pack === "rolled" ? "ROLLED" : undefined,
   });
 
   const t = await getTranslations({ locale, namespace: "checkout" });
@@ -206,7 +207,7 @@ export default async function CartCheckoutPage({
               locale={locale}
               countries={countries}
               value={{ country: p.country, city: p.city, zip: p.zip }}
-              carry={{ ship: p.ship, cur: p.cur }}
+              carry={{ ship: p.ship, cur: p.cur, pack: p.pack }}
               issues={{}}
             />
           </section>
@@ -229,6 +230,7 @@ export default async function CartCheckoutPage({
     zip: p.zip,
     ship: r.offeredShip,
     cur: quote.currency === "USD" ? "USD" : null,
+    pack: quote.packing === "ROLLED" ? "rolled" : null,
   });
   const destination = {
     country: p.country,
@@ -247,7 +249,7 @@ export default async function CartCheckoutPage({
           locale={locale}
           countries={countries}
           value={{ country: p.country, city: p.city, zip: p.zip }}
-          carry={{ ship: p.ship, cur: p.cur }}
+          carry={{ ship: p.ship, cur: p.cur, pack: p.pack }}
           issues={r.showDestinationErrors ? r.issues : {}}
         />
       </div>
@@ -322,6 +324,7 @@ export default async function CartCheckoutPage({
           country: quote.country,
           method: s.method,
           currency: quote.currency,
+          ...(quote.packing === "ROLLED" ? { packing: "ROLLED" as const } : {}),
           ...(needsAddress
             ? { city: p.city, postalCode: p.zip || undefined }
             : {}),

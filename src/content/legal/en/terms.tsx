@@ -1,6 +1,6 @@
 import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
-/** Terms of sale – draft for the lawyer's review (spec §6.2, §12.4). */
+/** Terms of sale (spec §6.2, §12.4). */
 export const terms: LegalDocModule = {
   title: "Terms of sale",
   Body: ({ profile: p, links }) => (
@@ -9,9 +9,15 @@ export const terms: LegalDocModule = {
       <P>
         This site is operated by {p.legalName} ({p.tradeName}), address:{" "}
         {p.address}. Phone: <L>{p.phoneLocal}</L> (international:{" "}
-        <L>{p.phoneIntl}</L>), email: <L>{p.email}</L>. Merchant country:
-        Israel. The seller's identification details appear on the payment page,
-        in the disclosure document and in the order confirmation.
+        <L>{p.phoneIntl}</L>)
+        {p.email ? (
+          <>
+            , email: <L>{p.email}</L>
+          </>
+        ) : null}
+        . Merchant country: Israel. The seller's identification details appear
+        on the payment page, in the disclosure document and in the order
+        confirmation.
       </P>
 
       <H2>2. The works</H2>

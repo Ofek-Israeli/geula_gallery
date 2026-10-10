@@ -17,6 +17,10 @@ const LEGAL_DOCS = [
  * Public footer with the cancellation link and the legal pages (spec §1.2, §6.2). Never shows the
  * seller's ID number (spec §1.2 Compliance). `variant="minimal"` is the checkout footer.
  *
+ * At the painter's request the full footer has no separate "Cancel a purchase" line: its
+ * "Cancellations and returns" item is the cancellation link (it opens `/cancel`, the page where a
+ * buyer cancels, which links to the full policy). The checkout footer keeps `CancelPurchaseLink`.
+ *
  * With `background` (the public site: "By the Lake") the footer is the second window onto the
  * painting behind the page (`PaintingBackdrop`): reached at the bottom of the viewport, it shows
  * where the home page's quote band leaves off. Without it (checkout) it stays the plain light
@@ -60,16 +64,18 @@ export function SiteFooter({
           background ? "py-12" : "py-8",
         )}
       >
-        <p className="text-base font-medium">
-          <CancelPurchaseLink />
-        </p>
+        {variant === "full" ? null : (
+          <p className="text-base font-medium">
+            <CancelPurchaseLink />
+          </p>
+        )}
         {variant === "full" ? (
           <nav aria-label={t("footer.legalLabel")}>
             <ul className="flex flex-wrap gap-x-5 gap-y-1">
               {LEGAL_DOCS.map((doc) => (
                 <li key={doc}>
                   <Link
-                    href={`/legal/${doc}`}
+                    href={doc === "returns" ? "/cancel" : `/legal/${doc}`}
                     className="inline-flex min-h-6 items-center underline"
                   >
                     {t(`footer.${doc}`)}

@@ -151,6 +151,7 @@ export async function loadDisclosureInput(
     vatMinor: order.vatMinor,
     zeroRatedExport: international,
     shippingMethod: order.shippingMethod,
+    ...(quote?.packing === "ROLLED" ? { rolled: true } : {}),
     deliveryEstimate:
       (quote && "estimate" in quote ? quote.estimate?.[locale] : undefined) ??
       "",

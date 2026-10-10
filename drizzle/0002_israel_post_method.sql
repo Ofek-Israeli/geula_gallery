@@ -1,0 +1,1 @@
+ALTER TYPE "public"."shipping_method" ADD VALUE 'ISRAEL_POST';

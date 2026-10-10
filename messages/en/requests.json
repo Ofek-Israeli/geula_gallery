@@ -19,6 +19,7 @@
     "name": "Full name",
     "email": "Email",
     "phone": "Phone",
+    "phoneHint": "Leave a number and we can answer by phone or WhatsApp.",
     "country": "Shipping country",
     "countryHint": "Used to price the shipping.",
     "message": "Message",
@@ -31,7 +32,8 @@
   "submitting": "Sending…",
   "thanks": {
     "title": "Thank you! Your message was sent.",
-    "body": "We sent a confirmation to {email}. We will get back to you soon."
+    "body": "We sent a confirmation to {email}. We will get back to you soon.",
+    "bodyNoEmail": "We will get back to you soon."
   },
   "notAvailable": "This kind of request is not available for this work.",
   "errors": {

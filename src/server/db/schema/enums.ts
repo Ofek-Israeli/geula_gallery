@@ -83,8 +83,9 @@ export const orderSourceEnum = pgEnum("order_source", [
 export const shippingMethodEnum = pgEnum("shipping_method", [
   "CARRIER_TABLE",
   "LOCAL_PICKUP",
-  "ARTIST_DELIVERY",
   "QUOTED",
+  // Israel Post at its published prices (home delivery in Israel, EMS abroad).
+  "ISRAEL_POST",
 ]);
 export const vatModeEnum = pgEnum("vat_mode", ["OSEK_PATUR", "OSEK_MURSHE"]);
 

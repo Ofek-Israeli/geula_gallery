@@ -48,7 +48,9 @@
     "unavailable": "not available",
     "details": "Shipping and duties",
     "dap": "For international orders, import duties, taxes and handling fees at the destination are paid by the buyer (DAP).",
-    "insured": "insured"
+    "insured": "insured",
+    "rolled": "rolled in a tube",
+    "israelFromRolled": "Delivery in Israel from {price} (rolled in a tube)"
   },
   "trust": {
     "label": "What is included",
@@ -61,6 +63,7 @@
     "title": "About the work",
     "medium": "Medium",
     "dimensions": "Dimensions (H × W × D)",
+    "dimensionsHW": "Dimensions (H × W)",
     "year": "Year",
     "series": "Series",
     "frame": "Frame",

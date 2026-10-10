@@ -45,6 +45,7 @@ const links = {
   privacy: "/x/legal/privacy",
   accessibility: "/x/legal/accessibility",
   cancel: "/x/cancel",
+  contact: "/x/contact",
 };
 
 /** Phrases a consumer-law-compliant text must never contain (spec §6.2: no "all sales final"). */
@@ -59,17 +60,29 @@ const FORBIDDEN = [
   /המכירה סופית/,
 ];
 
-function renderDoc(locale: "he" | "en", doc: (typeof LEGAL_DOCS)[number]) {
+function renderDoc(
+  locale: "he" | "en",
+  doc: (typeof LEGAL_DOCS)[number],
+  profile: typeof businessProfile = businessProfile,
+) {
   const mod = LEGAL_DOCUMENTS[locale][doc];
   const html = renderToStaticMarkup(
     createElement(mod.Body, {
-      profile: toLegalProfile(businessProfile, locale),
+      profile: toLegalProfile(profile, locale),
       links,
       versionDate: "1 October 2026",
     }),
   );
   return stripBidi(html.replace(/<[^>]+>/g, " "));
 }
+
+/** No public email and no privacy or accessibility contact: the pages point to the contact form. */
+const noEmailProfile = {
+  ...businessProfile,
+  email: "",
+  accessibilityContact: "",
+  privacyContact: "",
+};
 
 const input: DisclosureInput = {
   seller: {
@@ -184,6 +197,42 @@ describe("legal pages", () => {
       expect(Object.keys(p)).not.toContain("idNumber");
     }
   });
+});
+
+describe("without a public email", () => {
+  for (const locale of LOCALE_VALUES) {
+    it(`${locale}: no email anywhere; privacy and accessibility point to the contact form and the phone`, () => {
+      for (const doc of LEGAL_DOCS) {
+        const text = renderDoc(locale, doc, noEmailProfile);
+        expect(text, doc).not.toMatch(/@/);
+        // The seller-contact phrasings ("by email:", ", email:"), not mentions such as retention.
+        expect(text, doc).not.toMatch(/בדוא״ל:|by email:|, דוא״ל:|, email:/i);
+      }
+      const form = locale === "he" ? "טופס יצירת הקשר" : "contact form";
+      for (const doc of ["privacy", "accessibility"] as const) {
+        const html = renderToStaticMarkup(
+          createElement(LEGAL_DOCUMENTS[locale][doc].Body, {
+            profile: toLegalProfile(noEmailProfile, locale),
+            links,
+            versionDate: "1 October 2026",
+          }),
+        );
+        expect(html, doc).toContain('href="/x/contact"');
+        expect(renderDoc(locale, doc, noEmailProfile), doc).toContain(form);
+      }
+    });
+
+    it(`${locale}: the disclosure has no email row`, () => {
+      const doc = buildPreContract(
+        { ...input, seller: { ...input.seller, email: "" } },
+        locale,
+      );
+      const seller = doc.sections.find((s) => s.id === "seller");
+      const labels = (seller?.rows ?? []).map((r) => r.label);
+      expect(labels).not.toContain(locale === "he" ? "דוא״ל" : "Email");
+      expect(JSON.stringify(doc)).not.toMatch(/@/);
+    });
+  }
 });
 
 describe("pre-contract disclosure: s.14C(a) elements", () => {

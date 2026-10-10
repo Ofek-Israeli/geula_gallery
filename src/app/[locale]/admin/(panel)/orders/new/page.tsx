@@ -7,6 +7,7 @@ import { countryOptions } from "@/lib/countries";
 import { isLocale } from "@/lib/locale";
 import { toDecimalString } from "@/lib/money";
 import { paths } from "@/lib/routes";
+import { env } from "@/server/env";
 import { requireAdmin } from "@/server/next/guards";
 import { listSellableArtworks } from "@/server/orders/admin";
 import { getSetting } from "@/server/settings";
@@ -25,6 +26,7 @@ export async function generateMetadata({
  * `/admin/orders/new` (spec §5.10): artwork, buyer, country, price (a change needs a reason),
  * currency, shipping, language, `conversation_took_place` (default true) and expiry →
  * `createLinkOrder(kind: 'MANUAL')`. Payment: the emailed link, or "Record payment" on the order.
+ * While online sales are closed (`SALES_OPEN=false`) the page only explains how to record a sale.
  */
 export default async function NewManualOrderPage({
   params,
@@ -36,6 +38,19 @@ export default async function NewManualOrderPage({
   const sp = await searchParams;
   const preselect = Array.isArray(sp.artwork) ? sp.artwork[0] : sp.artwork;
   const t = await getTranslations({ locale, namespace: "admin-orders.new" });
+  if (!env.SALES_OPEN) {
+    return (
+      <div className="flex max-w-2xl flex-col gap-6">
+        <Link href={paths.admin.orders()} className="text-sm">
+          {t("title")}
+        </Link>
+        <h1 className="text-3xl">{t("title")}</h1>
+        <p className="border border-line p-4" data-testid="sales-closed">
+          {t("salesClosed")}
+        </p>
+      </div>
+    );
+  }
   const tl = await getTranslations({ locale, namespace: "common.language" });
   const tm = await getTranslations({
     locale,
@@ -139,9 +154,9 @@ export default async function NewManualOrderPage({
             options={(
               [
                 "CARRIER_TABLE",
+                "ISRAEL_POST",
                 "QUOTED",
                 "LOCAL_PICKUP",
-                "ARTIST_DELIVERY",
               ] as const
             ).map((m) => ({
               value: m,

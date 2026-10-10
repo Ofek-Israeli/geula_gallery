@@ -84,7 +84,6 @@ test("US buyer: Latin destination and address, DAP required, pays the USD total"
   await box(en.details.phone).fill("+12025550123");
   await box(en.details.line1).fill("רחוב הרצל 1");
   await page.getByLabel(en.consent.terms).check();
-  await page.getByLabel(en.consent.age).check();
   // DAP left unticked.
   await page.getByTestId("checkout-submit").click();
 

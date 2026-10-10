@@ -1,9 +1,9 @@
-import { H2, L, type LegalDocModule, P, UL } from "../types";
+import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
 /** Accessibility statement (voluntary) – draft (spec §6.7). */
 export const accessibility: LegalDocModule = {
   title: "Accessibility statement",
-  Body: ({ profile: p, versionDate }) => (
+  Body: ({ profile: p, links, versionDate }) => (
     <>
       <P>
         We want this site to be usable by everyone. It is built to meet WCAG 2.2
@@ -36,13 +36,17 @@ export const accessibility: LegalDocModule = {
           tagged for accessibility; an accessible HTML version of each exists on
           the site.
         </li>
-        <li>The demo images are museum paintings used as placeholders.</li>
       </UL>
 
       <H2>Contact</H2>
       <P>
         Found a problem? Tell us and we will fix it:{" "}
-        <L>{p.accessibilityContact}</L>, phone <L>{p.phoneLocal}</L>.
+        {p.accessibilityContact ? (
+          <L>{p.accessibilityContact}</L>
+        ) : (
+          <A href={links.contact}>the contact form</A>
+        )}
+        , phone <L>{p.phoneIntl}</L>.
       </P>
       <P>This statement was updated on {versionDate}.</P>
     </>

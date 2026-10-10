@@ -19,8 +19,6 @@ import { requireAdmin } from "@/server/next/guards";
 import { getFulfillment } from "@/server/shipping/fulfillment-view";
 import { MANUAL_EVENT_STATUSES } from "@/server/shipping/shipments";
 import {
-  artistDeliveredAction,
-  artistOutAction,
   collectedAction,
   customsAction,
   eventAction,
@@ -82,8 +80,8 @@ const IN_FLIGHT = [
 /**
  * `/admin/orders/[id]/fulfill` (spec §5.5, §6.10): guards and the cancellation override, the
  * printables, then the three steps – pack (checklist, packed parcel, photos), customs
- * (international), ship (label with the claim protocol, manual tracking, pickup or artist
- * delivery behind the disclosure guard) – and the shipment events.
+ * (international), ship (label with the claim protocol, manual tracking, pickup behind the
+ * disclosure guard) – and the shipment events.
  */
 export default async function FulfillPage({
   params,
@@ -98,7 +96,9 @@ export default async function FulfillPage({
   const status = shipment.status;
   const blocked = v.block !== null;
   const carrierMethod =
-    shipment.method === "CARRIER_TABLE" || shipment.method === "QUOTED";
+    shipment.method === "CARRIER_TABLE" ||
+    shipment.method === "ISRAEL_POST" ||
+    shipment.method === "QUOTED";
   const hidden = { orderId: order.id };
   const when = (d: Date | null | undefined) =>
     d ? formatDateTime(d, locale) : "—";
@@ -689,37 +689,6 @@ export default async function FulfillPage({
           </>
         ) : null}
 
-        {shipment.method === "ARTIST_DELIVERY" ? (
-          <>
-            {status === "PACKED" && !blocked ? (
-              <ActionForm
-                action={artistOutAction}
-                locale={locale}
-                hidden={hidden}
-                submit={t("fulfill.ship.artist.out")}
-                testId="artist-out-form"
-              />
-            ) : null}
-            {status === "OUT_FOR_DELIVERY" ? (
-              <HandOverForm
-                action={artistDeliveredAction}
-                locale={locale}
-                hidden={hidden}
-                submit={t("fulfill.ship.artist.delivered")}
-                testId="artist-delivered-form"
-                disclosureSentAt={order.disclosureSentAt}
-                labels={{
-                  sent: (d) =>
-                    t("fulfill.ship.pickup.disclosureSent", { date: d }),
-                  notSent: t("fulfill.ship.pickup.disclosureNotSent"),
-                  check: t("fulfill.ship.pickup.handedOverCheck"),
-                }}
-                when={when}
-              />
-            ) : null}
-          </>
-        ) : null}
-
         {["DELIVERED", "COLLECTED"].includes(status) ? (
           <p data-testid="fulfill-done">
             {t("fulfill.ship.done", { status: t(`status.${status}`) })}
@@ -829,7 +798,7 @@ function HandOverForm({
   labels,
   when,
 }: {
-  action: typeof collectedAction | typeof artistDeliveredAction;
+  action: typeof collectedAction;
   locale: "he" | "en";
   hidden: Record<string, string>;
   submit: string;

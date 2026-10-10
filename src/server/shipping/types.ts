@@ -16,8 +16,8 @@ export type { ShippingSettings, ZoneId } from "@/server/settings/schemas";
 export type SizeClass = "S" | "M" | "L" | "QUOTE";
 export type ShippingMethod =
   | "CARRIER_TABLE"
+  | "ISRAEL_POST"
   | "LOCAL_PICKUP"
-  | "ARTIST_DELIVERY"
   | "QUOTED";
 export type CarrierCode = "DHL" | "MANUAL" | "MOCK";
 export type PackagingType =
@@ -27,6 +27,11 @@ export type PackagingType =
   | "FRAMED_BOX"
   | "CRATE";
 export type Glazing = "NONE" | "GLASS" | "ACRYLIC";
+/**
+ * How the buyer wants the works sent: as listed (a stretched canvas in its box) or rolled in a tube
+ * off the stretcher (`rates.ts#rolledSpec`; only works `rollableAtCheckout`).
+ */
+export type Packing = "STRETCHED" | "ROLLED";
 
 /** What the engine needs about one artwork (from `artworks`). */
 export interface ArtworkShipSpec {
@@ -145,6 +150,29 @@ export interface DhlEstimateDetail {
   totalMinor: number;
 }
 
+/** One parcel as Israel Post prices it (`shipping/israel-post.ts`). */
+export interface IsraelPostPiece {
+  /** Whole cm, rounded up, longest first. */
+  dimsCm: [number, number, number];
+  actualG: number;
+  /** The weight priced: actual (domestic) or rounded up to 0.5 kg (EMS). */
+  billedG: number;
+  priceMinor: number;
+}
+
+/** How an Israel Post price was computed, snapshotted with the quote (ILS minor units). */
+export interface IsraelPostDetail {
+  /** The published price lists (e.g. `ISRAEL-POST-2026`). */
+  tariff: string;
+  /** Home delivery in Israel, or EMS abroad. */
+  service: "DOMESTIC_DOOR" | "EMS";
+  /** EMS destination group (1–13); null in Israel. */
+  group: number | null;
+  /** One parcel per work. */
+  pieces: IsraelPostPiece[];
+  totalMinor: number;
+}
+
 /** One priced shipping method for a destination (snapshotted into `orders.shipping_quote`). */
 export interface ShippingQuoteResult extends DestinationEvaluation {
   zone: ZoneId | null;
@@ -173,9 +201,16 @@ export interface ShippingQuoteResult extends DestinationEvaluation {
    * abroad) or the DHL Express estimate from DHL's published tariff (abroad). Absent on refusals,
    * other methods and quotes stored before it existed.
    */
-  rateSource?: "TABLE" | "DHL_ESTIMATE";
+  rateSource?: "TABLE" | "DHL_ESTIMATE" | "ISRAEL_POST";
   /** The DHL estimate's workings, when `rateSource` is `DHL_ESTIMATE`. */
   dhl?: DhlEstimateDetail;
+  /** Israel Post's published price, for the `ISRAEL_POST` method. */
+  israelPost?: IsraelPostDetail;
+  /**
+   * `ROLLED` when the buyer chose to have the rollable works rolled in a tube and the quote prices
+   * them so (snapshotted: the painter rolls them). Absent: as listed.
+   */
+  packing?: "ROLLED";
 }
 
 export interface QuoteShippingInput {
@@ -191,7 +226,14 @@ export interface QuoteShippingInput {
 }
 
 export type ZoneEstimate =
-  | { fromIlsMinor: number; insured: boolean }
+  | {
+      fromIlsMinor: number;
+      insured: boolean;
+      /** The cheapest option's own delivery time when it has one (Israel Post); else the zone's. */
+      estimate?: { he: string; en: string };
+      /** The price is for the work rolled in a tube, which the buyer may choose at checkout. */
+      rolled?: boolean;
+    }
   | "QUOTE"
   | "UNAVAILABLE";
 

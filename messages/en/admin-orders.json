@@ -48,6 +48,7 @@
     "phone": "Phone",
     "address": "Shipping address",
     "method": "Delivery",
+    "rolled": "rolled in a tube (the buyer's choice)",
     "consents": "Consents",
     "receiptByEmail": "Receipt by email",
     "yes": "Yes",
@@ -100,7 +101,7 @@
     "generic": "Something went wrong. Please try again.",
     "ORDER_NOT_PAID": "The order is not paid.",
     "FULFILLMENT_BLOCKED": "Fulfillment is blocked for this order.",
-    "NOT_A_CARRIER_SHIPMENT": "Pickup and artist delivery have no tracking.",
+    "NOT_A_CARRIER_SHIPMENT": "Pickup has no tracking.",
     "SHIPMENT_STATE": "Tracking cannot be recorded in the shipment's current state.",
     "TRACKING_NUMBER_IN_USE": "This tracking number is already used by another shipment.",
     "NOT_FOUND": "Not found.",
@@ -118,7 +119,8 @@
     "PRICE_REASON_REQUIRED": "The price differs from the list price; please give a reason.",
     "NOT_RESERVABLE": "The artwork cannot be held right now.",
     "ORDER_NOT_PAYABLE": "A payment cannot be recorded for the order in its current state.",
-    "PRICE_REQUIRED": "The artwork has no price in this currency; please enter one."
+    "PRICE_REQUIRED": "The artwork has no price in this currency; please enter one.",
+    "SALES_CLOSED": "Online sales are closed, so no payment link can be created."
   },
   "source": {
     "WEB": "Site",
@@ -128,8 +130,8 @@
   },
   "method": {
     "CARRIER_TABLE": "Shipping",
+    "ISRAEL_POST": "Israel Post",
     "LOCAL_PICKUP": "Studio pickup",
-    "ARTIST_DELIVERY": "Delivered by the artist",
     "QUOTED": "Quoted shipping"
   },
   "attemptStatus": {
@@ -298,6 +300,7 @@
     "expiresInHours": "Link valid for (hours)",
     "submit": "Create the order and send the link",
     "confirm": "Create an order at this price and email the buyer a payment link?",
-    "created": "The order was created."
+    "created": "The order was created.",
+    "salesClosed": "Online sales are closed, so orders with a payment link can't be created. A work sold by phone, WhatsApp or in the studio is recorded under \"Sold outside the site\" on its page."
   }
 }

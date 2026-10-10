@@ -27,6 +27,8 @@ export interface CheckoutFormProps {
     country: string;
     method: string;
     currency: string;
+    /** "ROLLED" when the buyer chose the works rolled in a tube (step 2). */
+    packing?: "ROLLED";
     /** From the destination step; posted only for a delivery (a pickup posts neither). */
     city?: string;
     postalCode?: string;
@@ -62,7 +64,6 @@ const FIELD_IDS: Record<string, string> = {
   companyName: "co-company",
   vatId: "co-vat",
   terms: "co-terms",
-  age: "co-age",
   dap: "co-dap",
   providerId: "co-provider",
 };
@@ -104,7 +105,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
   const errorFor = (name: string): string | undefined => {
     const list = fieldErrors[name];
     if (!list?.length) return undefined;
-    if (["terms", "age", "dap"].includes(name)) return t("consent.required");
+    if (["terms", "dap"].includes(name)) return t("consent.required");
     return list[0] === "required" ? tf("invalid") : list[0];
   };
 
@@ -188,6 +189,9 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <input type="hidden" name="country" value={h.country} />
       <input type="hidden" name="method" value={h.method} />
       <input type="hidden" name="currency" value={h.currency} />
+      {h.packing ? (
+        <input type="hidden" name="packing" value={h.packing} />
+      ) : null}
       {h.city !== undefined ? (
         <input type="hidden" name="city" value={h.city} />
       ) : null}
@@ -356,14 +360,6 @@ export function CheckoutForm(props: CheckoutFormProps) {
           required
           defaultChecked={v.terms === "on"}
           error={errorFor("terms")}
-        />
-        <Checkbox
-          id={FIELD_IDS.age ?? "co-age"}
-          name="age"
-          label={t("consent.age")}
-          required
-          defaultChecked={v.age === "on"}
-          error={errorFor("age")}
         />
         {props.international ? (
           <Checkbox

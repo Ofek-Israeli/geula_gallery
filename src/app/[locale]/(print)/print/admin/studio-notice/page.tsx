@@ -56,11 +56,16 @@ export default async function StudioNoticePage({
         {t("body3")} <bdi dir="ltr">{cancelUrl}</bdi>
       </p>
       <p className="mbs-auto">
-        {t.rich("contact", {
-          phone: profile.phoneLocal,
-          email: profile.email,
-          ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
-        })}
+        {profile.email
+          ? t.rich("contact", {
+              phone: profile.phoneLocal,
+              email: profile.email,
+              ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
+            })
+          : t.rich("contactPhone", {
+              phone: profile.phoneLocal,
+              ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
+            })}
       </p>
       <p className="text-sm text-ink-muted print:hidden">{t("print")}</p>
     </article>

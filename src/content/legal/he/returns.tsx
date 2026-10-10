@@ -30,10 +30,12 @@ export const returns: LegalDocModule = {
         <li>
           בטלפון: <L>{p.phoneLocal}</L> (מחו״ל: <L>{p.phoneIntl}</L>);
         </li>
-        <li>
-          בדוא״ל: <L>{p.email}</L>
-          {";"}
-        </li>
+        {p.email ? (
+          <li>
+            בדוא״ל: <L>{p.email}</L>
+            {";"}
+          </li>
+        ) : null}
         <li>בדואר רשום: {p.address}.</li>
       </UL>
 
@@ -54,7 +56,7 @@ export const returns: LegalDocModule = {
       <P>
         אם היצירה כבר נמסרה, נשלח הוראות החזרה. יש להחזיר אותה באריזה מגינה,
         במשלוח עם מעקב, לכתובת: {p.returnAddress}. אפשר לתאם החזרה בתיאום
-        טלפוני. [לאישור עורך הדין: מי נושא בעלות משלוח ההחזרה.]
+        טלפוני.
       </P>
 
       <H2>חריגים</H2>

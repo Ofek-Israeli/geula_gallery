@@ -119,7 +119,9 @@ export default async function AdminOrderPage({
     order.status === "PAID" &&
     !order.fulfillmentBlockedReason &&
     shipment !== null &&
-    (shipment.method === "CARRIER_TABLE" || shipment.method === "QUOTED");
+    (shipment.method === "CARRIER_TABLE" ||
+      shipment.method === "ISRAEL_POST" ||
+      shipment.method === "QUOTED");
 
   return (
     <div className="flex max-w-4xl flex-col gap-6" data-testid="admin-order">
@@ -229,6 +231,10 @@ export default async function AdminOrderPage({
           <dt className="text-ink-muted">{t("detail.method")}</dt>
           <dd data-testid="admin-order-method">
             {order.shippingMethod ? t(`method.${order.shippingMethod}`) : "—"}
+            {(order.shippingQuote as { packing?: string } | null)?.packing ===
+            "ROLLED"
+              ? ` · ${t("detail.rolled")}`
+              : ""}
           </dd>
           {pickup ? (
             <>

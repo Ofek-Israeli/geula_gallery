@@ -30,6 +30,8 @@ export interface LegalDocProps {
     privacy: string;
     accessibility: string;
     cancel: string;
+    /** The contact page (its form), used when no privacy or accessibility contact is set. */
+    contact: string;
   };
   /** Display date of the version ("1 October 2026"). */
   versionDate: string;

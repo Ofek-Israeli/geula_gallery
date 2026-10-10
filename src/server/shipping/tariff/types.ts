@@ -77,3 +77,47 @@ export interface DhlTariff {
   /** Shipment Insurance as DHL publishes it: max(ratePct × value, minMinor). */
   insurance: { ratePct: number; minMinor: number };
 }
+
+/** An Israel Post price band: up to `upToG` grams costs `minor` (ILS minor units, VAT included). */
+export interface PostWeightBand {
+  upToG: number;
+  minor: number;
+}
+
+/** Israel Post's size rule: no side over `maxSideCm`, longest + girth (2 × the other two). */
+export interface PostSizeLimit {
+  maxSideCm: number;
+  maxLengthGirthCm: number;
+}
+
+/**
+ * Israel Post's published 2026 prices and limits (see `israel-post-2026.ts`), ILS minor units.
+ * Domestic: one service and its bands. Abroad: EMS by destination group (1–13) and weight.
+ */
+export interface IsraelPostTariff {
+  id: string;
+  name: string;
+  checkedOn: string;
+  sources: { domestic: string; ems: string; postalGuide: string };
+  domestic: {
+    validFrom: string;
+    /** Counter to door, next day; the inter-city column (the in-city one is cheaper). */
+    bands: readonly PostWeightBand[];
+    inCityBands: readonly PostWeightBand[];
+    maxWeightG: number;
+    limit: PostSizeLimit;
+  };
+  ems: {
+    validFrom: string;
+    /** Counter price per item: up to 0.5 kg, over 0.5 up to 1 kg, each further 0.5 kg or part. */
+    groups: Readonly<
+      Record<number, { upTo500: number; upTo1000: number; perExtra500: number }>
+    >;
+    countryGroups: Readonly<Record<number, readonly string[]>>;
+    maxWeightG: number;
+    /** Per-destination size limits (the post's parcel table; unclear entries take 105/200). */
+    limits: readonly (PostSizeLimit & { countries: readonly string[] })[];
+    /** Liability extension: `perThousandMinor` per ₪1,000 (or part) of value, up to the cap. */
+    insurance: { perThousandMinor: number; maxValueMinor: number };
+  };
+}

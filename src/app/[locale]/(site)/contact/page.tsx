@@ -64,7 +64,7 @@ export default async function ContactPage({
           locale,
           name: profile.artistName,
           jobTitle: ta("jobTitle"),
-          email: profile.email,
+          ...(profile.email ? { email: profile.email } : {}),
         })}
       />
       <header className="flex flex-col gap-3">
@@ -102,11 +102,14 @@ export default async function ContactPage({
         <h2 id="message-title" className="text-2xl">
           {t("formTitle")}
         </h2>
-        <p className="max-w-prose">{t("formIntro")}</p>
+        <p className="max-w-prose">
+          {t(env.EMAIL_TO_VISITORS ? "formIntro" : "formIntroNoEmail")}
+        </p>
         <ContactForm
           action={submitContactAction}
           locale={locale}
           formStart={issueFormStartToken()}
+          visitorEmail={env.EMAIL_TO_VISITORS}
         />
         <PrivacyNotice>{t("privacy")}</PrivacyNotice>
       </section>

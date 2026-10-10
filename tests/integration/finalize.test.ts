@@ -446,7 +446,7 @@ describe("finalizeAttempt", () => {
     const art = await buyableArtwork(db);
     const h = await heldOrder(art.slug); // LOCAL_PICKUP
     const shipping = await shippingQuoteForOrder(h.orderId, {
-      method: "ARTIST_DELIVERY",
+      method: "CARRIER_TABLE",
     });
     expect(shipping.mode).toBe("ok");
     const requoted = await withTx((tx) =>
@@ -481,7 +481,7 @@ describe("finalizeAttempt", () => {
     await clickMockPay(second?.providerRef ?? "", "pay");
     expect((await finalize(second?.id ?? "")).outcome).toBe("paid");
     expect((await order(h.orderId)).shippingMinor).toBe(shipping.shippingMinor);
-    expect((await order(h.orderId)).shippingMethod).toBe("ARTIST_DELIVERY");
+    expect((await order(h.orderId)).shippingMethod).toBe("CARRIER_TABLE");
   });
 
   it("defers a success while another attempt of the order is capturing", async () => {

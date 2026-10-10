@@ -34,7 +34,7 @@ export interface CheckoutOptions {
   buyer?: { name: string; email: string; phone: string };
   ipHash?: string | null;
   country?: string;
-  method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY";
+  method?: "CARRIER_TABLE" | "LOCAL_PICKUP";
   currency?: "ILS" | "USD";
   clientRequestId?: string;
   locale?: "he" | "en";
@@ -84,7 +84,6 @@ export async function checkoutInput(
       termsVersion: LEGAL_VERSIONS.terms,
       returnsVersion: LEGAL_VERSIONS.returns,
       privacyVersion: LEGAL_VERSIONS.privacy,
-      ageConfirmed: true,
       ...(country === "IL"
         ? {}
         : { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }),
@@ -165,7 +164,6 @@ async function singleItemDefaults(
       termsVersion: LEGAL_VERSIONS.terms,
       returnsVersion: LEGAL_VERSIONS.returns,
       privacyVersion: LEGAL_VERSIONS.privacy,
-      ageConfirmed: true as const,
       ...(country === "IL"
         ? {}
         : { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }),
@@ -377,7 +375,7 @@ export async function linkOrder(
 export async function completeDetails(
   orderId: string,
   opts: {
-    method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY" | "QUOTED";
+    method?: "CARRIER_TABLE" | "LOCAL_PICKUP" | "QUOTED";
     country?: string;
     duties?: boolean;
   } = {},
@@ -406,7 +404,6 @@ export async function completeDetails(
       termsVersion: LEGAL_VERSIONS.terms,
       returnsVersion: LEGAL_VERSIONS.returns,
       privacyVersion: LEGAL_VERSIONS.privacy,
-      ageConfirmed: true,
       ...((opts.duties ?? country !== "IL")
         ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
         : {}),

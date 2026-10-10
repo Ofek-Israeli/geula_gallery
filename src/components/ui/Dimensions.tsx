@@ -6,7 +6,7 @@ import {
 } from "@/lib/dimensions";
 import { Bdi } from "./Bdi";
 
-/** `H × W [× D] cm (h × w [× d] in)`, in `<bdi dir="ltr">` (spec §6.3). */
+/** `H × W [× D] cm`, plus `(h × w [× d] in)` on English pages only, in `<bdi dir="ltr">` (spec §6.3). */
 export function Dimensions({
   locale,
   className,
@@ -18,14 +18,19 @@ export function Dimensions({
     <span className={className}>
       <Bdi>
         {cm} {t("cm")}
-      </Bdi>{" "}
-      <span className="text-ink-muted">
-        (
-        <Bdi>
-          {inches} {t("in")}
-        </Bdi>
-        )
-      </span>
+      </Bdi>
+      {locale === "en" ? (
+        <>
+          {" "}
+          <span className="text-ink-muted">
+            (
+            <Bdi>
+              {inches} {t("in")}
+            </Bdi>
+            )
+          </span>
+        </>
+      ) : null}
     </span>
   );
 }

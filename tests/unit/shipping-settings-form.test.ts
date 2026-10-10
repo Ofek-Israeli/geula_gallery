@@ -90,6 +90,29 @@ describe("shipping settings form", () => {
     expect(res.value.dhlEstimate).toEqual(stored.dhlEstimate);
   });
 
+  it("edits the Israel Post options and delivery times; an older page keeps them", () => {
+    const f = shippingSettingsToForm(shippingDefaults);
+    delete f["post.abroad"];
+    f["post.estDomEn"] = "Next business day";
+    const res = shippingSettingsFromForm(f, shippingDefaults, NOW);
+    if (!res.ok) throw new Error(res.details);
+    expect(res.value.israelPost).toMatchObject({
+      domestic: true,
+      abroad: false,
+      insureAbroad: true,
+      estimate: { domestic: { en: "Next business day" } },
+    });
+    const old = shippingSettingsToForm(shippingDefaults);
+    for (const k of Object.keys(old)) if (k.startsWith("post.")) delete old[k];
+    const stored = {
+      ...shippingDefaults,
+      israelPost: { ...shippingDefaults.israelPost, abroad: false },
+    };
+    const kept = shippingSettingsFromForm(old, stored, NOW);
+    if (!kept.ok) throw new Error(kept.details);
+    expect(kept.value.israelPost).toEqual(stored.israelPost);
+  });
+
   it("keeps IR, SY and LB blocked; IQ is removable", () => {
     const f = shippingSettingsToForm(shippingDefaults);
     f.deniedCountries = "IR, SY, LB";

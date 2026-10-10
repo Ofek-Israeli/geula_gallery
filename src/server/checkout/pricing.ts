@@ -2,11 +2,17 @@ import "server-only";
 import type { Currency } from "@/lib/money";
 import { vatForOrder } from "@/lib/vat";
 import type { CheckoutSettings, ShippingSettings } from "@/server/settings";
-import { insuredValueInCurrency, quoteShipping } from "@/server/shipping/rates";
+import {
+  insuredValueInCurrency,
+  quoteShipping,
+  rollableAtCheckout,
+  rolledSpec,
+} from "@/server/shipping/rates";
 import type {
   ArtworkShipSpec,
   CarrierCode,
   FxReference,
+  Packing,
   ShippingMethod,
   ShippingQuoteResult,
 } from "@/server/shipping/types";
@@ -90,11 +96,15 @@ export function fxReference(s: CheckoutSettings): FxReference {
   };
 }
 
-/** Methods offered for a destination, in display order. */
+/**
+ * Methods offered for a destination, in display order (the first available one is preselected):
+ * the courier, Israel Post (when the parcel fits its limits), then pickup from the studio in
+ * Israel.
+ */
 export function candidateMethods(country: string): ShippingMethod[] {
   return country === "IL"
-    ? ["CARRIER_TABLE", "LOCAL_PICKUP", "ARTIST_DELIVERY"]
-    : ["CARRIER_TABLE"];
+    ? ["CARRIER_TABLE", "ISRAEL_POST", "LOCAL_PICKUP"]
+    : ["CARRIER_TABLE", "ISRAEL_POST"];
 }
 
 export interface ShippingOptions {
@@ -104,6 +114,15 @@ export interface ShippingOptions {
   ok: ShippingQuoteResult[];
 }
 
+/** Whether the buyer can have any of the works rolled in a tube (the checkout's packing choice). */
+export function anyRollable(items: readonly PricedArtwork[]): boolean {
+  return items.some((a) => rollableAtCheckout(shipSpecOf(a)));
+}
+
+/**
+ * Every candidate method's quote. `packing: "ROLLED"` prices the works the buyer may have rolled
+ * as tubes (`rolledSpec`; the others as listed), and the quotes then carry `packing: "ROLLED"`.
+ */
 export function shippingOptions(i: {
   items: PricedArtwork[];
   country: string;
@@ -112,11 +131,16 @@ export function shippingOptions(i: {
   shipping: ShippingSettings;
   checkout: CheckoutSettings;
   carrier: CarrierCode;
+  packing?: Packing;
 }): ShippingOptions {
-  const specs = i.items.map(shipSpecOf);
+  const listed = i.items.map(shipSpecOf);
+  const rolled = i.packing === "ROLLED" && listed.some(rollableAtCheckout);
+  const specs = rolled
+    ? listed.map((s) => (rollableAtCheckout(s) ? rolledSpec(s) : s))
+    : listed;
   const declared = i.items.reduce((s, a) => s + declaredValueIlsMinor(a), 0);
-  const all = candidateMethods(i.country).map((method) =>
-    quoteShipping({
+  const all = candidateMethods(i.country).map((method) => {
+    const q = quoteShipping({
       items: specs,
       country: i.country,
       method,
@@ -126,8 +150,9 @@ export function shippingOptions(i: {
       settings: i.shipping,
       fx: fxReference(i.checkout),
       carrier: i.carrier,
-    }),
-  );
+    });
+    return rolled ? { ...q, packing: "ROLLED" as const } : q;
+  });
   return { all, ok: all.filter((q) => q.mode === "ok") };
 }
 

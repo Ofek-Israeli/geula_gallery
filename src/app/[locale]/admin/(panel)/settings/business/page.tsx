@@ -168,7 +168,7 @@ export default async function BusinessSettingsPage({
               label={t("business.email")}
               defaultValue={p.email}
               type="email"
-              required
+              hint={t("business.emailHint")}
             />
             <FormField
               name="notificationEmail"
@@ -182,13 +182,13 @@ export default async function BusinessSettingsPage({
             name="accessibilityContact"
             label={t("business.accessibilityContact")}
             defaultValue={p.accessibilityContact}
-            required
+            hint={t("business.contactHint")}
           />
           <FormField
             name="privacyContact"
             label={t("business.privacyContact")}
             defaultValue={p.privacyContact}
-            required
+            hint={t("business.contactHint")}
           />
         </fieldset>
         <fieldset className="flex flex-col gap-4">

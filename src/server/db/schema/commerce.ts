@@ -100,6 +100,7 @@ export const orders = pgTable(
     returnsVersion: text(),
     privacyVersion: text(),
     termsAcceptedAt: tstz(),
+    /** No longer asked (the 18+ checkbox was removed); kept for older rows. */
     ageConfirmedAt: tstz(),
     dutiesNoticeVersion: text(),
     dutiesAckAt: tstz(),

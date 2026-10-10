@@ -85,6 +85,7 @@ export default async function LegalPage({
           privacy: l(paths.legal("privacy")),
           accessibility: l(paths.legal("accessibility")),
           cancel: l(paths.cancel()),
+          contact: l(paths.contact()),
         }}
         versionDate={formatDate(VERSION_DATE, locale)}
       />

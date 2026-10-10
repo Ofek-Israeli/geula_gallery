@@ -39,9 +39,10 @@ The buyer pays the works, the delivery and, abroad, the insurance when the quote
 \begin{itemize}[leftmargin=*]
   \item The price of a work already includes VAT when the seller is an \emph{osek murshe}; a sale
     abroad is a zero-rated export.
-  \item In Israel, delivery is a flat price: pickup, delivery by the artist, or the courier's price
-    for the box size. Abroad, it is DHL Express's \emph{published} price for the box, computed by
-    the site.
+  \item In Israel, delivery is a flat price: pickup, Israel Post home delivery, or the courier's
+    price for the box size. Abroad, it is DHL Express's
+    \emph{published} price for the box or, when the parcel fits, Israel Post EMS's published price;
+    the site computes both and the buyer chooses.
   \item Duties, import taxes and clearance fees at the destination are the buyer's, paid to DHL on
     delivery (Incoterm DAP). The site never collects them.
   \item Payment and currency-conversion fees are the seller's, paid out of the price. They are
@@ -61,10 +62,11 @@ The quote is locked when the buyer presses ``Continue to payment''.
   \midrule
   Work & the price list (shekels); VAT inside when \emph{murshe} & the dollar or shekel price;
     0\,\% VAT (export) & the pricing procedure \\
-  Delivery & pickup \nis{0}; the artist \nis{150}; courier by box size (table) & the DHL Express
-    estimate (Section~\ref{sec:abroad}) & Settings $\to$ Shipping \\
-  Insurance & none & DHL's, $\max(\nis{45}, 1\,\%)$, when shipped with the DHL account &
-    Settings $\to$ Shipping \\
+  Delivery & pickup \nis{0}; Israel Post \nis{67}--\nis{86} by weight;
+    courier by box size (table) & the DHL Express estimate (Section~\ref{sec:abroad}) or Israel
+    Post EMS (Section~\ref{sec:post}) & Settings $\to$ Shipping \\
+  Insurance & none & DHL's, $\max(\nis{45}, 1\,\%)$, when shipped with the DHL account; Israel
+    Post's, \nis{6.90} per \nis{1{,}000} & Settings $\to$ Shipping \\
   Duties, import VAT, clearance & none & paid by the buyer to DHL on delivery (DAP) & the
     destination country \\
   Payment fees & paid by the seller & paid by the seller & the merchant agreements \\
@@ -75,7 +77,11 @@ The quote is locked when the buyer presses ``Continue to payment''.
 \section{Delivery in Israel}
 \begin{itemize}
   \item \textbf{Pickup from the studio} costs nothing, and the buyer types no address.
-  \item \textbf{Delivery by the artist} is a flat \nis{150} per order (a setting).
+  \item \textbf{Israel Post home delivery} (counter to door, next day in most localities) at
+    Israel Post's published price \cite{postdomestic}, by the parcel's actual weight: up to 1\,kg
+    \nis{67}, up to 10\,kg \nis{73}, up to 20\,kg \nis{86} (the inter-city prices; within a
+    city it costs \nis{45}, \nis{56}, \nis{67}). It is offered when the parcel fits Israel Post's
+    limits (Section~\ref{sec:post}); most of her works up to $80\times80$\,cm do.
   \item \textbf{The courier} is priced per box from a table, by size class. The class comes from
     the packed box, sides sorted longest first, and its chargeable weight
     $\max(\text{actual}, \text{L}\times\text{W}\times\text{H}/5000)$:
@@ -286,7 +292,116 @@ parcel (zone $\times$ size class, plus its own fuel and season surcharges), as i
     restricted lists.
   \item \textbf{Once DHL opens an account}: the account discount, and the decision whether DHL
     files the export declaration.
+  \item \textbf{When Israel Post publishes new price lists} (domestic and international): the
+    numbers in \code{tariff/israel-post-2026.ts}, with the tests and this document.
+  \item \textbf{Once a rolled parcel has been weighed}: the rolled weight assumption
+    (\code{ROLLED\_BASE\_G}, \code{ROLLED\_G\_PER\_M2} in \code{rates.ts}), with the tests and
+    this document.
 \end{itemize}
+
+\section{Israel Post}\label{sec:post}
+Israel Post is offered next to the courier, in Israel and abroad, at the prices of its own price
+lists \cite{postdomestic,postems}, whenever the parcel fits its limits. The code is
+\code{src/server/shipping/israel-post.ts}; the data is in
+\code{src/server/shipping/tariff/israel-post-2026.ts}.
+\begin{itemize}
+  \item \textbf{Each work is its own parcel}, priced by its \emph{actual} weight. Israel Post
+    does not charge by volume, so for large, light canvases it costs a fraction of DHL's price.
+  \item \textbf{Limits} \cite{postguide}: 20\,kg; no side over 150\,cm; the longest side
+    plus twice the other two at most 300\,cm. Abroad, the destination's own limits apply
+    \cite{postems}: 150 and 300\,cm for most countries, but 105 and 200\,cm for some, such as
+    the United States, Germany, Italy and Australia (where the price list's entry is unclear, the
+    site uses 105 and 200). Crates and glazed works are not sent by post.
+  \item \textbf{EMS abroad}: the destination's group (1--13) sets the price per item: up to
+    0.5\,kg, up to 1\,kg, then each further 0.5\,kg or part. EMS reaches 171 countries; where
+    Israel Post sends no EMS (for example Saudi Arabia, Kuwait, Qatar) only DHL is offered, and
+    Europe stays ``by quote'' while its zone is off. The site uses the counter prices; preparing
+    the parcel online (``prepare at home'') is \nis{5} cheaper.
+  \item \textbf{Insurance abroad}: Israel Post's liability extension, \nis{6.90} per
+    \nis{1{,}000} of value or part of it, up to \nis{25{,}000} (a setting).
+  \item \textbf{Handling}: the painter takes the parcel to the post office (with the customs
+    form for EMS) and enters the tracking number on the order.
+\end{itemize}
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrrr>{\raggedright\arraybackslash}p{5.6cm}@{}}
+  \toprule
+  EMS group & Up to 0.5\,kg & Up to 1\,kg & Each further 0.5\,kg & Examples \\
+  \midrule
+  1 & 175 & 206 & 31.50 & United States \\
+  2 & 168 & 213 & 46.00 & Australia, South Africa \\
+  3 & 174 & 184 & 11.50 & UK, France, Germany, Italy, Türkiye, UAE \\
+  4 & 152 & 171 & 24.00 & Canada, Mexico, India, Taiwan \\
+  5 & 143 & 161 & 20.50 & Japan, China, Hong Kong, Singapore \\
+  6 & 156 & 182 & 34.00 & Brazil, Argentina, New Zealand \\
+  10 & 161 & 177 & 13.50 & Greece, Croatia, Ukraine, Serbia \\
+  13 & 208 & 218 & 13.00 & Denmark, Finland, Norway, Sweden \\
+  \bottomrule
+\end{tabular}
+\end{center}
+The other groups (7, 8, 9, 11, 12) are in the code. Compared with DHL, for an $80\times80$\,cm
+canvas (box $92\times92\times11$\,cm, 5.34\,kg, billed as 5.5\,kg by EMS and as 19\,kg by DHL),
+in shekels:
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrr@{}}
+  \toprule
+  Destination & DHL Express (list price) & Israel Post \\
+  \midrule
+  Israel & -- (the courier table) & 73 \\
+  UK, France & 3{,}209 & 287.50 \\
+  Canada & 2{,}621 & 387 \\
+  Japan & 4{,}512 & 345.50 \\
+  United States & 2{,}621 & too large (200\,cm) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+The box just fits the 300\,cm countries ($92 + 2\times(92+11) = 298$). A $40\times60$\,cm canvas
+reaches the United States too (\nis{332} by EMS, \nis{1{,}637} by DHL); an $80\times100$\,cm
+canvas (box $112\times92\times11$) is too large for Israel Post everywhere, so DHL or the courier
+carries it, unless the buyer chooses to have it rolled (Section~\ref{sec:rolled}).
+
+\section{Stretched or rolled}\label{sec:rolled}
+At checkout the buyer chooses how a canvas travels: \emph{stretched}, on its wooden frame in its
+box (the default), or \emph{rolled} in a tube, taken off the stretcher. A rolled canvas has to be
+re-stretched on arrival, at the buyer's cost; the pre-contract disclosure and the order say so.
+\begin{itemize}
+  \item \textbf{Which works}: the painter's canvases, unless she turns it off for a work (thick
+    paint that could crack, for example). Framed, glazed or crated works always travel as listed.
+  \item \textbf{The tube}: the shorter side of the painting plus 10\,cm long, $26\times26$\,cm
+    across. Its weight is assumed at 1.5\,kg for the tube and wrapping plus 1.2\,kg per square
+    metre of canvas, against the box's 1.5\,kg plus 6\,kg per square metre; the painter should
+    weigh one rolled parcel to confirm it.
+  \item \textbf{The effect}: a tube up to 150\,cm long fits Israel Post's 300\,cm limit, so
+    large paintings can go by Israel Post at home and by EMS abroad; DHL bills the tube's smaller
+    volume. The artwork page's ``Delivery from'' shows the cheaper of the two, marked ``rolled in
+    a tube'' when that is the one.
+\end{itemize}
+For a $100\times100$\,cm canvas (box $112\times112\times11$\,cm, 7.5\,kg; tube
+$110\times26\times26$\,cm, 2.7\,kg), shipping only, on 15 October 2026, in shekels:
+\begin{center}
+\small
+\rowcolors{2}{gray!6}{white}
+\begin{tabular}{@{}lrr@{}}
+  \toprule
+  & Stretched & Rolled \\
+  \midrule
+  Israel, the courier (table) & 250 & 250 \\
+  Israel, Israel Post home delivery & too large & 73 \\
+  Canada, DHL Express & 3{,}396 & 2{,}321 \\
+  Canada, Israel Post EMS & too large & 267 \\
+  Japan, DHL Express & 5{,}825 & 3{,}916 \\
+  Japan, Israel Post EMS & too large & 243 \\
+  United States, DHL Express & 3{,}396 & 2{,}321 \\
+  United States, Israel Post EMS & too large & too large (200\,cm) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+DHL bills the box as 28\,kg and the tube as 15\,kg. EMS to the United States takes at most
+200\,cm in length plus girth, and the tube's girth is 104\,cm: a canvas whose shorter side is over
+86\,cm goes by DHL there even rolled.
 
 \section{The quote lock}
 When the buyer presses ``Continue to payment'', the server prices the order again from the same
@@ -408,6 +523,13 @@ The rate is a setting (Settings $\to$ Checkout) to update when the shekel moves.
 \bibitem{patur} The 2026 \emph{osek patur} turnover ceiling, \nis{122{,}833}.
   \url{https://www.efraty.com/?p=5221}
 \bibitem{vatlaw} Value Added Tax Law, 5736--1975 (Israel), section 30(a)(1).
+\bibitem{postdomestic} Israel Post, \emph{Price list: express services, domestic}, 1 May 2026.
+  \url{https://cdn-mypostpublic.israelpost.co.il/media/media/to3b3pim/%D7%9E%D7%94%D7%99%D7%A8%D7%99%D7%9D-%D7%A4%D7%A0%D7%99%D7%9D.pdf}
+\bibitem{postems} Israel Post, \emph{Price list: express services abroad (EMS), with the country
+  groups and parcel limits}, 1 July 2026.
+  \url{https://cdn-mypostpublic.israelpost.co.il/media/media/z44bfxii/%D7%9E%D7%94%D7%99%D7%A8-%D7%97%D7%95%D7%9C.pdf}
+\bibitem{postguide} Israel Post, \emph{Postal guide} (Madrich HaDoar), version 1/2023, parcels
+  (3.10.18--3.10.20). \url{https://israelpost.co.il/media/3429/%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%94%D7%93%D7%95%D7%90%D7%A8-%D7%A0%D7%95%D7%A1%D7%97-%D7%9C%D7%A4%D7%A8%D7%A1%D7%95%D7%9D-161845.pdf}
 \end{thebibliography}
 }
 

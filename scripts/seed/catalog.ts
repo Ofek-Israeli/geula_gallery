@@ -23,8 +23,9 @@ import type { SeedDb, SeedModule } from "./types";
  * bilingual titles and alt texts, packaging defaults and statuses. Framed works get a second,
  * FRAMED image.
  * - Mode `demo` seeds every work as the painter's real catalog (`asCatalogWork`): all AVAILABLE,
- *   priced by the formula in `src/lib/price-formula.ts`, default shipping flags, and real listings
- *   (`is_demo = false`; the painter confirmed the prices).
+ *   priced by the formula in `src/lib/price-formula.ts`, default shipping flags (canvases listed
+ *   stretched and rollable at the buyer's choice), and real listings (`is_demo = false`; the
+ *   painter confirmed the prices).
  * - Mode `fixtures` seeds only the 16 `fixture` works the tests use, with their commerce roles:
  *   test prices and flags, ON_HOLD and NOT_FOR_SALE from the manifest; the three sold works are
  *   inserted AVAILABLE and marked SOLD by `orders.ts`. They are demo listings (`is_demo = true`).
@@ -126,6 +127,11 @@ export const catalogSeed: SeedModule = {
         });
       }
       const pack = demoPackaging(w);
+      // The painter's canvases are listed stretched (in their box) and may be rolled in a tube
+      // at the buyer's choice (checkout's packing choice). The test fixtures keep their flags
+      // (a fixture's `canBeRolled` means it is sold rolled).
+      const rollableAtCheckout =
+        mode === "demo" && w.surface === "CANVAS" && !w.framed && !w.crate;
       const created = await db.transaction(async (tx) => {
         const [row] = await tx
           .insert(artworks)
@@ -146,7 +152,9 @@ export const catalogSeed: SeedModule = {
             mediumDetailEn: w.mediumDetail.en,
             heightMm: w.heightMm,
             widthMm: w.widthMm,
-            depthMm: pack.depthMm,
+            // No depth was measured: pages show H × W. The packed box still assumes the
+            // surface's usual depth (packaging.ts); a measured depth is entered in the admin.
+            depthMm: null,
             framed: w.framed,
             glazing: "NONE",
             readyToHang: w.framed || !w.canBeRolled,
@@ -170,7 +178,7 @@ export const catalogSeed: SeedModule = {
             priceOnRequest: false,
             offersEnabled: false,
             packagingType: pack.packagingType,
-            canBeRolled: w.canBeRolled,
+            canBeRolled: w.canBeRolled || rollableAtCheckout,
             packedLengthMm: pack.packedLengthMm,
             packedWidthMm: pack.packedWidthMm,
             packedHeightMm: pack.packedHeightMm,
@@ -178,7 +186,7 @@ export const catalogSeed: SeedModule = {
             shipsInternationally: w.shipsInternationally,
             localPickupOnly: false,
             quoteOnly: w.quoteOnly,
-            dispatchDays: 5,
+            dispatchDays: 7,
             customsDescriptionEn: CUSTOMS[w.medium],
             creditLine: null,
           })

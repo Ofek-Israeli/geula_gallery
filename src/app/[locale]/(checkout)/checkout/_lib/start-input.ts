@@ -32,6 +32,8 @@ export const checkoutFields = {
   country: countrySchema,
   method: z.enum(CHECKOUT_METHODS),
   currency: currencySchema,
+  /** "ROLLED" when the buyer chose to have the works rolled in a tube (step 2). */
+  packing: z.enum(["ROLLED"]).optional(),
   providerId: z.enum(PROVIDER_IDS),
   expectedTotalMinor: z.coerce.number().int().nonnegative(),
   clientRequestId: z.uuid(),
@@ -46,7 +48,6 @@ export const checkoutFields = {
   region: optionalText(120),
   postalCode: optionalText(DESTINATION_LIMITS.postalCode),
   terms: checkboxSchema.refine((v) => v),
-  age: checkboxSchema.refine((v) => v),
   dap: checkboxSchema,
   receiptEmail: checkboxSchema,
 };
@@ -129,6 +130,7 @@ export function startBase(
     country: input.country,
     method: input.method,
     currency: input.currency,
+    ...(input.packing ? { packing: input.packing } : {}),
     providerId: input.providerId,
     buyer: {
       name: input.name,
@@ -156,7 +158,6 @@ export function startBase(
       termsVersion: LEGAL_VERSIONS.terms,
       returnsVersion: LEGAL_VERSIONS.returns,
       privacyVersion: LEGAL_VERSIONS.privacy,
-      ageConfirmed: true as const,
       ...(input.country !== "IL"
         ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
         : {}),

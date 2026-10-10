@@ -30,7 +30,11 @@ export const businessProfileSchema = z.object({
   returnAddress: localized,
   phoneLocal: z.string(),
   phoneIntl: z.string(),
-  email: z.email(),
+  /**
+   * The public email for buyers. Empty: no email is shown anywhere (site, documents, buyer emails);
+   * visitors write through the contact form, which goes to `notificationEmail` (never shown).
+   */
+  email: z.union([z.email(), z.literal("")]),
   notificationEmail: z.email(),
   accessibilityContact: z.string(),
   privacyContact: z.string(),
@@ -129,6 +133,31 @@ export const dhlEstimateSettingsSchema = z.object({
 });
 export type DhlEstimateSettings = z.infer<typeof dhlEstimateSettingsSchema>;
 
+/**
+ * Israel Post at its published prices (`shipping/israel-post.ts`): home delivery in Israel and EMS
+ * abroad, offered next to the courier when the parcel fits Israel Post's limits. `insureAbroad`
+ * adds Israel Post's EMS liability extension (while `insurance.enabled`). The delivery times are
+ * shown to the buyer. Every field has a default, so rows saved before it existed still parse.
+ */
+export const israelPostSettingsSchema = z.object({
+  domestic: z.boolean().default(true),
+  abroad: z.boolean().default(true),
+  insureAbroad: z.boolean().default(true),
+  estimate: z
+    .object({
+      domestic: localized.default({
+        he: "1–2 ימי עסקים",
+        en: "1–2 business days",
+      }),
+      abroad: localized.default({
+        he: "5–10 ימי עסקים",
+        en: "5–10 business days",
+      }),
+    })
+    .prefault({}),
+});
+export type IsraelPostSettings = z.infer<typeof israelPostSettingsSchema>;
+
 export const shippingSettingsSchema = z.object({
   /** Volumetric divisor (cm³ per kg). */
   divisor: z.number().int().positive().default(5000),
@@ -140,6 +169,7 @@ export const shippingSettingsSchema = z.object({
   nonConveyableFeeIls: nonNegNum,
   surcharges: z.array(surchargeSchema),
   dhlEstimate: dhlEstimateSettingsSchema.prefault({}),
+  israelPost: israelPostSettingsSchema.prefault({}),
   insurance: insuranceSettingsSchema,
   valueCaps: z.array(
     z.object({
@@ -158,12 +188,6 @@ export const shippingSettingsSchema = z.object({
   localPickup: z.object({
     enabled: z.boolean(),
     feeIls: nonNegNum.default(0),
-  }),
-  artistDelivery: z.object({
-    enabled: z.boolean(),
-    feeIls: nonNegNum,
-    /** Free-text service area shown at checkout. */
-    area: localized,
   }),
   domesticCarrierName: localized,
 });

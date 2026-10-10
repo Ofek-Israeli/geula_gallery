@@ -14,7 +14,12 @@ import { PROVIDER_IDS } from "@/server/payments/types";
 import { getSetting } from "@/server/settings";
 import { carrierFor } from "@/server/shipping/registry";
 import type { ShippingMethod } from "@/server/shipping/types";
-import { itemPriceMinor, orderAmounts, shippingOptions } from "./pricing";
+import {
+  anyRollable,
+  itemPriceMinor,
+  orderAmounts,
+  shippingOptions,
+} from "./pricing";
 import { ordersWithAttemptInFlight } from "./reservations";
 import type {
   CheckoutQuote,
@@ -31,7 +36,7 @@ import type {
  * `price_changed`). Everything the buyer sees is server-computed; the client never sends prices.
  * It quotes one work (`slug`) or a cart (`artworkIds`) through the same N-item core.
  *
- * Order of checks: work exists and is AVAILABLE → no live foreign hold → priced (not price on
+ * Order of checks: work exists → online sales are open (`SALES_OPEN`) → work is AVAILABLE → no live foreign hold → priced (not price on
  * request, not quote-only) → currency (IL ⇒ ILS; USD only abroad with a USD price) → providers
  * (demo item with a live provider configured is refused) → shipping methods for the destination
  * (the requested method if it is ok, else the first ok one; none ok → the carrier's block reason).
@@ -124,6 +129,8 @@ async function quoteArtworks(
   const db = deps.db ?? defaultDb;
   const e = deps.env ?? defaultEnv;
   const now = deps.now ?? new Date();
+  // A showcase site sells nothing online; the page keeps the work (and its "Ask").
+  if (!e.SALES_OPEN) return blocked("SALES_CLOSED", [], items[0]?.id ?? null);
 
   // Sequential reads: `db` may be a single dedicated connection (race tests).
   const checkout = await getSetting("checkout", db);
@@ -205,6 +212,8 @@ async function quoteArtworks(
     return blocked("NO_PROVIDER", [], (items[0] as ArtworkRow).id);
 
   const carrier = carrierFor(country, { env: e });
+  const rollable = anyRollable(items);
+  const packing = rollable && req.packing === "ROLLED" ? "ROLLED" : "STRETCHED";
   const optionsFor = (works: ArtworkRow[]) =>
     shippingOptions({
       items: works,
@@ -214,6 +223,7 @@ async function quoteArtworks(
       shipping,
       checkout,
       carrier,
+      packing,
     });
   const options = optionsFor(items);
   const wanted: ShippingMethod | undefined = req.method;
@@ -273,6 +283,8 @@ async function quoteArtworks(
     })),
     notices: selected.notices,
     usdAvailable,
+    rollable,
+    packing,
   };
 }
 

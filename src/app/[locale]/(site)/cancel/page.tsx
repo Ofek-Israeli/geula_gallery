@@ -3,16 +3,19 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { PrivacyNotice } from "@/components/ui/PrivacyNotice";
 import { LEGAL_TEXTS_APPROVED } from "@/content/legal/versions";
+import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { parseOrderNumber } from "@/lib/validation/identifiers";
+import { env } from "@/server/env";
 import { issueFormStartToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import { cancelFlowAction } from "./actions";
 import { CancelFlow } from "./CancelFlow";
 
 /**
- * `/[locale]/cancel` (spec §5.7 steps 2–4, §6.2): the rights, every channel (phone local and +972,
- * email, registered mail, the online form) and the single POST form → review → acknowledgement.
+ * `/[locale]/cancel` (spec §5.7 steps 2–4, §6.2): the rights with a link to the full policy, every
+ * channel (phone local and +972, email, registered mail, the online form) and the single POST form →
+ * review → acknowledgement. The public footer's "Cancellations and returns" item opens this page.
  * noindex. `?order=` only prefills the order number (never PII). The seller ID number is not shown.
  */
 export async function generateMetadata({
@@ -65,6 +68,15 @@ export default async function CancelPage({
           <li>{t("rightsFee")}</li>
           <li>{t("rightsRefund")}</li>
         </ul>
+        <p>
+          <Link
+            href="/legal/returns"
+            className="inline-flex min-h-6 items-center underline"
+            data-testid="cancel-policy-link"
+          >
+            {t("fullPolicy")}
+          </Link>
+        </p>
       </section>
 
       <section aria-labelledby="channels-title" className="flex flex-col gap-2">
@@ -84,12 +96,14 @@ export default async function CancelPage({
               ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
             })}
           </li>
-          <li>
-            {t.rich("channelEmail", {
-              email: profile.email,
-              ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
-            })}
-          </li>
+          {profile.email ? (
+            <li>
+              {t.rich("channelEmail", {
+                email: profile.email,
+                ltr: (chunks) => <bdi dir="ltr">{chunks}</bdi>,
+              })}
+            </li>
+          ) : null}
           <li>{t("channelMail", { address: profile.address[locale] })}</li>
         </ul>
       </section>
@@ -107,6 +121,7 @@ export default async function CancelPage({
           locale={locale}
           formStart={issueFormStartToken()}
           prefillOrder={prefill}
+          visitorEmail={env.EMAIL_TO_VISITORS}
         />
         <PrivacyNotice>{t("privacy")}</PrivacyNotice>
       </section>

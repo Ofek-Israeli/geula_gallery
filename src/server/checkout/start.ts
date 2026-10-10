@@ -302,6 +302,7 @@ export async function startCheckout(
     country: input.country,
     method: input.method,
     currency: input.currency,
+    packing: input.packing,
   };
   const quote = await getCheckoutQuote(
     input.slug !== undefined
@@ -593,7 +594,6 @@ async function createHeldOrder(
       returnsVersion: input.consents.returnsVersion,
       privacyVersion: input.consents.privacyVersion,
       termsAcceptedAt: now,
-      ageConfirmedAt: now,
       dutiesNoticeVersion: input.consents.dutiesNoticeVersion ?? null,
       dutiesAckAt: input.consents.dutiesNoticeVersion ? now : null,
       receiptEmailConsent: input.consents.receiptEmailConsent,
@@ -728,6 +728,10 @@ export async function startPaymentForOrder(
 ): Promise<ServiceResult<StartCheckoutResult>> {
   const db = deps.db ?? defaultDb;
   const e = deps.env ?? defaultEnv;
+  // A showcase site takes no payments, not even for a link order made while sales were open.
+  if (!e.SALES_OPEN) {
+    return withEffects({ kind: "refused", code: "SALES_CLOSED" });
+  }
   const provider = buildProvider(input.providerId, { env: e });
   if (!provider) {
     return withEffects({ kind: "refused", code: "provider_unavailable" });

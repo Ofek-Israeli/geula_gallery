@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { SiteAnalytics } from "@/components/site/SiteAnalytics";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { MAIN_CONTENT_ID, SkipLink } from "@/components/ui/SkipLink";
+import { env } from "@/server/env";
 
 /** Checkout and mock-pay: minimal chrome, cancellation link in header and footer, noindex (§2.1). */
 export const metadata: Metadata = {
@@ -21,6 +23,7 @@ export default function CheckoutLayout({ children }: LayoutProps<"/[locale]">) {
         {children}
       </main>
       <SiteFooter variant="minimal" />
+      {env.VERCEL ? <SiteAnalytics /> : null}
     </>
   );
 }

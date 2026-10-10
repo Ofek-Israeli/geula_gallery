@@ -86,7 +86,6 @@
     "jobTitle": "Painter",
     "studioTitle": "The studio",
     "studioBody": "The studio is in Israel. Visits and pickups are by appointment only.",
-    "demoNote": "This site is currently a demo: payments are test payments, and sales are not real.",
     "worksLink": "See the works",
     "contactLink": "Get in touch"
   },
@@ -100,12 +99,13 @@
     "email": "Email",
     "phone": "Phone",
     "whatsapp": "WhatsApp",
+    "phoneWhatsapp": "Phone / WhatsApp",
     "subjectGeneral": "Question from the website",
-    "writeEmail": "Write an email",
     "formTitle": "Send a message",
     "formIntro": "Write here and we will reply by email.",
+    "formIntroNoEmail": "Write here and we will get back to you.",
     "privacy": "We use your details only to answer your message. You are not legally required to provide them, but we cannot get back to you without them. They are kept by us and sent only through our email provider.",
     "cancelTitle": "Cancelling a purchase",
-    "cancelBody": "To cancel a purchase, use the cancellation form, or phone or email us."
+    "cancelBody": "To cancel a purchase, use the cancellation form or phone us."
   }
 }

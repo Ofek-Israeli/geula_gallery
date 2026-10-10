@@ -21,7 +21,7 @@ const tbd = { he: TBD_HE, en: TBD_EN };
 
 export function businessProfileDefaults(env: SeedEnv): BusinessProfile {
   return {
-    legalName: TBD_HE,
+    legalName: "Geula Levi",
     tradeName: { he: "גאולה לוי", en: "Geula Levi" },
     artistName: { he: "גאולה לוי", en: "Geula Levi" },
     signatureName: TBD_EN,
@@ -177,6 +177,17 @@ export const shippingDefaults: ShippingSettings = {
     accountDiscountPct: 0,
     exportDeclarationByDhl: true,
   },
+  // Israel Post at its published prices: home delivery in Israel, EMS abroad (with its liability
+  // extension), next to the courier when the parcel fits Israel Post's limits.
+  israelPost: {
+    domestic: true,
+    abroad: true,
+    insureAbroad: true,
+    estimate: {
+      domestic: { he: "1–2 ימי עסקים", en: "1–2 business days" },
+      abroad: { he: "5–10 ימי עסקים", en: "5–10 business days" },
+    },
+  },
   // DHL's published Shipment Insurance: 1% of the insured value, at least 45 ILS.
   insurance: {
     enabled: true,
@@ -196,12 +207,8 @@ export const shippingDefaults: ShippingSettings = {
     exportDeclarationUsd: 200,
   },
   localPickup: { enabled: true, feeIls: 0 },
-  artistDelivery: {
-    enabled: true,
-    feeIls: 150,
-    area: tbd,
-  },
-  domesticCarrierName: { he: "דואר ישראל", en: "Israel Post" },
+  // The painter's own courier in Israel (Israel Post has its own option).
+  domesticCarrierName: { he: "שליח", en: "Courier" },
 };
 
 export const cancellationPolicyDefaults: CancellationPolicy = {

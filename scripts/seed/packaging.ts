@@ -1,7 +1,8 @@
 /**
  * Packaging defaults for the demo catalog (spec §8.3 "Packaging defaults", explicit):
- * - canvas → STRETCHED_BOX, artwork depth 30 mm; board or cardboard → FLAT_BOX, 10 mm;
- *   paper → FLAT_BOX, 2 mm; a crate when the manifest says so (109693);
+ * - canvas → STRETCHED_BOX, assumed depth 30 mm; board or cardboard → FLAT_BOX, 10 mm;
+ *   paper → FLAT_BOX, 2 mm; a crate when the manifest says so (109693). The depth only sizes
+ *   the box: the catalog seed stores no artwork depth (none was measured), so pages show H × W;
  * - packed length and width = artwork + 120 mm in total (canvas, board) or + 80 mm (paper);
  *   packed height = depth + 80 mm;
  * - packed weight = 1,500 g + 6,000 g × artwork area (m²), rounded to the gram;

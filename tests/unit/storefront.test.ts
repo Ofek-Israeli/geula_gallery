@@ -147,6 +147,7 @@ describe("buy box decisions", () => {
     kind: "price",
     fromIlsMinor: 6_000,
     insured,
+    rolled: false,
     estimate: null,
   });
   const na: ZoneEstimateDTO = {
@@ -154,6 +155,7 @@ describe("buy box decisions", () => {
     kind: "price",
     fromIlsMinor: 40_200,
     insured: true,
+    rolled: false,
     estimate: null,
   };
 

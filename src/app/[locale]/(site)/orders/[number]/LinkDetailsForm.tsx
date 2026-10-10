@@ -51,7 +51,6 @@ const IDS: Record<string, string> = {
   companyName: "ld-company",
   vatId: "ld-vat",
   terms: "ld-terms",
-  age: "ld-age",
   dap: "ld-dap",
 };
 
@@ -90,7 +89,7 @@ export function LinkDetailsForm(props: LinkDetailsFormProps) {
   const errorFor = (name: string): string | undefined => {
     const list = fieldErrors[name];
     if (!list?.length) return undefined;
-    if (["terms", "age", "dap"].includes(name)) return tc("consent.required");
+    if (["terms", "dap"].includes(name)) return tc("consent.required");
     return list[0] === "required" ? tf("invalid") : list[0];
   };
   const optional = (label: string): ReactNode => (
@@ -270,14 +269,6 @@ export function LinkDetailsForm(props: LinkDetailsFormProps) {
           required
           defaultChecked={v.terms === "on"}
           error={errorFor("terms")}
-        />
-        <Checkbox
-          id={IDS.age ?? "ld-age"}
-          name="age"
-          label={tc("consent.age")}
-          required
-          defaultChecked={v.age === "on"}
-          error={errorFor("age")}
         />
         {props.international ? (
           <Checkbox

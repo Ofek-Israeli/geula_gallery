@@ -7,6 +7,7 @@ import { countryOptions } from "@/lib/countries";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
 import { getArtworkPage } from "@/server/catalog/queries";
+import { env } from "@/server/env";
 import { issueFormStartToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import { submitRequestAction } from "./actions";
@@ -91,6 +92,7 @@ export default async function RequestPage({
         formStart={issueFormStartToken()}
         countries={countryOptions(locale, shipping.deniedCountries)}
         defaultCountry={to && /^[A-Z]{2}$/.test(to) ? to : "IL"}
+        visitorEmail={env.EMAIL_TO_VISITORS}
       />
       <PrivacyNotice>{t("privacy")}</PrivacyNotice>
     </div>

@@ -184,13 +184,20 @@
     "name": "Name",
     "email": "Email",
     "phone": "Phone",
+    "whatsapp": "WhatsApp",
     "country": "Country",
     "language": "Language",
     "message": "Message",
     "lastReply": "Latest reply ({date})",
+    "answeredOffline": "Answered by phone or WhatsApp ({date})",
     "order": "Link order: {number} ({status})",
     "history": "Earlier messages from the same address",
     "reply": "Reply",
+    "answer": "Answer",
+    "markAnsweredIntro": "Visitors don't get emails from the site yet. Answer by phone or WhatsApp (the details are above), then mark the message as answered.",
+    "answerNote": "Internal note (optional)",
+    "markAnswered": "Mark as answered",
+    "markedAnswered": "Marked as answered.",
     "replyHint": "The reply is emailed in the sender's language ({language}).",
     "replyTemplate": "Template",
     "replyTemplatePick": "Choose a template…",
@@ -204,6 +211,7 @@
     "sent": "The reply was sent.",
     "decline": "Decline the request",
     "declineHint": "You can add a short message (optional).",
+    "declineHintOffline": "Internal note (optional). Nothing is emailed.",
     "declineConfirm": "Decline the request?",
     "declined": "The request was declined.",
     "close": "Close (archive)",
@@ -220,9 +228,9 @@
     "shippingMethod": "Shipping method",
     "methods": {
       "CARRIER_TABLE": "From the rate table",
+      "ISRAEL_POST": "Israel Post (its price list)",
       "QUOTED": "Fixed shipping price (quote)",
-      "LOCAL_PICKUP": "Studio pickup",
-      "ARTIST_DELIVERY": "Delivered by the artist"
+      "LOCAL_PICKUP": "Studio pickup"
     },
     "lockedShipping": "Shipping price",
     "lockedShippingHint": "Required for a fixed shipping price.",
@@ -234,6 +242,7 @@
     "quoteSent": "The quote was sent.",
     "errors": {
       "REPLY_REQUIRED": "Please write a reply.",
+      "NOT_NEW": "This message was already answered.",
       "NOT_DECLINABLE": "Questions are answered, not declined.",
       "NOT_QUOTABLE": "Only a new quote request can be quoted.",
       "IL_REQUIRES_ILS": "An order to Israel must be in ILS.",
@@ -241,7 +250,8 @@
       "NOT_RESERVABLE": "The artwork cannot be held right now.",
       "NOT_ANSWERABLE": "Only a new offer can be answered.",
       "ACCEPT_MUST_MATCH": "Accepting keeps the offered amount and currency.",
-      "COUNTER_SAME_PRICE": "A counter-offer needs a price different from the offer."
+      "COUNTER_SAME_PRICE": "A counter-offer needs a price different from the offer.",
+      "SALES_CLOSED": "Online sales are closed, so no payment link can be created."
     },
     "offerAmount": "Offer: {amount}",
     "offer": "Answer the offer",
@@ -252,7 +262,8 @@
     "counterPrice": "Counter-offer price",
     "counterSubmit": "Send the counter-offer",
     "counterConfirm": "Email the buyer a payment link at this price?",
-    "offerSent": "Sent."
+    "offerSent": "Sent.",
+    "salesClosed": "Online sales are closed, so payment links can't be sent. Answer by phone or WhatsApp. A work sold that way is recorded under \"Sold outside the site\" on its page."
   },
   "more": {
     "title": "More"

@@ -140,6 +140,10 @@ export async function createLinkOrder(
 > {
   const db = deps.db ?? defaultDb;
   const e = deps.env ?? defaultEnv;
+  // A showcase site sends no payment links (quotes, offers and manual orders included).
+  if (!e.SALES_OPEN) {
+    throw new ConflictError("SALES_CLOSED", "online sales are closed");
+  }
   const country = input.country.trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(country)) {
     throw new ValidationError("COUNTRY", "a two-letter country code");

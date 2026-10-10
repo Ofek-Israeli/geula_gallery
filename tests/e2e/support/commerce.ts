@@ -94,7 +94,7 @@ const MSG = {
   en: messages("en", "checkout"),
 } as const;
 
-export type ShipMethod = "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY";
+export type ShipMethod = "CARRIER_TABLE" | "ISRAEL_POST" | "LOCAL_PICKUP";
 export type CheckoutStep = "destination" | "delivery" | "details";
 
 export interface CheckoutUrlOptions {
@@ -192,7 +192,6 @@ export async function fillCheckout(page: Page, o: FillOptions): Promise<void> {
   await box(m.details.phone).fill("+97230000000");
   if (o.address) await box(m.details.line1).fill("Herzl 1");
   await page.getByLabel(m.consent.terms).check();
-  await page.getByLabel(m.consent.age).check();
   if (o.receiptByEmail) await page.getByLabel(m.consent.receiptEmail).check();
 }
 

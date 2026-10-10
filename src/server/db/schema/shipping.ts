@@ -35,7 +35,7 @@ export const shipments = pgTable(
       .references(() => orders.id, { onDelete: "restrict" }),
     status: shipmentStatusEnum().notNull().default("AWAITING_FULFILLMENT"),
     method: shippingMethodEnum().notNull(),
-    /** Null for local pickup and artist delivery. */
+    /** Null for local pickup. */
     carrier: carrierEnum(),
     carrierName: text(),
     serviceCode: text(),

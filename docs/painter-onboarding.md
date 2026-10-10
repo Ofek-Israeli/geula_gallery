@@ -14,7 +14,7 @@
 - כתובת עסקית לפרסום וכתובת להחזרות; טלפונים (כולל וואטסאפ).
 - מחירים בשקלים ובדולרים; תשלומים (ברירת מחדל: תשלום אחד).
 - הצעות מחיר מקונים (מופעל/כבוי) וסף לדחייה אוטומטית.
-- משך שמירת יצירה בזמן תשלום (35 דקות) ובקישור תשלום (48 שעות); איסוף עצמי ומסירה אישית.
+- משך שמירת יצירה בזמן תשלום (35 דקות) ובקישור תשלום (48 שעות); איסוף עצמי.
 - אילו יצירות אפשר לגלגל לשפופרת; מסגור וזכוכית.
 - ביטוח משלוחים (DHL או צד שלישי) ואישור הכיסוי בכתב.
 - כיול תעריפי המשלוח; פתיחת אירופה ובריטניה.
@@ -96,8 +96,13 @@
     רק בביטול שלא משאיר אף יצירה פעילה – בביטול חלקי היצירות האחרות עדיין נשלחות; (2) דמי הביטול
     הם 5% מהסכום שמוחזר בפועל (היצירות, ובביטול האחרון גם המשלוח), ותקרת ‎100 ₪ אחת להזמנה כולה
     – הפרשנות המיטיבה עם הקונה; (3) האם אפשר לחייב את הקונה במשלוח מחדש אם החבילה כבר נארזה.
-- **קישור "ביטול עסקה"**: לבקשת האמנית הוא הוסר מהכותרת העליונה ונשאר בתחתית כל עמוד (וגם בקופה,
-  בכל מייל לקונה ובמסמכים). האם קישור בתחתית העמוד עומד בדרישה להציג אותו באופן בולט באתר?
+- **בלי כתובת דוא״ל גלויה**: האתר לא מציג דוא״ל בשום מקום; פונים דרך טופס יצירת הקשר ובטלפון,
+  והודעות ביטול מתקבלות בטופס המקוון, בטלפון ובדואר רשום. האם זה עומד בדרישות (דרכי מסירת הודעת
+  ביטול, פרטי העוסק בגילוי הנאות, פרטי קשר בהצהרת הנגישות ובמדיניות הפרטיות)?
+- **קישור "ביטול עסקה"**: לבקשת האמנית הוא הוסר מהכותרת העליונה, ובתחתית כל עמוד הוא חלק מהפריט
+  "ביטול עסקה והחזרות", שפותח את עמוד הביטול (ומשם קישור למדיניות המלאה). הקישור "ביטול עסקה" עצמו
+  נשאר בקופה, בעמודי יצירת קשר, המסמכים המשפטיים וההזמנה, בכל מייל לקונה ובמסמכים. האם פריט בתחתית
+  העמוד עומד בדרישה להציג בדף הבית, באופן בולט, קישור למסירת הודעת ביטול?
 - **עגלת קניות**: עוגייה הכרחית אחת (`gg_cart`, מזהי היצירות בלבד, 30 יום) – נוסח שורת הפרטיות;
   יצירות בעגלה אינן שמורות לקונה עד "המשך לתשלום".
 - **מחירים**: הצגת מחיר במטבע חוץ (סעיף 17ז(א)(1)); פרטי הסוחר לפי Visa; ניסוח "מבוטח".
@@ -112,14 +117,21 @@
   מלאים ומעודכנים", תשלומים אמיתיים חסומים.
 - **הגדרות ← קופה ותשלומים**: זמני שמירה, מגבלות נגד "תפיסת" יצירות, שער הדולר, מספר תשלומים
   מקסימלי, האם להציע PayPal גם ליעדים בישראל, וקבלה לתשלומים שהוחזרו.
-- **הגדרות ← משלוחים**: אזורים, הערכת DHL Express לחו״ל, תעריף בסיס לפי גודל (מחירון חברת
+- **הגדרות ← משלוחים**: אזורים, הערכת DHL Express לחו״ל, דואר ישראל, תעריף בסיס לפי גודל (מחירון חברת
   השליחויות בארץ), תוספות (דלק, עונה), ביטוח ותקרת שווי מבוטח, תקרת שווי מוצהר לפי מוביל, מדינות,
-  ספים (הצהרת יצוא), איסוף עצמי, מסירה על ידי האמנית, שליח בארץ. אחרי העתקת מחירון השליחויות –
+  ספים (הצהרת יצוא), איסוף עצמי, שליח בארץ. אחרי העתקת מחירון השליחויות –
   "סימון: התעריפים כוילו היום".
 - **היטל הדלק של DHL**: פעם בשבוע או שבועיים מעתיקים מעמוד התוספות של DHL (mydhl.express.dhl/il/en/ship/surcharges.html)
   את היטל הדלק הבין־לאומי לשבוע הקרוב ואת התאריך שלו (הגדרות ← משלוחים ← הערכת DHL Express).
   אחרי 14 יום בלי עדכון מופיע "לא עודכן". כש-DHL נותנת הנחה לחשבון, מזינים אותה שם; אם הצהרת
   היצוא מוגשת בנפרד ולא דרך DHL, מבטלים את הסימון.
+- **דואר ישראל** (הגדרות ← משלוחים ← דואר ישראל): אפשר לכבות בנפרד את המשלוח עד הבית בארץ ואת
+  EMS לחו״ל, ולבחור אם להוסיף ל-EMS את הביטוח של דואר ישראל. שם גם זמני המסירה שהקונה רואה.
+  המחירים הם המחירונים שדואר ישראל פרסם, והם כתובים בקוד: כשיוצא מחירון חדש, מבקשים מהמפתח לעדכן.
+- **מתוח או מגולגל**: בקופה הקונה בוחר/ת "מתוח על מסגרת, בקופסה" או "מגולגל בגליל". מגולגל זול בהרבה,
+  וגם ציורים גדולים נכנסים לדואר ישראל. אפשר לכבות את האפשרות ליצירה מסוימת (למשל צבע עבה שעלול
+  להיסדק): בעמוד היצירה בניהול מבטלים את הסימון "אפשר לגלגל את הבד לשליחה בגליל". משקל הגליל במחיר
+  הוא הערכה (1.5 ק״ג ועוד 1.2 ק״ג למ״ר); כדאי לשקול גליל אחד ולספר למפתח.
 - **הגדרות ← ביטול עסקה**: דמי הביטול המוצעים (הצעה בלבד – בכל ביטול אפשר רק להפחית).
 - **חשבון**: סיסמה ואימות דו-שלבי (חובה באתר החי).
 - בלוח הבקרה מופיעה רשימת "מוכנות לעלייה לאוויר": כל עוד יש בה פריט פתוח, תשלומים אמיתיים חסומים.
@@ -141,12 +153,41 @@
    פגומה מסומנת כלא למכירה). ההזמנה עצמה מסומנת "בוטלה" רק כשכל היצירות שבה בוטלו.
 7. הודעה שהתקבלה בטלפון, במייל או בדואר: **ביטולים ← רישום הודעת ביטול**, עם מועד הקבלה בפועל: 14 הימים להחזר נספרים ממנו.
 
+### לענות להודעה (כל עוד האתר במצב תצוגה)
+כל עוד אין באתר רכישה מקוונת, המבקרים לא מקבלים מיילים מהאתר, וכל הודעה חדשה מגיעה במייל לכתובת
+ההתראות.
+1. במייל ובמסך ההודעה (**תיבת ההודעות**) מופיעים הטלפון של השולח/ת, עם קישור לשיחה ולוואטסאפ, והדוא״ל.
+2. עונים בטלפון או בוואטסאפ.
+3. במסך ההודעה לוחצים "סימון כנענתה". אפשר להוסיף הערה פנימית (למשל "תיאמנו ביקור ביום ראשון"); היא
+   לא נשלחת לאף אחד.
+4. יצירה שנמכרה כך: בעמוד היצירה בממשק הניהול, "מכירה מחוץ לאתר". היצירה תוצג באתר כנמכרה.
+
 ### לאשר החזר "לא ידוע" או "נכשל"
 נכנסים ללוח הבקרה של Cardcom או PayPal ומוצאים את העסקה לפי מספר ההזמנה. במסך ההזמנה:
 - החזר **לא ידוע**: "בדיקה מול הספק"; אם עדיין לא ברור – "בדקתי בלוח הבקרה: ההחזר בוצע" או
   "…ההחזר לא בוצע".
 - החזר **שנכשל**: "בדקתי בלוח הבקרה של הספק: לא הוחזר כסף", ואז "ניסיון חוזר". עד האישור הזה
   ההחזר שנכשל נספר בתקרת ההחזרים, כדי שלא יוחזר כסף פעמיים.
+
+### לשלוח הזמנה מגולגלת
+1. בהזמנה כתוב "מגולגל בגליל (בחירת הקונה)", ובמסך "הכנה למשלוח" סוג האריזה של היצירה הוא "גליל".
+2. מורידים את הבד ממסגרת המתיחה, מגלגלים כשהצבע כלפי חוץ, עם נייר מגן בין השכבות, ושמים בגליל
+   בקוטר 25 ס״מ לפחות (רשימת האריזה כוללת את השלבים).
+3. מידות החבילה המוצעות הן של הגליל; אם הגליל שונה, מתקנים לפני "ארוז".
+4. שולחים בשיטה שהקונה בחר/ה (דואר ישראל או שליח/DHL), כרגיל.
+
+### לשלוח הזמנה בדואר ישראל
+1. בהזמנה כתוב "דואר ישראל – עד הבית" (בארץ) או "דואר ישראל – EMS" (לחו״ל). האתר מציע את דואר
+   ישראל רק כשהחבילה עומדת במגבלות שלו: עד 20 ק״ג, בלי ארגז עץ ובלי זכוכית, ובגודל שהיעד מקבל.
+2. אורזים כרגיל, בקרטון.
+3. מביאים את החבילה לסניף: בארץ – "מאשנב לדלת מהיום למחר"; לחו״ל – EMS. לחו״ל ממלאים בסניף את
+   הצהרת המכס לפי החשבונית המסחרית (ממסך "הכנה למשלוח"). כשההזמנה מבוטחת, מבקשים הרחבת אחריות על
+   הסכום המבוטח שבהזמנה.
+4. לחו״ל, הכנת המשלוח מראש באתר דואר ישראל ("הכן מהבית") זולה ב-5 ₪ ממחיר הסניף שהקונה שילם.
+5. במסך "הכנה למשלוח", ב"מעקב ידני (חברת שילוח אחרת)": חברת השילוח "דואר ישראל", מספר המעקב,
+   וסימון שהחבילה נמסרה.
+6. האתר מחשב את EMS לפי המשקל בפועל, כמו במחירון. אם בסניף גובים יותר על חבילה גדולה, מספרים
+   למפתח.
 
 ### להדפיס
 - מסמך גילוי – מהקישור במייל אישור ההזמנה או מעמוד ההזמנה; חובה לצרף ליצירה.
@@ -183,7 +224,7 @@
 - Prices in ILS and USD; installments (default: a single payment).
 - Offers from buyers on or off, and the auto-decline threshold.
 - How long a work is held during payment (35 minutes) and on a payment link (48 hours); studio
-  pickup and delivery by the artist.
+  pickup.
 - Which works can be rolled into a tube; framing and glazing.
 - Shipping insurance (DHL or a third party) and written confirmation of the coverage.
 - Shipping rate calibration; opening Europe and the UK.
@@ -284,9 +325,17 @@
        cancellation. There is one ₪100 cap for the whole order, which is the reading most
        favourable to the buyer.
     3. Whether the buyer may be charged for repacking when the parcel was already packed.
-- **The "Cancel a purchase" link:** at the painter's request it was removed from the header. It
-  stays in the footer of every page, in the checkout, in every buyer email and in documents. Does
-  a footer link meet the requirement to show it prominently on the site?
+- **No public email:** the site shows no email address anywhere. Visitors write through the
+  contact form or phone, and cancellation notices come through the online form, by phone or by
+  registered mail. Does that meet the requirements: the ways to give a cancellation notice, the
+  seller's details in the disclosure, and the contact details in the accessibility statement and
+  the privacy policy?
+- **The "Cancel a purchase" link:** at the painter's request it was removed from the header, and in
+  the footer of every page it is part of the "Cancellations and returns" item, which opens the
+  cancellation page (with a link to the full policy). The "Cancel a purchase" link itself stays in
+  the checkout, on the contact, legal and order pages, in every buyer email and in documents. Does
+  a footer item meet the requirement to show, prominently on the home page, a link for sending a
+  cancellation notice?
 - **Shopping cart:**
   - The privacy text for its one strictly necessary cookie (`gg_cart`: artwork ids only, 30
     days).
@@ -305,10 +354,10 @@
 - **Settings → Checkout and payments:** hold times, anti-hoarding limits, the USD rate, the
   maximum number of installments, whether PayPal is offered for Israeli destinations too, and
   receipts for refunded payments.
-- **Settings → Shipping:** zones, the DHL Express estimate abroad, base rate by size (your Israeli
+- **Settings → Shipping:** zones, the DHL Express estimate abroad, Israel Post, base rate by size (your Israeli
   courier's price list), surcharges (fuel, season), insurance and the insured-value cap, the
-  declared-value cap per carrier, countries, thresholds (export declaration), studio pickup,
-  delivery by the artist, the domestic courier. After copying the courier's prices, press "Mark
+  declared-value cap per carrier, countries, thresholds (export declaration), studio pickup, the
+  domestic courier. After copying the courier's prices, press "Mark
   the rates as calibrated today".
 - **DHL's fuel surcharge:** every week or two, copy DHL's international fuel surcharge for the
   coming week and its date from DHL's surcharges page
@@ -316,6 +365,15 @@
   After 14 days without an update the page shows "not updated". When DHL gives your account a
   discount, enter it there; if the export declaration is filed separately rather than through DHL,
   untick that box.
+- **Israel Post** (Settings → Shipping → Israel Post): home delivery in Israel and EMS abroad can
+  each be switched off, and you choose whether EMS includes Israel Post's insurance. The delivery
+  times buyers see are there too. The prices are Israel Post's published price lists, written in
+  the code: when a new price list comes out, ask the developer to update them.
+- **Stretched or rolled:** at checkout the buyer chooses "Stretched, in a box" or "Rolled in a
+  tube". Rolled costs far less, and large paintings then fit Israel Post. To turn it off for one
+  work (thick paint that could crack, for example), untick "The canvas can be rolled for a tube" on
+  the work's admin page. The tube's weight in the price is an estimate (1.5 kg plus 1.2 kg per m²);
+  weigh one rolled parcel and tell the developer.
 - **Settings → Cancellations:** the suggested cancellation fee. It is a suggestion only; for each
   cancellation you can only lower it.
 - **Account:** password and two-step verification (required on the live site).
@@ -345,6 +403,17 @@
 7. A notice received by phone, email or post: **Cancellations → Log a notice**, with the actual
    time it was received; the 14 days for the refund count from it.
 
+### Answer a message (while the site is a showcase)
+While online purchase is closed, visitors get no emails from the site, and every new message
+arrives by email at the notification address.
+1. The email and the message screen (**Inbox**) show the sender's phone, with call and WhatsApp
+   links, and their email.
+2. Answer by phone or WhatsApp.
+3. On the message screen, press "Mark as answered". You can add an internal note (for example
+   "Studio visit on Sunday"); it is sent to no one.
+4. A work sold this way: on the work's admin page, "Sold outside the site". The site then shows it
+   as sold.
+
 ### Confirm an "unknown" or "failed" refund
 Open the Cardcom or PayPal dashboard and find the transaction by order number. Then, on the
 order page:
@@ -353,6 +422,31 @@ order page:
 - A **failed** refund: press "I checked the provider dashboard: no money was refunded", then
   "Retry". Until you confirm, the failed refund counts against the refund cap, so money is never
   refunded twice.
+
+### Ship a rolled order
+1. The order says "rolled in a tube (the buyer's choice)", and on the fulfillment screen the work's
+   packaging is "tube".
+2. Take the canvas off its stretcher, roll it paint side out with protective paper between the
+   layers, and put it in a tube at least 25 cm (10 in) across; the packing checklist lists the
+   steps.
+3. The suggested parcel size is the tube's; correct it before "Packed" if your tube differs.
+4. Ship by the method the buyer chose (Israel Post, or the courier/DHL), as usual.
+
+### Ship an Israel Post order
+1. The order says "Israel Post – home delivery" (in Israel) or "Israel Post EMS" (abroad). The site
+   offers Israel Post only when the parcel fits its limits: up to 20 kg, no wooden crate, no glass,
+   and a size the destination accepts.
+2. Pack as usual, in a cardboard box.
+3. Take the parcel to a post office: in Israel, counter-to-door next-day delivery; abroad, EMS.
+   Abroad, fill in the customs declaration at the counter from the commercial invoice (on the
+   fulfillment screen). When the order is insured, ask for the liability extension on the order's
+   insured value.
+4. Abroad, preparing the parcel online on Israel Post's site ("prepare at home") costs ₪5 less than
+   the counter price the buyer paid.
+5. On the fulfillment screen, under "Manual tracking (another carrier)": carrier "Israel Post", the
+   tracking number, and tick that the parcel was handed over.
+6. The site prices EMS by actual weight, as the price list does. If the counter charges more for a
+   large parcel, tell the developer.
 
 ### Print
 - The disclosure document: from the link in the order confirmation email or from the order

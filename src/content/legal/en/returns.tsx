@@ -1,6 +1,6 @@
 import { A, H2, L, type LegalDocModule, P, UL } from "../types";
 
-/** Cancellations and returns – draft for the lawyer's review (spec §5.7). */
+/** Cancellations and returns (spec §5.7). */
 export const returns: LegalDocModule = {
   title: "Cancellations and returns",
   Body: ({ profile: p, links }) => (
@@ -32,10 +32,12 @@ export const returns: LegalDocModule = {
           by phone: <L>{p.phoneLocal}</L> (international: <L>{p.phoneIntl}</L>
           );
         </li>
-        <li>
-          by email: <L>{p.email}</L>
-          {";"}
-        </li>
+        {p.email ? (
+          <li>
+            by email: <L>{p.email}</L>
+            {";"}
+          </li>
+        ) : null}
         <li>by registered mail: {p.address}.</li>
       </UL>
 
@@ -57,8 +59,7 @@ export const returns: LegalDocModule = {
       <P>
         If the work was already delivered, we will send return instructions.
         Please return it in protective packaging, with tracking, to:{" "}
-        {p.returnAddress}. A collection can be arranged by phone. [For the
-        lawyer: who pays the return shipping.]
+        {p.returnAddress}. A collection can be arranged by phone.
       </P>
 
       <H2>Exceptions</H2>

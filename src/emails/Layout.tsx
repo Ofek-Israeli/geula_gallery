@@ -99,28 +99,42 @@ export function Layout({ ctx, preview, orderUrl, children }: LayoutProps) {
               })}
             </Text>
             <Text style={small}>
-              {isolated(
-                t,
-                "emails-core.footer.contact",
-                { email: brand.email, phone: brand.phone },
-                ["phone"],
-              )}
+              {brand.email
+                ? isolated(
+                    t,
+                    "emails-core.footer.contact",
+                    { email: brand.email, phone: brand.phone },
+                    ["phone"],
+                  )
+                : isolated(
+                    t,
+                    "emails-core.footer.contactPhone",
+                    { phone: brand.phone },
+                    ["phone"],
+                  )}
             </Text>
             <Text style={small}>{t("emails-core.footer.merchantCountry")}</Text>
             <Text style={{ ...small, fontWeight: 700 }}>
               {t("emails-core.footer.cancelTitle")}
             </Text>
             <Text style={small}>
-              {isolated(
-                t,
-                "emails-core.footer.cancelChannels",
-                {
-                  url: brand.cancelUrl,
-                  email: brand.email,
-                  phone: brand.phone,
-                },
-                ["phone"],
-              )}
+              {brand.email
+                ? isolated(
+                    t,
+                    "emails-core.footer.cancelChannels",
+                    {
+                      url: brand.cancelUrl,
+                      email: brand.email,
+                      phone: brand.phone,
+                    },
+                    ["phone"],
+                  )
+                : isolated(
+                    t,
+                    "emails-core.footer.cancelChannelsNoEmail",
+                    { url: brand.cancelUrl, phone: brand.phone },
+                    ["phone"],
+                  )}
             </Text>
             <Text style={small}>{t("emails-core.footer.transactional")}</Text>
             {ctx.demo ? (

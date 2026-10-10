@@ -9,6 +9,7 @@ import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
 import { type CartLine, loadCart } from "@/server/cart/cart";
+import { env } from "@/server/env";
 import { readCartIds } from "@/server/next/cart";
 import { removeFromCartAction } from "./actions";
 
@@ -16,6 +17,7 @@ import { removeFromCartAction } from "./actions";
  * `/[locale]/cart` (noindex): the works collected for one checkout, re-read live on every request.
  * Ready works (available and buyable) go to the checkout together; the others are listed with the
  * reason and a Remove button. Nothing is reserved until "Continue to payment" at the checkout.
+ * While online sales are closed (`SALES_OPEN=false`) it only says so.
  */
 export async function generateMetadata({
   params,
@@ -38,6 +40,22 @@ export default async function CartPage({
   const noticeParam = Array.isArray(sp.cart) ? sp.cart[0] : sp.cart;
   const notice = noticeParam && NOTICES.has(noticeParam) ? noticeParam : null;
   const t = await getTranslations({ locale, namespace: "checkout.cart" });
+  if (!env.SALES_OPEN) {
+    return (
+      <div className="flex max-w-3xl flex-col gap-8">
+        <h1 className="text-4xl">{t("title")}</h1>
+        <div
+          className="flex flex-col items-start gap-4"
+          data-testid="cart-sales-closed"
+        >
+          <p>{t("salesClosed")}</p>
+          <Link href={paths.works()} className={buttonClasses("secondary")}>
+            {t("emptyCta")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
   const cart = await loadCart(locale, await readCartIds());
   const ready = cart.lines.filter((l) => l.readiness === "ready");
   const other = cart.lines.filter((l) => l.readiness !== "ready");
