@@ -12,6 +12,10 @@ import {
   slugSchema,
 } from "@/lib/validation/common";
 import {
+  DESTINATION_LIMITS,
+  destinationIssues,
+} from "@/lib/validation/destination";
+import {
   isCancellationNumber,
   isOrderNumber,
   isSlug,
@@ -128,5 +132,84 @@ describe("postal address", () => {
       phone: "050-123-4567",
     });
     expect(r.success).toBe(true);
+  });
+});
+
+describe("destination", () => {
+  const offered = new Set(["IL", "US", "HK", "GB"]);
+
+  it("accepts a Hebrew city in Israel, with or without a postal code", () => {
+    expect(destinationIssues({ country: "IL", city: "חיפה" }, offered)).toEqual(
+      {},
+    );
+    expect(
+      destinationIssues(
+        { country: "IL", city: "תל אביב", postalCode: "6100000" },
+        offered,
+      ),
+    ).toEqual({});
+  });
+
+  it("requires a postal code abroad", () => {
+    expect(
+      destinationIssues({ country: "US", city: "Springfield" }, offered),
+    ).toEqual({ postalCode: "required" });
+    expect(
+      destinationIssues(
+        { country: "US", city: "Springfield", postalCode: "62701" },
+        offered,
+      ),
+    ).toEqual({});
+  });
+
+  it("requires Latin script abroad for the city and the postal code", () => {
+    expect(
+      destinationIssues(
+        { country: "US", city: "ספרינגפילד", postalCode: "מיקוד" },
+        offered,
+      ),
+    ).toEqual({ city: "latin_only", postalCode: "latin_only" });
+  });
+
+  it("needs no postal code where there are none (Hong Kong)", () => {
+    expect(
+      destinationIssues({ country: "HK", city: "Kowloon" }, offered),
+    ).toEqual({});
+  });
+
+  it("checks lengths and blank values", () => {
+    expect(
+      destinationIssues(
+        { country: "IL", city: "a".repeat(DESTINATION_LIMITS.city + 1) },
+        offered,
+      ),
+    ).toEqual({ city: "too_long" });
+    expect(
+      destinationIssues(
+        { country: "IL", city: "a".repeat(DESTINATION_LIMITS.city) },
+        offered,
+      ),
+    ).toEqual({});
+    expect(
+      destinationIssues(
+        { country: "GB", city: "London", postalCode: "1".repeat(21) },
+        offered,
+      ),
+    ).toEqual({ postalCode: "too_long" });
+    expect(destinationIssues({ country: "IL", city: "   " }, offered)).toEqual({
+      city: "required",
+    });
+  });
+
+  it("refuses unknown codes and countries the selector does not offer", () => {
+    expect(destinationIssues({ country: "XX", city: "X" }, offered)).toEqual({
+      country: "invalid_country",
+      postalCode: "required",
+    });
+    expect(
+      destinationIssues({ country: "AQ", city: "McMurdo" }, offered),
+    ).toEqual({ country: "invalid_country" });
+    // Without an offered list only the code is checked.
+    expect(destinationIssues({ country: "AQ", city: "McMurdo" })).toEqual({});
   });
 });

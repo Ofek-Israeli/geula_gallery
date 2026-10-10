@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
+import { postalCodeRequired } from "@/lib/countries";
 import type { Locale } from "@/lib/locale";
 import { normalizePhone } from "@/lib/phone";
 import { localePath, paths } from "@/lib/routes";
@@ -171,7 +172,7 @@ const detailsSchema = base
           ctx.addIssue({ code: "custom", path: [field], message: "required" });
         }
       }
-      if (v.country !== "IL" && !has(v.postalCode)) {
+      if (postalCodeRequired(v.country) && !has(v.postalCode)) {
         ctx.addIssue({
           code: "custom",
           path: ["postalCode"],

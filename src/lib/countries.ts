@@ -42,6 +42,42 @@ export function parseCountryCode(value: string): CountryCode | null {
 
 export const HOME_COUNTRY = "IL" satisfies CountryCode;
 
+// ---------------------------------------------------------------- postal codes
+
+/**
+ * Countries without postal codes: the regions whose address format in Google's libaddressinput
+ * has no postal-code field (`%Z`), either in their own "fmt" or, for regions without one, in the
+ * default format `%N%n%O%n%A%n%C`. Source:
+ * https://github.com/google/libaddressinput/blob/master/cpp/src/region_metadata_constants.cc
+ * (checked 2026-10-10: 69 regions). To refresh, list the `kRegionData` entries of that file whose
+ * format lacks `%Z`; `satisfies` below keeps the list to codes of COUNTRY_CODES.
+ */
+// biome-ignore format: rows of 16 codes keep the list scannable
+export const POSTAL_CODE_FREE_COUNTRIES = [
+  "AE", "AG", "AO", "AQ", "AW", "BF", "BI", "BJ", "BO", "BQ", "BS", "BV", "BW", "BZ", "CD", "CF",
+  "CG", "CI", "CK", "CM", "CW", "DJ", "DM", "ER", "FJ", "GA", "GD", "GH", "GM", "GQ", "GY", "HK",
+  "JM", "KI", "KM", "KN", "LC", "LY", "ML", "MO", "MR", "MS", "MW", "NR", "NU", "PA", "PS", "QA",
+  "RW", "SB", "SC", "SL", "SR", "SS", "ST", "SX", "SY", "TD", "TF", "TG", "TK", "TL", "TO", "TV",
+  "UG", "VU", "WS", "YE", "ZW",
+] as const satisfies readonly CountryCode[];
+
+const POSTAL_CODE_FREE: ReadonlySet<string> = new Set(
+  POSTAL_CODE_FREE_COUNTRIES,
+);
+
+/** False for destinations without postal codes (Hong Kong, the UAE…). */
+export function usesPostalCodes(code: string): boolean {
+  return !POSTAL_CODE_FREE.has(code);
+}
+
+/**
+ * Whether a delivery address needs a postal code: abroad when the destination uses them (carriers
+ * and customs forms ask for it); optional in Israel.
+ */
+export function postalCodeRequired(code: string): boolean {
+  return code !== HOME_COUNTRY && usesPostalCodes(code);
+}
+
 // ---------------------------------------------------------------- zones (spec §4.4)
 
 export const ZONE_IDS = [

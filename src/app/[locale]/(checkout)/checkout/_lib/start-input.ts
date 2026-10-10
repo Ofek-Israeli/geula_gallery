@@ -11,6 +11,10 @@ import {
   personNameSchema,
   phoneSchema,
 } from "@/lib/validation/common";
+import {
+  DESTINATION_LIMITS,
+  destinationIssues,
+} from "@/lib/validation/destination";
 import { issueParams } from "@/lib/validation/messages";
 import type { StartCheckoutResult } from "@/server/checkout/types";
 import { PROVIDER_IDS } from "@/server/payments/types";
@@ -36,9 +40,9 @@ export const checkoutFields = {
   vatId: optionalText(40),
   line1: optionalText(200),
   line2: optionalText(200),
-  city: optionalText(120),
+  city: optionalText(DESTINATION_LIMITS.city),
   region: optionalText(120),
-  postalCode: optionalText(20),
+  postalCode: optionalText(DESTINATION_LIMITS.postalCode),
   terms: checkboxSchema.refine((v) => v),
   age: checkboxSchema.refine((v) => v),
   dap: checkboxSchema,
@@ -47,28 +51,38 @@ export const checkoutFields = {
 
 type Fields = z.output<z.ZodObject<typeof checkoutFields>>;
 
-/** Address required unless pickup; postal code and Latin script abroad; the DAP consent abroad. */
+/**
+ * Street address unless pickup; city and postal code by the destination rules (a postal code
+ * abroad unless the destination has none); Latin script abroad; the DAP consent abroad.
+ */
 export function refineCheckout(v: Fields, ctx: z.RefinementCtx): void {
   if (v.method !== "LOCAL_PICKUP") {
-    for (const field of ["line1", "city"] as const) {
-      if (!required(v[field])) {
-        ctx.addIssue({ code: "custom", path: [field], message: "required" });
-      }
+    if (!required(v.line1)) {
+      ctx.addIssue({ code: "custom", path: ["line1"], message: "required" });
     }
-    if (v.country !== "IL" && !required(v.postalCode)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["postalCode"],
-        message: "required",
-      });
+    const destination = destinationIssues({
+      country: v.country,
+      city: v.city,
+      postalCode: v.postalCode,
+    });
+    for (const field of ["city", "postalCode"] as const) {
+      const issue = destination[field];
+      if (issue === "required") {
+        ctx.addIssue({ code: "custom", path: [field], message: "required" });
+      } else if (issue === "latin_only") {
+        ctx.addIssue({
+          code: "custom",
+          path: [field],
+          ...issueParams("latin_only"),
+        });
+      }
+      // too_long: optionalText's own max check reports it.
     }
     const fields = {
       name: v.name,
       line1: v.line1,
       line2: v.line2,
-      city: v.city,
       region: v.region,
-      postalCode: v.postalCode,
     };
     for (const field of nonLatinFields(fields, v.country)) {
       ctx.addIssue({

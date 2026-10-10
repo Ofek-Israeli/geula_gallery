@@ -9,7 +9,10 @@ import {
   EUROPE_ZONE_COUNTRIES,
   isCountryCode,
   isEuCountry,
+  POSTAL_CODE_FREE_COUNTRIES,
   parseCountryCode,
+  postalCodeRequired,
+  usesPostalCodes,
   zoneOf,
 } from "@/lib/countries";
 
@@ -74,5 +77,28 @@ describe("countries", () => {
       .map((o) => o.name);
     const collator = new Intl.Collator("en-IL");
     expect([...names].sort(collator.compare)).toEqual(names);
+  });
+
+  it("lists the countries without postal codes (libaddressinput), sorted and unique", () => {
+    expect(POSTAL_CODE_FREE_COUNTRIES).toHaveLength(69);
+    expect(new Set(POSTAL_CODE_FREE_COUNTRIES).size).toBe(69);
+    expect([...POSTAL_CODE_FREE_COUNTRIES].sort()).toEqual([
+      ...POSTAL_CODE_FREE_COUNTRIES,
+    ]);
+    for (const code of POSTAL_CODE_FREE_COUNTRIES) {
+      expect(isCountryCode(code), code).toBe(true);
+    }
+    expect(POSTAL_CODE_FREE_COUNTRIES).not.toContain("IL");
+    expect(usesPostalCodes("HK")).toBe(false);
+    expect(usesPostalCodes("IL")).toBe(true);
+  });
+
+  it("requires a postal code abroad unless the destination has none", () => {
+    expect(postalCodeRequired("IL")).toBe(false);
+    expect(postalCodeRequired("US")).toBe(true);
+    expect(postalCodeRequired("GB")).toBe(true);
+    expect(postalCodeRequired("HK")).toBe(false);
+    expect(postalCodeRequired("AE")).toBe(false);
+    expect(postalCodeRequired("ZW")).toBe(false);
   });
 });

@@ -8,6 +8,7 @@ import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { RadioGroup } from "@/components/ui/RadioGroup";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { postalCodeRequired } from "@/lib/countries";
 import { LOCALE_FIELD } from "@/lib/forms";
 import type { Locale } from "@/lib/locale";
 import type { ActionState } from "@/server/next/actions";
@@ -123,7 +124,7 @@ export function LinkDetailsForm(props: LinkDetailsFormProps) {
     ["line2", "address-line2", false],
     ["city", "address-level2", true],
     ["region", "address-level1", false],
-    ["postalCode", "postal-code", props.international],
+    ["postalCode", "postal-code", postalCodeRequired(props.country)],
   ];
   return (
     <form
