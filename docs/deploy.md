@@ -92,6 +92,9 @@ Cloudflare Tunnel (no open ports at home).
   `NODE_ENV=production` would skip the build tools.
 - **First data:** `scripts/seed/index.ts --remote --yes --storage-dir /var/lib/geula/uploads`, with
   `SEED_BUSINESS_PROFILE` set for that run only.
+- **Email:** home connections are on Spamhaus's PBL, so the server cannot email Gmail directly.
+  While sales are closed it runs with `EMAIL_DRIVER=log` (nothing is sent; messages wait in the
+  admin inbox); for emails, set `EMAIL_DRIVER=resend` and a `RESEND_API_KEY` in `/etc/geula/env`.
 - **Updates:** `DEPLOY_HOST=user@host sh scripts/deploy-home.sh` copies the sources, installs,
   migrates, builds and restarts.
 

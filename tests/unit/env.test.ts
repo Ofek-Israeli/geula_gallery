@@ -247,8 +247,10 @@ describe("the showcase switches", () => {
     expect(e.PAYMENT_PROVIDERS).toEqual(["mock"]);
   });
 
-  it("a showcase production still needs Resend, Blob and strong secrets", () => {
-    expectProblem({ ...showcaseEnv(), EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
+  it("a showcase production may keep emails in the database; Blob on Vercel and strong secrets stay", () => {
+    expect(
+      problems({ ...showcaseEnv(), EMAIL_DRIVER: "log", RESEND_API_KEY: "" }),
+    ).toEqual([]);
     expectProblem(
       { ...showcaseEnv(), VERCEL: "1", STORAGE_DRIVER: "local" },
       "STORAGE_DRIVER",
@@ -263,5 +265,6 @@ describe("the showcase switches", () => {
     const open = { ...showcaseEnv(), SALES_OPEN: "true" };
     expectProblem(open, "PAYMENT_PROVIDERS");
     expectProblem(open, "TAX_DOCUMENTS_MODE");
+    expectProblem({ ...open, EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
   });
 });

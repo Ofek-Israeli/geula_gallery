@@ -260,7 +260,8 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
   }
 
   // Real production store. A showcase (SALES_OPEN=false) sells nothing online, so it needs no
-  // payment provider, tax documents or carrier; email and storage stay real.
+  // payment provider, tax documents, carrier or real email (EMAIL_DRIVER=log keeps each email in
+  // the database; the painter reads the admin inbox).
   if (isProduction && !e.DEMO_MODE) {
     if (e.SALES_OPEN) {
       if (e.PAYMENT_PROVIDERS.includes("mock"))
@@ -272,9 +273,9 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
         issue("TAX_DOCUMENTS_MODE", "must be morning or gateway in production");
       if (e.SHIPPING_CARRIER === "mock")
         issue("SHIPPING_CARRIER", "must not be mock in production");
+      if (e.EMAIL_DRIVER !== "resend")
+        issue("EMAIL_DRIVER", "must be resend in production");
     }
-    if (e.EMAIL_DRIVER !== "resend")
-      issue("EMAIL_DRIVER", "must be resend in production");
     // Vercel's filesystem does not persist, so a deployment there stores files in Blob; a
     // self-hosted server (no VERCEL) may keep them on its own disk (STORAGE_DRIVER=local).
     if (e.VERCEL && e.STORAGE_DRIVER !== "blob")

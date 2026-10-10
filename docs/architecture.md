@@ -2587,6 +2587,9 @@ and production-data pieces below.
   - `src/server/checkout/types.ts`: `QuoteBlockReason` gains `SALES_CLOSED`.
   - `src/server/env.ts` (later the same day): Blob storage is required only on Vercel
     (`VERCEL=1`), so a self-hosted server may keep files on its own disk (`docs/deploy.md` §0b).
+  - `src/server/env.ts`: Resend is required only while sales are open; a showcase may use
+    `EMAIL_DRIVER=log` (each email stays in `email_messages`, nothing is sent) and the painter
+    reads the admin inbox.
 - **Tests:** `tests/unit/env.test.ts` (the showcase env), `tests/unit/commerce-state.test.ts`,
   `tests/integration/showcase.test.ts` (quote, link and payment refusals, the email skip, Mark as
   answered) and `tests/integration/invariants.test.ts` (the legal approval). The E2E suite runs
