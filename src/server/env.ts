@@ -275,8 +275,10 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
     }
     if (e.EMAIL_DRIVER !== "resend")
       issue("EMAIL_DRIVER", "must be resend in production");
-    if (e.STORAGE_DRIVER !== "blob")
-      issue("STORAGE_DRIVER", "must be blob in production");
+    // Vercel's filesystem does not persist, so a deployment there stores files in Blob; a
+    // self-hosted server (no VERCEL) may keep them on its own disk (STORAGE_DRIVER=local).
+    if (e.VERCEL && e.STORAGE_DRIVER !== "blob")
+      issue("STORAGE_DRIVER", "must be blob on Vercel");
   }
 
   if (e.PAYMENT_PROVIDERS.length === 0)

@@ -70,6 +70,31 @@ email the Resend account's owner. See `docs/architecture.md`, "Showcase launch".
   - `/he/checkout/<slug>` shows the closed notice;
   - a contact message reaches the notification address and the admin inbox.
 
+## 0b. Self-hosting on a home server
+
+The site also runs on an always-on Ubuntu machine (26.04 LTS), reached from the internet through a
+Cloudflare Tunnel (no open ports at home).
+
+- **Layout:** the `geula` system user runs everything.
+  - `/srv/geula/app`: the code, with `node_modules` and `.next`.
+  - `/var/lib/geula/uploads`: images and documents (`STORAGE_DRIVER=local`; Blob is required only
+    on Vercel, `VERCEL=1`).
+  - `/etc/geula/env`: settings and secrets (mode 640, root:geula).
+  - PostgreSQL 18 on 127.0.0.1, database `geula`.
+- **Services (systemd):**
+  - `geula-web` runs `next start` on 127.0.0.1:3000 and restarts on failure.
+  - `geula-cron-<job>.timer` → `geula-cron@<job>.service` call `/api/cron/<job>` with
+    `CRON_SECRET`: reconcile and outbox every 5 minutes, tracking hourly, daily 05:00 UTC, purge
+    02:30 UTC.
+  - `geula-backup.timer` (03:15) runs `/usr/local/sbin/geula-backup`: a `pg_dump` kept 14 days,
+    and an uploads mirror, in `/var/backups/geula`. Copy them off the machine as well.
+- **Node 24** from nodejs.org (checksum-verified) in `/opt/node`. Install with `npm ci --include=dev`:
+  `NODE_ENV=production` would skip the build tools.
+- **First data:** `scripts/seed/index.ts --remote --yes --storage-dir /var/lib/geula/uploads`, with
+  `SEED_BUSINESS_PROFILE` set for that run only.
+- **Updates:** `DEPLOY_HOST=user@host sh scripts/deploy-home.sh` copies the sources, installs,
+  migrates, builds and restarts.
+
 ## 1. Vercel project
 
 - **Plan: Vercel Pro** (about $20 per month). Hobby is for non-commercial use only, so it does

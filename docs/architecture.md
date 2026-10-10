@@ -2585,6 +2585,8 @@ and production-data pieces below.
   - `package.json`: the four `prod:*` scripts.
   - `src/emails/types.ts` (§9.3 email contract): an optional `phone` on `painter-new-request`.
   - `src/server/checkout/types.ts`: `QuoteBlockReason` gains `SALES_CLOSED`.
+  - `src/server/env.ts` (later the same day): Blob storage is required only on Vercel
+    (`VERCEL=1`), so a self-hosted server may keep files on its own disk (`docs/deploy.md` §0b).
 - **Tests:** `tests/unit/env.test.ts` (the showcase env), `tests/unit/commerce-state.test.ts`,
   `tests/integration/showcase.test.ts` (quote, link and payment refusals, the email skip, Mark as
   answered) and `tests/integration/invariants.test.ts` (the legal approval). The E2E suite runs

@@ -150,9 +150,15 @@ describe("parseEnv cross-field rules (spec §4.8)", () => {
     );
     expectProblem({ ...productionEnv(), EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
     expectProblem(
-      { ...productionEnv(), STORAGE_DRIVER: "local" },
+      { ...productionEnv(), VERCEL: "1", STORAGE_DRIVER: "local" },
       "STORAGE_DRIVER",
     );
+    // A self-hosted server keeps files on its own disk.
+    expect(
+      problems({ ...productionEnv(), STORAGE_DRIVER: "local" }).filter((p) =>
+        p.startsWith("STORAGE_DRIVER"),
+      ),
+    ).toEqual([]);
     expectProblem({ ...productionEnv(), APP_SECRET: "short" }, "APP_SECRET");
     expectProblem(
       { ...productionEnv(), RATE_LIMIT_SCALE: "100" },
@@ -244,7 +250,7 @@ describe("the showcase switches", () => {
   it("a showcase production still needs Resend, Blob and strong secrets", () => {
     expectProblem({ ...showcaseEnv(), EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
     expectProblem(
-      { ...showcaseEnv(), STORAGE_DRIVER: "local" },
+      { ...showcaseEnv(), VERCEL: "1", STORAGE_DRIVER: "local" },
       "STORAGE_DRIVER",
     );
     expectProblem(
