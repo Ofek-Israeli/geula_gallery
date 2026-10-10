@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -26,9 +22,7 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -39,15 +33,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     ".next-e2e/types/**/*.ts",
-    ".next-e2e/dev/types/**/*.ts",
-    ".next-showcase/types/**/*.ts",
-    ".next-showcase/dev/types/**/*.ts"
+    ".next-e2e/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".next-*",
-    "drizzle",
-    "openapi",
-    ".data"
-  ]
+  "exclude": ["node_modules", ".next-*", "drizzle", "openapi", ".data"]
 }
