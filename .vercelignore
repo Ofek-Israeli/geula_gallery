@@ -12,8 +12,6 @@ playwright-report/
 test-results/
 blob-report/
 tests/
-# Seed input: the catalog is seeded and uploaded from a local machine (npm run prod:seed).
-data/
 openapi/
 .DS_Store
 *.pem

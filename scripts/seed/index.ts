@@ -64,6 +64,7 @@ export function readSeedEnv(): SeedEnv {
     e2eAdminPassword: v("E2E_ADMIN_PASSWORD") ?? "e2e-admin-password",
     storageDriver: v("STORAGE_DRIVER") ?? "local",
     storageDir: v("LOCAL_STORAGE_DIR") ?? ".data/uploads",
+    businessProfileJson: v("SEED_BUSINESS_PROFILE"),
   };
 }
 

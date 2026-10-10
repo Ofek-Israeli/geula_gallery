@@ -20,6 +20,13 @@ const TBD_EN = "(to be completed)";
 const tbd = { he: TBD_HE, en: TBD_EN };
 
 export function businessProfileDefaults(env: SeedEnv): BusinessProfile {
+  // A production setup passes the real profile (SEED_BUSINESS_PROFILE; never committed).
+  if (env.businessProfileJson) {
+    return parseSettings(
+      "business_profile",
+      JSON.parse(env.businessProfileJson),
+    );
+  }
   return {
     legalName: "Geula Levi",
     tradeName: { he: "גאולה לוי", en: "Geula Levi" },

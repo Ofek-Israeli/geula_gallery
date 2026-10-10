@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "regions": ["fra1"],
   "installCommand": "npm ci",
-  "buildCommand": "if [ \"$VERCEL_ENV\" = production ]; then npm run db:migrate && npm run build; else npm run build; fi",
+  "buildCommand": "if [ \"$VERCEL_ENV\" = production ]; then npm run db:migrate && { [ \"$SETUP_ON_BUILD\" != 1 ] || sh scripts/production-setup.sh; } && npm run build; else npm run build; fi",
   "crons": [
     { "path": "/api/cron/purge", "schedule": "30 2 * * *" },
     { "path": "/api/cron/outbox", "schedule": "0 3 * * *" },

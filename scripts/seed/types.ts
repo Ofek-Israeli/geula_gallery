@@ -18,6 +18,11 @@ export interface SeedEnv {
   storageDriver?: string;
   /** LOCAL_STORAGE_DIR (default `.data/uploads`), where the catalog seed writes images. */
   storageDir?: string;
+  /**
+   * SEED_BUSINESS_PROFILE: the real business profile as JSON, for a production setup only. It
+   * lives in an environment variable for one deployment and never in the repository.
+   */
+  businessProfileJson?: string;
 }
 
 export interface SeedContext {

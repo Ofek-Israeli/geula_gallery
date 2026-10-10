@@ -4,7 +4,10 @@ import {
   parseSettings,
   shippingSettingsSchema,
 } from "@/server/settings/schemas";
-import { settingsSeedValues } from "../../scripts/seed/settings";
+import {
+  businessProfileDefaults,
+  settingsSeedValues,
+} from "../../scripts/seed/settings";
 
 const seedEnv = {
   authBaseUrl: "http://localhost:3000",
@@ -18,6 +21,23 @@ describe("settings schemas", () => {
     for (const [key, value] of Object.entries(values)) {
       expect(() => parseSettings(key as SettingsKey, value), key).not.toThrow();
     }
+  });
+
+  it("take the real business profile from SEED_BUSINESS_PROFILE when given (production setup)", () => {
+    const profile = {
+      ...businessProfileDefaults(seedEnv),
+      legalName: "Someone Else",
+      completed: true,
+    };
+    expect(
+      settingsSeedValues({
+        ...seedEnv,
+        businessProfileJson: JSON.stringify(profile),
+      }).business_profile,
+    ).toEqual(profile);
+    expect(() =>
+      settingsSeedValues({ ...seedEnv, businessProfileJson: "{}" }),
+    ).toThrow();
   });
 
   it("use the spec's surcharge shape (PCT/FIXED, ALL or listed zones, inclusive window)", () => {

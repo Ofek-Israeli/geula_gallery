@@ -24,7 +24,7 @@ email the Resend account's owner. See `docs/architecture.md`, "Showcase launch".
      - Storage: create **Neon Postgres** (Frankfurt) and connect it;
      - create a **public Blob store** and connect it;
      - create a **private Blob store** and connect it with the env prefix `BLOB_PRIVATE`;
-     - Analytics: enable **Web Analytics**.
+     - Analytics: enable **Web Analytics** (optional; deferred at launch).
   3. A **Resend** account with the notification address, an API key, and `RESEND_API_KEY` in
      Settings → Environment Variables, Production **(owner)**.
   4. Production variables (`vercel env add <name> production`):
@@ -44,14 +44,22 @@ email the Resend account's owner. See `docs/architecture.md`, "Showcase launch".
      | `GOOGLE_SITE_VERIFICATION` | Search Console's "HTML tag" code, once you have it |
 
      `PAYMENT_PROVIDERS` stays unset: production outside demo mode never builds the mock provider.
-  5. `npx vercel env pull .env.production.local --environment=production` (ignored by git and
-     by Vercel), then `npm run prod:migrate`, `npm run prod:seed` (the settings and the painter's
-     catalog; images into `.data/prod-seed`) and `npm run prod:upload` (the images to the two
-     stores). Set `NEXT_PUBLIC_BLOB_HOST`.
-  6. `npm run prod:admin` in a terminal **(owner)**: it asks for the admin email and the password
-     (hidden, twice).
-  7. `npx vercel deploy --prod`. Sign in at `/he/admin`, set up two-step verification, and fill
-     in Settings → Business (phone, addresses, notification email).
+  5. The first data. Neon's variables are Sensitive (the database is connected to Production only),
+     so `vercel env pull` returns `[SENSITIVE]` and the `prod:*` scripts cannot reach the database
+     from a laptop. The first production build does it instead: with `SETUP_ON_BUILD=1`,
+     `scripts/production-setup.sh` seeds the settings and the painter's catalog, uploads the images to
+     the two stores (keys already there are skipped) and creates the admin account. Set:
+     - `SETUP_ON_BUILD=1`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` (Sensitive; **owner**, in the
+       dashboard);
+     - `SEED_BUSINESS_PROFILE` (Sensitive): the business profile as JSON, so the site starts with
+       the real phone and addresses;
+     - `NEXT_PUBLIC_BLOB_HOST`: the public store's host (`vercel blob get-store <id>`, "Base URL").
+  6. After the first deployment, remove `SETUP_ON_BUILD`, `SEED_BUSINESS_PROFILE` and
+     `ADMIN_PASSWORD`. When the database URL is readable (a database connected to every
+     environment), `npm run prod:migrate | prod:seed | prod:upload | prod:admin` do the same from a
+     laptop with `.env.production.local`.
+  7. `npx vercel deploy --prod`. Sign in at `/he/admin`, set up two-step verification, and check
+     Settings → Business.
   8. Google Search Console **(owner)**: add a URL-prefix property for the `vercel.app` URL and
      choose "HTML tag". Put its code in `GOOGLE_SITE_VERIFICATION`, redeploy, press Verify, then
      submit `/sitemap.xml`. Indexing takes days to weeks.
