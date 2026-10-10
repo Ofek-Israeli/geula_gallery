@@ -1,5 +1,6 @@
 # Never uploaded to Vercel. Vercel installs and builds from the sources, so local data (database
 # files, private originals and documents), secrets, build output and test artifacts stay here.
+# tests/ is uploaded: the build type-checks it, as `npm run typecheck` does.
 .data/
 .env*
 !.env.example
@@ -11,7 +12,6 @@ coverage/
 playwright-report/
 test-results/
 blob-report/
-tests/
 openapi/
 .DS_Store
 *.pem
