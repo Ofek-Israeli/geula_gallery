@@ -6,10 +6,16 @@ import { getTranslations } from "next-intl/server";
 import { PreContractDisclosure } from "@/components/checkout/PreContractDisclosure";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
-import { countryOptions } from "@/lib/countries";
+import {
+  checkoutQuery,
+  parseCheckoutParams,
+  resolveCheckoutStep,
+  stepLinks,
+} from "@/lib/checkout-steps";
+import { countryName, countryOptions } from "@/lib/countries";
 import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
-import { localePath, paths } from "@/lib/routes";
+import { type CheckoutQuery, localePath, paths } from "@/lib/routes";
 import { loadCart } from "@/server/cart/cart";
 import { getCheckoutQuote } from "@/server/checkout/quote";
 import { readCartIds } from "@/server/next/cart";
@@ -18,19 +24,26 @@ import { getSetting } from "@/server/settings";
 import { removeFromCartAction } from "../../(site)/cart/actions";
 import { CheckoutForm } from "./_components/CheckoutForm";
 import {
-  DeliveryForm,
-  deliveryQuery,
   OrderSummary,
   preContractDoc,
   providerOptions,
 } from "./_components/parts";
+import {
+  CheckoutSteps,
+  DeliveryStep,
+  DestinationForm,
+  DestinationStep,
+  DetailsIntro,
+} from "./_components/steps";
 import { startCartCheckoutAction } from "./actions";
 
 /**
- * `/[locale]/checkout?to=<CC>&ship=<METHOD>&cur=<ILS|USD>`: the cart checkout. Every ready work of
- * the cart in one order — one delivery choice for all of them, one payment. Works that are not
- * ready stay in the cart (and are named here); a work that blocks the delivery is named with a
- * "Remove from cart" button. No hold exists until "Continue to payment".
+ * `/[locale]/checkout?to=&city=&zip=&ship=&cur=&step=`: the cart checkout. Every ready work of the
+ * cart in one order: one delivery choice for all of them, one payment, through the same
+ * address-first steps as "Buy now" (`src/lib/checkout-steps.ts`; `strict-origin` keeps the
+ * destination in the query out of Referer headers). Works that are not ready stay in the cart (and
+ * are named here); a work that blocks the delivery is named with a "Remove from cart" button that
+ * comes back to the same step. No hold exists until "Continue to payment".
  */
 export async function generateMetadata({
   params,
@@ -38,14 +51,11 @@ export async function generateMetadata({
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const t = await getTranslations({ locale, namespace: "checkout" });
-  return { title: t("title"), robots: { index: false, follow: false } };
-}
-
-const METHODS = ["CARRIER_TABLE", "LOCAL_PICKUP", "ARTIST_DELIVERY"] as const;
-type Method = (typeof METHODS)[number];
-
-function one(v: string | string[] | undefined): string | undefined {
-  return Array.isArray(v) ? v[0] : v;
+  return {
+    title: t("title"),
+    robots: { index: false, follow: false },
+    referrer: "strict-origin",
+  };
 }
 
 const DESTINATION_REASONS = new Set([
@@ -65,13 +75,7 @@ export default async function CartCheckoutPage({
 }: PageProps<"/[locale]/checkout">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const sp = await searchParams;
-  const country = (one(sp.to) ?? "IL").toUpperCase();
-  const shipParam = one(sp.ship);
-  const method = METHODS.includes(shipParam as Method)
-    ? (shipParam as Method)
-    : undefined;
-  const cur = one(sp.cur) === "USD" ? "USD" : undefined;
+  const p = parseCheckoutParams(await searchParams);
 
   const cart = await loadCart(locale, await readCartIds());
   if (cart.readyIds.length === 0) redirect(localePath(locale, paths.cart()));
@@ -80,33 +84,18 @@ export default async function CartCheckoutPage({
   const quote = await getCheckoutQuote({
     artworkIds: cart.readyIds,
     locale,
-    country,
-    method,
-    currency: cur,
+    country: p.country,
+    method: p.ship ?? undefined,
+    currency: p.cur ?? undefined,
   });
 
   const t = await getTranslations({ locale, namespace: "checkout" });
   const shipping = await getSetting("shipping");
   const checkout = await getSetting("checkout");
   const countries = countryOptions(locale, shipping.deniedCountries);
-  const checkoutPath = localePath(locale, paths.cartCheckout());
+  const action = localePath(locale, paths.cartCheckout());
+  const href = (q: CheckoutQuery) => paths.cartCheckout(q);
   const titleOf = new Map(ready.map((l) => [l.work.id, l.work.title]));
-  const currentQuery = new URLSearchParams(
-    Object.entries({ to: country, ship: method ?? "", cur: cur ?? "" }).filter(
-      ([, v]) => v !== "",
-    ),
-  ).toString();
-
-  const countryForm = (
-    <DeliveryForm
-      action={checkoutPath}
-      country={country}
-      countries={countries}
-      quote={quote}
-      locale={locale}
-      ilsPerUsd={checkout.fx.ilsPerUsd}
-    />
-  );
 
   const header = (
     <header className="flex flex-col gap-3">
@@ -146,11 +135,13 @@ export default async function CartCheckoutPage({
   );
 
   if (quote.kind === "blocked") {
-    const named = quote.problems.filter((p) => titleOf.has(p.artworkId));
+    const named = quote.problems.filter((x) => titleOf.has(x.artworkId));
     const message =
       quote.reason === "VALUE_CAP" && named.length === 0
         ? t("blocked.VALUE_CAP_CART")
         : t(`blocked.${quote.reason}`);
+    // "Remove from cart" comes back to the same checkout URL (destination and step included).
+    const currentQuery = new URLSearchParams(checkoutQuery(p)).toString();
     return (
       <div className="flex flex-col gap-8">
         {header}
@@ -165,24 +156,24 @@ export default async function CartCheckoutPage({
           {named.length === 0 ? <p>{message}</p> : null}
           {named.length > 0 ? (
             <ul className="flex flex-col gap-3" data-testid="checkout-problems">
-              {named.map((p) => {
-                const title = titleOf.get(p.artworkId) ?? "";
+              {named.map((problem) => {
+                const title = titleOf.get(problem.artworkId) ?? "";
                 return (
                   <li
-                    key={p.artworkId}
+                    key={problem.artworkId}
                     className="flex flex-wrap items-center justify-between gap-3"
                   >
                     <span>
                       <span className="font-serif">{title}</span>
                       {" – "}
-                      {t(`cart.problem.${p.reason}`)}
+                      {t(`cart.problem.${problem.reason}`)}
                     </span>
                     <form action={removeFromCartAction}>
                       <input type="hidden" name={LOCALE_FIELD} value={locale} />
                       <input
                         type="hidden"
                         name="artworkId"
-                        value={p.artworkId}
+                        value={problem.artworkId}
                       />
                       <input type="hidden" name="returnTo" value="checkout" />
                       <input type="hidden" name="query" value={currentQuery} />
@@ -210,9 +201,75 @@ export default async function CartCheckoutPage({
         </section>
         {DESTINATION_REASONS.has(quote.reason) ? (
           <section aria-label={t("blocked.otherCountry")}>
-            {countryForm}
+            <DestinationForm
+              action={action}
+              locale={locale}
+              countries={countries}
+              value={{ country: p.country, city: p.city, zip: p.zip }}
+              carry={{ ship: p.ship, cur: p.cur }}
+              issues={{}}
+            />
           </section>
         ) : null}
+      </div>
+    );
+  }
+
+  const r = resolveCheckoutStep(
+    p,
+    {
+      methods: quote.methods.map((m) => m.method),
+      selected: quote.shipping.method,
+    },
+    new Set(countries.map((c) => c.code)),
+  );
+  const links = stepLinks(href, {
+    country: p.country,
+    city: p.city,
+    zip: p.zip,
+    ship: r.offeredShip,
+    cur: quote.currency === "USD" ? "USD" : null,
+  });
+  const destination = {
+    country: p.country,
+    countryName: countryName(p.country, locale),
+    city: p.city,
+    zip: p.zip,
+  };
+
+  if (r.step === "destination") {
+    return (
+      <div className="flex flex-col gap-8">
+        {header}
+        <CheckoutSteps current="destination" locale={locale} />
+        <DestinationStep
+          action={action}
+          locale={locale}
+          countries={countries}
+          value={{ country: p.country, city: p.city, zip: p.zip }}
+          carry={{ ship: p.ship, cur: p.cur }}
+          issues={r.showDestinationErrors ? r.issues : {}}
+        />
+      </div>
+    );
+  }
+
+  if (r.step === "delivery") {
+    return (
+      <div className="flex flex-col gap-8">
+        {header}
+        <CheckoutSteps current="delivery" locale={locale} />
+        <DeliveryStep
+          action={action}
+          locale={locale}
+          quote={quote}
+          ilsPerUsd={checkout.fx.ilsPerUsd}
+          itemCount={quote.items.length}
+          destination={destination}
+          links={links}
+          checked={r.checkedMethod}
+          problem={r.deliveryProblem}
+        />
       </div>
     );
   }
@@ -236,12 +293,18 @@ export default async function CartCheckoutPage({
     locale,
   );
   const s = quote.shipping;
-  const international = quote.country !== "IL";
+  const needsAddress = s.method !== "LOCAL_PICKUP";
 
   return (
     <div className="flex flex-col gap-8">
       {header}
-
+      <CheckoutSteps current="details" locale={locale} />
+      <DetailsIntro
+        quote={quote}
+        locale={locale}
+        destination={destination}
+        links={links}
+      />
       <OrderSummary
         quote={quote}
         locale={locale}
@@ -251,24 +314,6 @@ export default async function CartCheckoutPage({
           priceMinor: i.priceMinor,
         }))}
       />
-
-      <section
-        aria-labelledby="delivery-title"
-        className="flex flex-col gap-4 border border-line p-5"
-      >
-        <h2 id="delivery-title" className="text-2xl">
-          {t("delivery.title")}
-        </h2>
-        {countryForm}
-        {quote.notices.length > 0 ? (
-          <ul className="flex list-disc flex-col gap-1 ps-5 text-sm">
-            {quote.notices.map((n) => (
-              <li key={n}>{t(`notices.${n}`)}</li>
-            ))}
-          </ul>
-        ) : null}
-      </section>
-
       <CheckoutForm
         action={startCartCheckoutAction}
         locale={locale}
@@ -277,18 +322,27 @@ export default async function CartCheckoutPage({
           country: quote.country,
           method: s.method,
           currency: quote.currency,
+          ...(needsAddress
+            ? { city: p.city, postalCode: p.zip || undefined }
+            : {}),
           expectedTotalMinor: quote.totalMinor,
           clientRequestId: randomUUID(),
           formStart: issueFormStartToken(),
         }}
-        needsAddress={s.method !== "LOCAL_PICKUP"}
-        international={international}
+        destination={{
+          city: p.city,
+          postalCode: p.zip,
+          countryName: destination.countryName,
+        }}
+        needsAddress={needsAddress}
+        international={quote.country !== "IL"}
         holdMinutes={checkout.reservationMinutes}
         itemCount={quote.items.length}
         itemTitles={Object.fromEntries(titleOf)}
         providers={await providerOptions(quote, locale)}
         disclosure={<PreContractDisclosure doc={doc} />}
-        reloadHref={`${checkoutPath}?${new URLSearchParams(deliveryQuery(quote)).toString()}`}
+        reloadHref={localePath(locale, links.details)}
+        changeDestinationHref={localePath(locale, links.destination)}
       />
     </div>
   );

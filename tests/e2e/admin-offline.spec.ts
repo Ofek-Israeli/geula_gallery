@@ -9,6 +9,7 @@ import {
 } from "./support/admin";
 import {
   buyerIp,
+  checkoutUrl,
   continueToMockPay,
   e2eQuery,
   fillCheckout,
@@ -68,7 +69,9 @@ test("offline hold toggles the badge; an offline sale during a hold → the late
 
     // A buyer starts checking out (the work is held for them).
     const buyer = uniqueBuyer("offline");
-    await page.goto(`/he/checkout/${a.slug}?ship=LOCAL_PICKUP`);
+    await page.goto(
+      checkoutUrl(a.slug, { locale: "he", ship: "LOCAL_PICKUP" }),
+    );
     await fillCheckout(page, {
       locale: "he",
       name: buyer.name,

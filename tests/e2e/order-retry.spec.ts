@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
 import {
   buyerIp,
+  checkoutUrl,
   clickAndConfirm,
   continueToMockPay,
   fillCheckout,
@@ -26,7 +27,7 @@ test("cancel at the provider → retry from the order page → paid", async ({
 }) => {
   const slug = "puzzle";
   const buyer = uniqueBuyer("retry");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   const firstRef = await continueToMockPay(page);
   await page.getByTestId("mock-cancel").click();
@@ -65,7 +66,7 @@ test("release my reservation → the work is available again (Hebrew)", async ({
 }) => {
   const slug = "lone-home";
   const buyer = uniqueBuyer("release");
-  await page.goto(`/he/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { locale: "he", ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "he", ...buyer });
   await continueToMockPay(page);
   await page.getByTestId("mock-cancel").click();

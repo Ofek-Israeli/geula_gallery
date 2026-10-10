@@ -1,21 +1,26 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
 import {
   anotherBuyerBuys,
   artworkStatus,
   buyerIp,
+  checkoutUrl,
+  chooseDelivery,
+  chooseDestination,
   cloneWork,
   continueToMockPay,
   fillCheckout,
   messages,
+  seriousAxeViolations,
 } from "./support/commerce";
 
 /**
  * The cart: add several works from their pages (header count), remove and re-add on the cart page,
- * one checkout for all of them (one delivery choice, one payment), both works Sold, the cart
- * emptied; a work bought by someone else meanwhile is named and left out; "Buy now" takes a work
- * out of the cart; two buyers with overlapping carts; the cart works without JavaScript; axe.
+ * one checkout for all of them (one delivery choice, one payment; pickup through the steps, with
+ * no street address), both works Sold, the cart emptied; a work bought by someone else meanwhile
+ * is named and left out; a work that cannot ship to the destination is removed from the checkout,
+ * which comes back to the same step; "Buy now" takes a work out of the cart; two buyers with
+ * overlapping carts; the cart works without JavaScript; axe on the cart and every checkout step.
  * Each test clones its own works (the E2E database is reset once per run).
  */
 const enArtwork = messages("en", "artwork");
@@ -59,11 +64,16 @@ test.describe("cart", () => {
     await page.goto("/en/cart");
     await expect(page.getByTestId("cart-line")).toHaveCount(2);
 
-    // One checkout for both: studio pickup, one payment.
+    // One checkout for both: the destination, studio pickup, no street address, one payment.
     await page.getByTestId("cart-checkout").click();
     await expect(page).toHaveURL(/\/en\/checkout$/);
-    await page.goto("/en/checkout?to=IL&ship=LOCAL_PICKUP");
+    await expect(page.getByTestId("checkout-destination")).toBeVisible();
+    await chooseDestination(page, { locale: "en", city: "Haifa" });
+    await chooseDelivery(page, { locale: "en", method: "LOCAL_PICKUP" });
     await expect(page.getByTestId("summary-line")).toHaveCount(2);
+    await expect(
+      page.getByRole("textbox", { name: /^Street and number/ }),
+    ).toHaveCount(0);
     await expect(page.getByTestId("checkout-form")).toContainText(
       "the 2 works are reserved for you for 35 minutes",
     );
@@ -91,7 +101,7 @@ test.describe("cart", () => {
     await cloneWork("puzzle", "e2e-cart-b2");
     await addToCart(page, "e2e-cart-b1", "he");
     await addToCart(page, "e2e-cart-b2", "he");
-    await page.goto("/he/checkout?to=IL&ship=CARRIER_TABLE");
+    await page.goto(checkoutUrl(null, { locale: "he", ship: "CARRIER_TABLE" }));
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByTestId("summary-line")).toHaveCount(2);
     const buyer = uniqueBuyer("cart-he");
@@ -135,7 +145,7 @@ test.describe("cart", () => {
     await page.context().setExtraHTTPHeaders(buyerIp(75));
     await cloneWork("puzzle", "e2e-cart-d1");
     await addToCart(page, "e2e-cart-d1");
-    await page.goto("/en/checkout/e2e-cart-d1?ship=LOCAL_PICKUP");
+    await page.goto(checkoutUrl("e2e-cart-d1", { ship: "LOCAL_PICKUP" }));
     const buyer = uniqueBuyer("cart-buynow");
     await fillCheckout(page, {
       locale: "en",
@@ -145,6 +155,36 @@ test.describe("cart", () => {
     await continueToMockPay(page);
     await page.goto("/en/cart");
     await expect(page.getByTestId("cart-empty")).toBeVisible();
+  });
+
+  test("a work that cannot ship abroad is removed from the checkout, which keeps the destination and step", async ({
+    page,
+  }) => {
+    await page.context().setExtraHTTPHeaders(buyerIp(81));
+    // `lone-home` is sold for delivery in Israel only; its clone keeps that flag.
+    await cloneWork("lone-home", "e2e-cart-g1");
+    await cloneWork("puzzle", "e2e-cart-g2");
+    await addToCart(page, "e2e-cart-g1");
+    await addToCart(page, "e2e-cart-g2");
+    await page.goto("/en/checkout");
+    await chooseDestination(page, {
+      locale: "en",
+      to: "US",
+      city: "Springfield",
+      zip: "62701",
+    });
+    const problems = page.getByTestId("checkout-problems");
+    await expect(problems).toContainText(
+      enCheckout.cart.problem.NOT_INTERNATIONAL,
+    );
+    await problems.getByRole("button").click();
+    await expect(page).toHaveURL(
+      /\/en\/checkout\?to=US&city=Springfield&zip=62701&step=delivery$/,
+    );
+    await expect(page.getByTestId("checkout-delivery")).toBeVisible();
+    await expect(page.getByTestId("checkout-works").locator("li")).toHaveCount(
+      1,
+    );
   });
 
   test("two buyers with overlapping carts: one gets both works, the other is told which was taken", async ({
@@ -173,7 +213,7 @@ test.describe("cart", () => {
         [a, "a"],
         [b, "b"],
       ] as const) {
-        await p.goto("/en/checkout?to=IL&ship=LOCAL_PICKUP");
+        await p.goto(checkoutUrl(null, { ship: "LOCAL_PICKUP" }));
         const buyer = uniqueBuyer(`cart-race-${tag}`);
         await fillCheckout(p, {
           locale: "en",
@@ -231,27 +271,21 @@ test.describe("cart", () => {
         .context()
         .setExtraHTTPHeaders(buyerIp(locale === "he" ? 79 : 80));
       await page.goto(`/${locale}/cart`);
-      const empty = await new AxeBuilder({ page }).analyze();
-      expect(
-        empty.violations.filter((v) =>
-          ["serious", "critical"].includes(v.impact ?? ""),
-        ),
-      ).toEqual([]);
+      expect(await seriousAxeViolations(page)).toEqual([]);
       const slug = `e2e-cart-axe-${locale}`;
       await cloneWork("puzzle", slug);
       await addToCart(page, slug, locale);
-      for (const path of [
-        `/${locale}/cart`,
-        `/${locale}/checkout?ship=LOCAL_PICKUP`,
-      ]) {
+      for (const [path, testId] of [
+        [`/${locale}/cart`, "cart-checkout"],
+        [`/${locale}/checkout`, "checkout-destination"],
+        // Step 1 with errors (no city, no postal code for the US).
+        [`/${locale}/checkout?to=US&step=delivery`, "checkout-destination"],
+        [checkoutUrl(null, { locale, step: "delivery" }), "checkout-delivery"],
+        [checkoutUrl(null, { locale, ship: "LOCAL_PICKUP" }), "checkout-form"],
+      ] as const) {
         await page.goto(path);
-        const r = await new AxeBuilder({ page }).analyze();
-        expect(
-          r.violations.filter((v) =>
-            ["serious", "critical"].includes(v.impact ?? ""),
-          ),
-          path,
-        ).toEqual([]);
+        await expect(page.getByTestId(testId)).toBeVisible();
+        expect(await seriousAxeViolations(page), path).toEqual([]);
       }
     });
   }

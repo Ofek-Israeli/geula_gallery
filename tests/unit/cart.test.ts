@@ -68,4 +68,27 @@ describe("cart routes", () => {
       "/checkout?to=US&ship=CARRIER_TABLE",
     );
   });
+
+  it("keeps the checkout keys in order, and a Hebrew city round-trips", () => {
+    expect(
+      paths.cartCheckout({
+        step: "details",
+        ship: "LOCAL_PICKUP",
+        zip: "3100000",
+        city: "חיפה",
+        to: "IL",
+      }),
+    ).toBe(
+      `/checkout?to=IL&city=${encodeURIComponent("חיפה")}&zip=3100000&ship=LOCAL_PICKUP&step=details`,
+    );
+    const query = new URL(
+      paths.cartCheckout({ to: "IL", city: "באר שבע", step: "delivery" }),
+      "http://localhost",
+    ).searchParams;
+    expect(Object.fromEntries(query)).toEqual({
+      to: "IL",
+      city: "באר שבע",
+      step: "delivery",
+    });
+  });
 });

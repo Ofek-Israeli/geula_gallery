@@ -5,6 +5,7 @@ import { buildMockWebhook } from "../helpers/mock-webhook";
 import { E2E_SECRETS } from "./e2e-env";
 import {
   buyerIp,
+  checkoutUrl,
   clickAndConfirm,
   continueToMockPay,
   e2eQuery,
@@ -29,7 +30,7 @@ test("Pay without returning: the webhook alone marks the order paid", async ({
 }) => {
   const slug = "the-vase";
   const buyer = uniqueBuyer("webhook-pay");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   const ref = await continueToMockPay(page);
   await page.getByTestId("mock-pay_no_return").click();
@@ -94,7 +95,7 @@ test("a valid webhook for an unpaid payment leaves the order unpaid", async ({
 }) => {
   const slug = "jerusalem";
   const buyer = uniqueBuyer("webhook-unpaid");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   const ref = await continueToMockPay(page);
 

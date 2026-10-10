@@ -6,6 +6,7 @@ import { E2E_SECRETS } from "./e2e-env";
 import {
   artworkStatus,
   buyerIp,
+  checkoutUrl,
   cloneWork,
   continueToMockPay,
   e2eDatabaseUrl,
@@ -36,7 +37,7 @@ test("duplicate and concurrent webhooks → exactly one sale", async ({
   baseURL,
 }) => {
   const slug = "e2e-tamper-dup";
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...uniqueBuyer("dup") });
   const ref = await continueToMockPay(page);
   await page.getByTestId("mock-pay_no_return").click();
@@ -74,7 +75,7 @@ test("an amount tampered at the provider is never applied: manual refund and a C
   page,
 }) => {
   const slug = "e2e-tamper-amount";
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...uniqueBuyer("amount") });
   const ref = await continueToMockPay(page);
 
@@ -117,7 +118,7 @@ test("a tampered total in the form → price changed, nothing written", async ({
 }) => {
   const slug = "e2e-tamper-form";
   const buyer = uniqueBuyer("form");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   await page.locator('input[name="expectedTotalMinor"]').evaluate((el) => {
     (el as HTMLInputElement).value = "100";
@@ -125,6 +126,14 @@ test("a tampered total in the form → price changed, nothing written", async ({
   await page.getByTestId("checkout-submit").click();
   await expect(page.getByTestId("checkout-error")).toContainText(
     enCheckout.errors.price_changed,
+  );
+  // "Show the updated total" reproduces the whole choice, destination included, without a step.
+  const reload = page
+    .getByTestId("checkout-error")
+    .getByRole("link", { name: enCheckout.errors.reload });
+  await expect(reload).toHaveAttribute(
+    "href",
+    `/en/checkout/${slug}?to=IL&city=Tel+Aviv&zip=6100000&ship=LOCAL_PICKUP`,
   );
   expect(
     await e2eQuery("SELECT 1 FROM orders WHERE buyer_email = $1", [

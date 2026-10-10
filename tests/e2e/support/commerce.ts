@@ -9,6 +9,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
+import AxeBuilder from "@axe-core/playwright";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
 import pg from "pg";
 import { createTranslator } from "use-intl/core";
@@ -93,11 +94,90 @@ const MSG = {
   en: messages("en", "checkout"),
 } as const;
 
+export type ShipMethod = "CARRIER_TABLE" | "LOCAL_PICKUP" | "ARTIST_DELIVERY";
+export type CheckoutStep = "destination" | "delivery" | "details";
+
+export interface CheckoutUrlOptions {
+  locale?: "he" | "en";
+  to?: string;
+  city?: string;
+  zip?: string;
+  ship?: ShipMethod;
+  cur?: "USD";
+  step?: CheckoutStep;
+}
+
+/**
+ * A checkout deep link (`slug` null = the cart checkout). Every step after the first needs a
+ * complete destination, so the defaults are an Israeli one (English, Tel Aviv, 6100000); abroad
+ * the city must be given (the postal code too, where the destination uses them). Without `step`
+ * the page goes as far as the query allows: with `ship`, straight to the details form.
+ */
+export function checkoutUrl(
+  slug: string | null,
+  o: CheckoutUrlOptions = {},
+): string {
+  const to = o.to ?? "IL";
+  if (to !== "IL" && o.city === undefined) {
+    throw new Error(`checkoutUrl: a destination abroad (${to}) needs a city`);
+  }
+  const query = new URLSearchParams({ to, city: o.city ?? "Tel Aviv" });
+  const zip = o.zip ?? (to === "IL" ? "6100000" : "");
+  if (zip) query.set("zip", zip);
+  if (o.ship) query.set("ship", o.ship);
+  if (o.cur) query.set("cur", o.cur);
+  if (o.step) query.set("step", o.step);
+  const path = slug === null ? "/checkout" : `/checkout/${slug}`;
+  return `/${o.locale ?? "en"}${path}?${query}`;
+}
+
+/** Checkout step 1: picks the country (when given), types city and postal code, continues. */
+export async function chooseDestination(
+  page: Page,
+  o: { locale: "he" | "en"; to?: string; city: string; zip?: string },
+): Promise<void> {
+  const m = MSG[o.locale];
+  const form = page.getByTestId("destination-form");
+  const box = (label: string) =>
+    form.getByRole("textbox", { name: new RegExp(`^${escapeRe(label)}`) });
+  if (o.to) await form.locator("#co-country").selectOption(o.to);
+  await box(m.details.city).fill(o.city);
+  await box(m.details.postalCode).fill(o.zip ?? "");
+  await form.getByTestId("destination-continue").click();
+}
+
+/** Checkout step 2: switches to dollars (when asked), picks the method, continues. */
+export async function chooseDelivery(
+  page: Page,
+  o: { locale: "he" | "en"; method: ShipMethod; cur?: "USD" },
+): Promise<void> {
+  const m = MSG[o.locale];
+  if (o.cur === "USD") {
+    const usd = page
+      .getByTestId("currency-toggle")
+      .getByRole("link", { name: m.delivery.currencyUsd });
+    await usd.click();
+    await expect(usd).toHaveAttribute("aria-current", "true");
+  }
+  // The courier is "Courier" in Israel and "DHL Express" abroad (priced by the DHL estimate).
+  const names =
+    o.method === "CARRIER_TABLE"
+      ? [m.delivery.method.CARRIER_TABLE, m.delivery.method.DHL_EXPRESS]
+      : [m.delivery.method[o.method]];
+  await page
+    .getByTestId("delivery-form")
+    .getByRole("radio", {
+      name: new RegExp(`^(?:${names.map(escapeRe).join("|")})`),
+    })
+    .check();
+  await page.getByTestId("delivery-continue").click();
+}
+
 export interface FillOptions {
   locale: "he" | "en";
   name: string;
   email: string;
-  /** IL courier: fill the delivery address. */
+  /** A delivery: fill the street address (city and postal code come from step 1). */
   address?: boolean;
   receiptByEmail?: boolean;
 }
@@ -110,18 +190,27 @@ export async function fillCheckout(page: Page, o: FillOptions): Promise<void> {
   await box(m.details.name).fill(o.name);
   await box(m.details.email).fill(o.email);
   await box(m.details.phone).fill("+97230000000");
-  if (o.address) {
-    await box(m.details.line1).fill("Herzl 1");
-    await box(m.details.city).fill("Tel Aviv");
-    await box(m.details.postalCode).fill("6100000");
-  }
+  if (o.address) await box(m.details.line1).fill("Herzl 1");
   await page.getByLabel(m.consent.terms).check();
   await page.getByLabel(m.consent.age).check();
   if (o.receiptByEmail) await page.getByLabel(m.consent.receiptEmail).check();
 }
 
-function escapeRe(text: string): string {
+export function escapeRe(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** axe's serious and critical violations on the current page (compact, for readable failures). */
+export async function seriousAxeViolations(page: Page) {
+  const results = await new AxeBuilder({ page }).analyze();
+  return results.violations
+    .filter((v) => v.impact === "serious" || v.impact === "critical")
+    .map((v) => ({
+      id: v.id,
+      impact: v.impact,
+      help: v.help,
+      targets: v.nodes.slice(0, 5).map((n) => n.target.join(" ")),
+    }));
 }
 
 /** Submits the checkout and lands on the mock hosted page; returns the mock payment ref. */
@@ -275,7 +364,7 @@ export async function anotherBuyerBuys(
   });
   try {
     const other = await ctx.newPage();
-    await other.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+    await other.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
     const { uniqueBuyer } = await import("../../helpers/factories/core");
     await fillCheckout(other, { locale: "en", ...uniqueBuyer("other") });
     await continueToMockPay(other);

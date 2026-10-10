@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   absoluteUrl,
   apiPaths,
+  CHECKOUT_QUERY_KEYS,
   isLegalDoc,
   localePath,
   paths,
@@ -29,6 +30,39 @@ describe("routes", () => {
     expect(paths.admin.print.packingSlip("abc")).toBe(
       "/print/admin/packing-slip/abc",
     );
+  });
+
+  it("builds checkout URLs with the checkout keys only, in a stable order", () => {
+    expect(CHECKOUT_QUERY_KEYS).toEqual([
+      "to",
+      "city",
+      "zip",
+      "ship",
+      "cur",
+      "step",
+    ]);
+    expect(
+      paths.checkout("sunset", {
+        step: "delivery",
+        cur: "USD",
+        ship: "CARRIER_TABLE",
+        zip: "62701",
+        city: "Springfield",
+        to: "US",
+      }),
+    ).toBe(
+      "/checkout/sunset?to=US&city=Springfield&zip=62701&ship=CARRIER_TABLE&cur=USD&step=delivery",
+    );
+    expect(paths.checkout("sunset", { to: "IL", city: "", zip: "" })).toBe(
+      "/checkout/sunset?to=IL",
+    );
+    const unknown = { to: "IL", k: "secret" } as unknown as { to: string };
+    expect(paths.checkout("sunset", unknown)).toBe("/checkout/sunset?to=IL");
+    // A Hebrew city round-trips through the query string.
+    const url = paths.checkout("sunset", { to: "IL", city: "תל אביב-יפו" });
+    const back = new URL(url, "http://localhost").searchParams;
+    expect(back.get("city")).toBe("תל אביב-יפו");
+    expect([...back.keys()]).toEqual(["to", "city"]);
   });
 
   it("adds the locale prefix", () => {

@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { e2eExec } from "../helpers/factories/shipping";
-import { e2eDatabaseUrl, e2eQuery, messages } from "./support/commerce";
+import {
+  checkoutUrl,
+  e2eDatabaseUrl,
+  e2eQuery,
+  messages,
+} from "./support/commerce";
 
 /**
  * Spec §10.4 `shipping-rules` against the checkout page (read only: nothing is bought).
@@ -48,7 +53,15 @@ test("a declared value above the carrier cap routes to a quote", async ({
       blocked.getByRole("link", { name: co.blocked.requestQuote }),
     ).toBeVisible();
     // Under the cap the same destination is offered.
-    await page.goto("/he/checkout/the-path?to=US");
+    await page.goto(
+      checkoutUrl("the-path", {
+        locale: "he",
+        to: "US",
+        city: "Springfield",
+        zip: "62701",
+        ship: "CARRIER_TABLE",
+      }),
+    );
     await expect(page.getByTestId("checkout-form")).toBeVisible();
   } finally {
     await e2eExec(

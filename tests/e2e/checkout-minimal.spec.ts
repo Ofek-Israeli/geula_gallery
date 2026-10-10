@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
+import {
+  checkoutUrl,
+  chooseDelivery,
+  chooseDestination,
+} from "./support/commerce";
 
 /**
  * M2 part 2: the checkout page, the mock hosted page and the order page over the seeded demo
@@ -8,21 +13,33 @@ import { uniqueBuyer } from "../helpers/factories/core";
  */
 test.describe("checkout and order page", () => {
   for (const locale of ["he", "en"] as const) {
-    test(`checkout page (${locale}) shows the summary, disclosure and cancellation link`, async ({
+    test(`checkout page (${locale}) starts with the destination and shows the cancellation link`, async ({
       page,
     }) => {
       const res = await page.goto(`/${locale}/checkout/the-path`);
       expect(res?.status()).toBe(200);
-      await expect(page.getByTestId("checkout-summary")).toBeVisible();
-      await expect(page.getByTestId("precontract")).toContainText(
-        locale === "he" ? "ישראל" : "Israel",
-      );
+      await expect(page.getByTestId("checkout-destination")).toBeVisible();
+      await expect(page.locator("#co-country")).toHaveValue("IL");
+      await expect(page.getByTestId("checkout-summary")).toHaveCount(0);
       const cancel = page
         .getByRole("link", {
           name: locale === "he" ? "ביטול עסקה" : "Cancel a purchase",
         })
         .first();
       await expect(cancel).toHaveAttribute("href", `/${locale}/cancel`);
+    });
+
+    test(`checkout details step (${locale}) shows the summary and the disclosure`, async ({
+      page,
+    }) => {
+      const res = await page.goto(
+        checkoutUrl("the-path", { locale, ship: "CARRIER_TABLE" }),
+      );
+      expect(res?.status()).toBe(200);
+      await expect(page.getByTestId("checkout-summary")).toBeVisible();
+      await expect(page.getByTestId("precontract")).toContainText(
+        locale === "he" ? "ישראל" : "Israel",
+      );
     });
   }
 
@@ -33,11 +50,18 @@ test.describe("checkout and order page", () => {
     await expect(page.getByTestId("checkout-blocked")).toBeVisible();
   });
 
-  test("buy with studio pickup: mock payment → order page Paid", async ({
+  test("buy with studio pickup: no street address, mock payment → order page Paid", async ({
     page,
   }) => {
     const buyer = uniqueBuyer("checkout");
-    await page.goto("/en/checkout/view-in-blue?ship=LOCAL_PICKUP");
+    await page.goto("/en/checkout/view-in-blue");
+    await chooseDestination(page, { locale: "en", city: "Haifa" });
+    await chooseDelivery(page, { locale: "en", method: "LOCAL_PICKUP" });
+    await expect(page.getByTestId("checkout-form")).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: /^Street and number/ }),
+    ).toHaveCount(0);
+    await expect(page.locator('input[name="line1"]')).toHaveCount(0);
     await page.getByRole("textbox", { name: /^Full name/ }).fill(buyer.name);
     await page.getByRole("textbox", { name: /^Email/ }).fill(buyer.email);
     await page.getByRole("textbox", { name: /^Phone/ }).fill("+97230000000");
@@ -63,7 +87,7 @@ test.describe("checkout and order page", () => {
   });
 
   test("required consents are enforced on the server", async ({ page }) => {
-    await page.goto("/en/checkout/underground-city?ship=LOCAL_PICKUP");
+    await page.goto(checkoutUrl("underground-city", { ship: "LOCAL_PICKUP" }));
     await page.getByRole("textbox", { name: /^Full name/ }).fill("Test Buyer");
     await page
       .getByRole("textbox", { name: /^Email/ })

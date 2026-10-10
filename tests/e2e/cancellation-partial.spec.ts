@@ -4,6 +4,7 @@ import { uniqueBuyer } from "../helpers/factories/core";
 import { ADMIN_STORAGE_STATE } from "./e2e-env";
 import {
   buyerIp,
+  checkoutUrl,
   cloneWork,
   continueToMockPay,
   e2eQuery,
@@ -53,7 +54,7 @@ async function buyCart(page: Page, prefix: string): Promise<string> {
     await page.getByTestId("add-to-cart").click();
     await expect(page).toHaveURL(/cart=added/);
   }
-  await page.goto("/en/checkout?to=IL&ship=CARRIER_TABLE");
+  await page.goto(checkoutUrl(null, { ship: "CARRIER_TABLE" }));
   await expect(page.getByTestId("summary-line")).toHaveCount(3);
   const buyer = uniqueBuyer(`partial-${prefix}`);
   await fillCheckout(page, {

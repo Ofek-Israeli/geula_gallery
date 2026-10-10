@@ -4,6 +4,7 @@ import {
   anotherBuyerBuys,
   artworkStatus,
   buyerIp,
+  checkoutUrl,
   cloneWork,
   continueToMockPay,
   drainOutbox,
@@ -43,7 +44,7 @@ async function mockState(ref: string) {
 
 test("approve → the shop captures → paid", async ({ page }) => {
   const slug = "e2e-capture-ok";
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...uniqueBuyer("capture") });
   const ref = await continueToMockPay(page);
   await page.getByTestId("mock-approve").click();
@@ -63,7 +64,7 @@ test("an approval after the work was sold is never captured", async ({
 }) => {
   const slug = "e2e-capture-lost";
   const buyer = uniqueBuyer("capture-lost");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   const ref = await continueToMockPay(page);
   await releaseFromSecondTab(page, ref);
@@ -97,7 +98,7 @@ test("under review: no new payment, no release, the work stays reserved", async 
   baseURL,
 }) => {
   const slug = "e2e-capture-review";
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...uniqueBuyer("review") });
   await continueToMockPay(page);
   await page.getByTestId("mock-review").click();
@@ -119,7 +120,7 @@ test("under review: no new payment, no release, the work stays reserved", async 
     baseURL,
   });
   const other = await ctx.newPage();
-  await other.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await other.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await expect(other.getByTestId("checkout-blocked")).toContainText(
     enCheckout.blocked.RESERVED,
   );

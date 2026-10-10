@@ -1,7 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { buttonClasses } from "@/components/ui/Button";
 import { Price } from "@/components/ui/Price";
-import { Select } from "@/components/ui/Select";
 import { buildPreContract } from "@/content/disclosure";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import type { Locale } from "@/lib/locale";
@@ -13,145 +11,125 @@ import { getSetting } from "@/server/settings";
 
 /**
  * Pieces shared by the "Buy now" checkout (`/checkout/[slug]`) and the cart checkout (`/checkout`):
- * the delivery GET form (works without JS), the order summary (one line per work when there are
- * several), the payment options, and the pre-contract disclosure for one or more works.
+ * the delivery option radios and notices (step 2), the order summary (one line per work when there
+ * are several), the payment options, and the pre-contract disclosure for one or more works. The
+ * step layout itself is in `./steps.tsx`.
  */
 export type OkQuote = Extract<CheckoutQuote, { kind: "ok" }>;
 
-export async function DeliveryForm({
-  action,
-  country,
-  countries,
-  quote,
-  locale,
-  ilsPerUsd,
-}: {
-  action: string;
-  country: string;
-  countries: { code: string; name: string }[];
-  quote: CheckoutQuote;
-  locale: Locale;
-  ilsPerUsd: number;
-}) {
+/** One delivery option of a quote (the selected one is `quote.shipping`). */
+export type MethodQuote = OkQuote["methods"][number];
+
+/**
+ * The name of a delivery option ("Courier", "Pickup from the studio"…). The step 2 radios and the
+ * recap both use it, so a name that depends on the quote (its carrier, say) changes here only.
+ */
+export async function methodName(
+  m: MethodQuote,
+  locale: Locale,
+): Promise<string> {
   const t = await getTranslations({ locale, namespace: "checkout" });
-  return (
-    <form
-      method="get"
-      action={action}
-      className="flex flex-col gap-4"
-      data-testid="delivery-form"
-    >
-      <div className="flex flex-col gap-1">
-        <label htmlFor="co-country" className="font-medium">
-          {t("delivery.country")}
-        </label>
-        <Select
-          id="co-country"
-          name="to"
-          defaultValue={country}
-          options={countries.map((c) => ({ value: c.code, label: c.name }))}
-        />
-      </div>
-      {quote.kind === "ok" ? (
-        <DeliveryChoices quote={quote} locale={locale} ilsPerUsd={ilsPerUsd} />
-      ) : null}
-      <div>
-        <button type="submit" className={buttonClasses("secondary", "sm")}>
-          {t("delivery.update")}
-        </button>
-      </div>
-    </form>
-  );
+  // Abroad the courier is priced by DHL's published tariff: name the carrier.
+  if (m.rateSource === "DHL_ESTIMATE") return t("delivery.method.DHL_EXPRESS");
+  return t(`delivery.method.${m.method}`);
 }
 
-async function DeliveryChoices({
+/** "free", or the option's shipping plus insurance in the quote currency. */
+export async function methodPriceLabel(
+  m: MethodQuote,
+  quote: OkQuote,
+  locale: Locale,
+): Promise<string> {
+  const amount = m.shippingMinor + m.insuranceMinor;
+  if (amount > 0) return formatMoney(amount, quote.currency, locale);
+  const t = await getTranslations({ locale, namespace: "checkout" });
+  return t("delivery.free");
+}
+
+/** The delivery option radios (`name="ship"`, ids `ship-<METHOD>`), priced in the quote currency. */
+export async function MethodChoices({
   quote,
   locale,
   ilsPerUsd,
+  checked,
 }: {
   quote: OkQuote;
   locale: Locale;
   ilsPerUsd: number;
+  /** The method checked when the page loads. */
+  checked: string;
 }) {
   const t = await getTranslations({ locale, namespace: "checkout" });
+  const options = await Promise.all(
+    quote.methods.map(async (m) => ({
+      m,
+      name: await methodName(m, locale),
+      price: await methodPriceLabel(m, quote, locale),
+    })),
+  );
   return (
-    <>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="mbe-1 font-medium">
-          {t("delivery.methodLegend")}
-        </legend>
-        {quote.methods.map((m) => {
-          const id = `ship-${m.method}`;
-          const price =
-            m.shippingMinor + m.insuranceMinor === 0
-              ? t("delivery.free")
-              : formatMoney(
-                  m.shippingMinor + m.insuranceMinor,
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mbe-1 font-medium">
+        {t("delivery.methodLegend")}
+      </legend>
+      {options.map(({ m, name, price }) => {
+        const id = `ship-${m.method}`;
+        const extras = [
+          m.method === "CARRIER_TABLE" ? t("delivery.tracked") : null,
+          m.insured
+            ? t("delivery.insuredUpTo", {
+                amount: formatMoney(
+                  insuredValueForDisplay(m, quote.currency, ilsPerUsd),
                   quote.currency,
                   locale,
-                );
-          const extras = [
-            m.method === "CARRIER_TABLE" ? t("delivery.tracked") : null,
-            m.insured
-              ? t("delivery.insuredUpTo", {
-                  amount: formatMoney(
-                    insuredValueForDisplay(m, quote.currency, ilsPerUsd),
-                    quote.currency,
-                    locale,
-                  ),
-                })
-              : null,
-            m.estimate?.[locale] || null,
-          ].filter(Boolean);
-          return (
-            <div key={m.method} className="flex items-start gap-3">
-              <input
-                id={id}
-                type="radio"
-                name="ship"
-                value={m.method}
-                defaultChecked={m.method === quote.shipping.method}
-                className="mt-1 size-5 shrink-0 accent-ink"
-              />
-              <label htmlFor={id} className="flex flex-col">
-                <span>
-                  {t(`delivery.method.${m.method}`)} · <bdi>{price}</bdi>
+                ),
+              })
+            : null,
+          m.estimate?.[locale] || null,
+        ].filter(Boolean);
+        return (
+          <div key={m.method} className="flex items-start gap-3">
+            <input
+              id={id}
+              type="radio"
+              name="ship"
+              value={m.method}
+              defaultChecked={m.method === checked}
+              className="mt-1 size-5 shrink-0 accent-ink"
+            />
+            <label htmlFor={id} className="flex flex-col">
+              <span>
+                {name} · <bdi>{price}</bdi>
+              </span>
+              {extras.length ? (
+                <span className="text-sm text-ink-muted">
+                  {extras.join(" · ")}
                 </span>
-                {extras.length ? (
-                  <span className="text-sm text-ink-muted">
-                    {extras.join(" · ")}
-                  </span>
-                ) : null}
-              </label>
-            </div>
-          );
-        })}
-      </fieldset>
-      {quote.usdAvailable ? (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mbe-1 font-medium">
-            {t("delivery.currency")}
-          </legend>
-          {(["ILS", "USD"] as const).map((c) => (
-            <div key={c} className="flex items-center gap-3">
-              <input
-                id={`cur-${c}`}
-                type="radio"
-                name="cur"
-                value={c}
-                defaultChecked={quote.currency === c}
-                className="size-5 accent-ink"
-              />
-              <label htmlFor={`cur-${c}`}>
-                {t(
-                  c === "ILS" ? "delivery.currencyIls" : "delivery.currencyUsd",
-                )}
-              </label>
-            </div>
-          ))}
-        </fieldset>
-      ) : null}
-    </>
+              ) : null}
+            </label>
+          </div>
+        );
+      })}
+    </fieldset>
+  );
+}
+
+/** The quote's notices (duties, transit times…), if any. */
+export async function DeliveryNotices({
+  quote,
+  locale,
+}: {
+  quote: OkQuote;
+  locale: Locale;
+}) {
+  if (quote.notices.length === 0) return null;
+  const t = await getTranslations({ locale, namespace: "checkout" });
+  return (
+    <ul className="flex list-disc flex-col gap-1 ps-5 text-sm">
+      {quote.notices.map((n) => (
+        <li key={n}>{t(`notices.${n}`)}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -360,14 +338,4 @@ export async function preContractDoc(
     },
     locale,
   );
-}
-
-/** Query string that reproduces the current delivery choice (the "show the new total" link). */
-export function deliveryQuery(quote: OkQuote): Record<string, string> {
-  const query: Record<string, string> = {
-    to: quote.country,
-    ship: quote.shipping.method,
-  };
-  if (quote.currency === "USD") query.cur = "USD";
-  return query;
 }

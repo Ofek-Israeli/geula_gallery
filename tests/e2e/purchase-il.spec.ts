@@ -3,6 +3,8 @@ import { uniqueBuyer } from "../helpers/factories/core";
 import { ADMIN_STORAGE_STATE } from "./e2e-env";
 import {
   buyerIp,
+  chooseDelivery,
+  chooseDestination,
   continueToMockPay,
   e2eQuery,
   fillCheckout,
@@ -32,10 +34,17 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
 }) => {
   const buyer = uniqueBuyer("purchase-il");
 
-  // Checkout (Hebrew, courier to an Israeli address, receipt by email).
-  const res = await page.goto(`/he/checkout/${SLUG}?to=IL&ship=CARRIER_TABLE`);
+  // Checkout (Hebrew, courier to an Israeli address, receipt by email): destination → courier →
+  // details with the street address only.
+  const res = await page.goto(`/he/checkout/${SLUG}`);
   expect(res?.status()).toBe(200);
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await chooseDestination(page, {
+    locale: "he",
+    city: "תל אביב",
+    zip: "6100000",
+  });
+  await chooseDelivery(page, { locale: "he", method: "CARRIER_TABLE" });
   await fillCheckout(page, {
     locale: "he",
     name: buyer.name,
@@ -67,10 +76,21 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
   );
 
   // Emails (log driver). Cron drains whatever `after()` has not sent yet.
-  const [order] = await e2eQuery<{ id: string }>(
-    "SELECT id FROM orders WHERE number = $1",
+  const [order] = await e2eQuery<{
+    id: string;
+    ship_city: string;
+    ship_postal_code: string;
+    ship_line1: string;
+  }>(
+    "SELECT id, ship_city, ship_postal_code, ship_line1 FROM orders WHERE number = $1",
     [number],
   );
+  // City and postal code came from the destination step, the street from the details form.
+  expect(order).toMatchObject({
+    ship_city: "תל אביב",
+    ship_postal_code: "6100000",
+    ship_line1: "Herzl 1",
+  });
   const orderId = order?.id ?? "";
   const confirmation = await waitForMail(request, {
     template: "order-confirmation",

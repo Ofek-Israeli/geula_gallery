@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import type { Locale } from "@/lib/locale";
-import { localePath, paths } from "@/lib/routes";
+import {
+  CHECKOUT_QUERY_KEYS,
+  type CheckoutQuery,
+  localePath,
+  paths,
+} from "@/lib/routes";
 import { slugSchema } from "@/lib/validation/common";
 import {
   addOrderWorksToCart,
@@ -42,11 +47,15 @@ export async function addToCartAction(formData: FormData): Promise<void> {
   redirect(localePath(localeOf(formData), paths.works()));
 }
 
+/**
+ * Removing from the cart checkout returns to the same checkout URL: only the checkout keys of
+ * `query` are kept. 2000 characters fit a 120-character Hebrew city once percent-encoded.
+ */
 const runRemove = publicAction(
   z.object({
     artworkId: z.uuid(),
     returnTo: z.enum(["cart", "checkout"]).default("cart"),
-    query: z.string().max(200).optional(),
+    query: z.string().max(2000).optional(),
   }),
   async (input, meta) => {
     await writeCartIds(
@@ -54,8 +63,8 @@ const runRemove = publicAction(
     );
     if (input.returnTo === "checkout") {
       const q = new URLSearchParams(input.query ?? "");
-      const query = Object.fromEntries(
-        ["to", "ship", "cur"].flatMap((k) => {
+      const query: CheckoutQuery = Object.fromEntries(
+        CHECKOUT_QUERY_KEYS.flatMap((k) => {
           const v = q.get(k);
           return v ? [[k, v]] : [];
         }),

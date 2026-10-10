@@ -57,6 +57,26 @@ function seg(value: string): string {
   return encodeURIComponent(value);
 }
 
+/**
+ * The checkout query (`src/lib/checkout-steps.ts`): the destination `to` (ISO code), `city` and
+ * `zip`, the delivery method `ship`, `cur=USD`, and the `step` the buyer asked for. Checkout URLs
+ * list them in this order; other keys are dropped.
+ */
+export const CHECKOUT_QUERY_KEYS = [
+  "to",
+  "city",
+  "zip",
+  "ship",
+  "cur",
+  "step",
+] as const;
+export type CheckoutQueryKey = (typeof CHECKOUT_QUERY_KEYS)[number];
+export type CheckoutQuery = Partial<Record<CheckoutQueryKey, string>>;
+
+function checkoutQueryValues(query: CheckoutQuery): Record<string, QueryValue> {
+  return Object.fromEntries(CHECKOUT_QUERY_KEYS.map((k) => [k, query[k]]));
+}
+
 /** Locale-less paths for next-intl navigation. */
 export const paths = {
   home: () => "/",
@@ -71,15 +91,13 @@ export const paths = {
   /** `prefill` carries the order number from an order page or email (never PII). */
   cancel: (orderNumber?: string) =>
     withQuery("/cancel", { order: orderNumber }),
-  checkout: (
-    slug: string,
-    query: { to?: string; ship?: string; cur?: string } = {},
-  ) => withQuery(`/checkout/${seg(slug)}`, query),
+  checkout: (slug: string, query: CheckoutQuery = {}) =>
+    withQuery(`/checkout/${seg(slug)}`, checkoutQueryValues(query)),
   /** The cart (works collected for one checkout); `cart` carries a notice code. */
   cart: (query: { cart?: string } = {}) => withQuery("/cart", query),
   /** The cart checkout: every ready work of the cart in one order (no slug, so no shadowing). */
-  cartCheckout: (query: { to?: string; ship?: string; cur?: string } = {}) =>
-    withQuery("/checkout", query),
+  cartCheckout: (query: CheckoutQuery = {}) =>
+    withQuery("/checkout", checkoutQueryValues(query)),
   checkoutReturned: (query: Record<string, QueryValue> = {}) =>
     withQuery("/checkout/returned", query),
   mockPay: (ref: string) => `/mock-pay/${seg(ref)}`,

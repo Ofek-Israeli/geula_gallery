@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
+import { CHECKOUT_METHODS } from "@/lib/checkout-steps";
 import type { Locale } from "@/lib/locale";
 import { nonLatinFields } from "@/lib/script";
 import {
@@ -22,13 +23,14 @@ import { PROVIDER_IDS } from "@/server/payments/types";
 /**
  * The checkout form's fields, shared by "Buy now" (`/checkout/[slug]`, adds `slug`) and the cart
  * checkout (`/checkout`, adds `item` fields). The client never sends prices that matter: the totals
- * and item prices are only compared with the server re-quote.
+ * and item prices are only compared with the server re-quote. City and postal code come from the
+ * destination step (hidden fields; a pickup posts neither).
  */
 const required = (v: string | undefined) => v !== undefined && v !== "";
 
 export const checkoutFields = {
   country: countrySchema,
-  method: z.enum(["CARRIER_TABLE", "LOCAL_PICKUP", "ARTIST_DELIVERY"]),
+  method: z.enum(CHECKOUT_METHODS),
   currency: currencySchema,
   providerId: z.enum(PROVIDER_IDS),
   expectedTotalMinor: z.coerce.number().int().nonnegative(),

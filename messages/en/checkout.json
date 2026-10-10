@@ -2,6 +2,27 @@
   "title": "Checkout",
   "back": "Back to the work",
   "demoNotice": "Demo store: payments are simulated and no money is taken.",
+  "steps": {
+    "label": "Checkout steps",
+    "destination": "Destination",
+    "delivery": "Delivery",
+    "details": "Details and payment",
+    "continue": "Continue",
+    "change": "Change",
+    "changeDestination": "Change destination",
+    "changeDelivery": "Change delivery method"
+  },
+  "destination": {
+    "title": "Where to?",
+    "intro": "Country, city and postal code are enough to show the delivery options and prices. A street address is needed only for delivery, not for pickup from the studio.",
+    "country": "Country",
+    "postalHint": "Optional in Israel. Required abroad, unless the destination has no postal codes.",
+    "errors": {
+      "cityRequired": "Enter a city.",
+      "postalRequired": "Enter a postal code. It is needed for delivery to this destination.",
+      "tooLong": "Too long (at most {max} characters)."
+    }
+  },
   "summary": {
     "title": "Your order",
     "item": "Original painting",
@@ -15,15 +36,18 @@
     "vatExport": "Zero-rated export: no Israeli VAT."
   },
   "delivery": {
-    "title": "Delivery",
+    "stepTitle": "{count, plural, one {How would you like to receive it?} other {How would you like to receive them?}}",
+    "worksPrice": "{count, plural, one {Price of the work} other {Price of the # works}}",
+    "unavailable": "The delivery option you chose is not available for this destination. Please choose another one.",
+    "chooseMethod": "Please choose a delivery method.",
     "country": "Ship to",
-    "update": "Update delivery",
     "methodLegend": "Delivery method",
     "method": {
       "CARRIER_TABLE": "Courier",
       "LOCAL_PICKUP": "Pickup from the studio",
       "ARTIST_DELIVERY": "Hand delivery by the artist",
-      "QUOTED": "Quoted shipping"
+      "QUOTED": "Quoted shipping",
+      "DHL_EXPRESS": "DHL Express"
     },
     "free": "free",
     "tracked": "tracked",
@@ -75,6 +99,7 @@
     "city": "City",
     "region": "State / region",
     "postalCode": "Postal code",
+    "cityAndPostal": "City and postal code",
     "companyName": "Company name",
     "vatId": "VAT / company ID for the receipt",
     "pickupNote": "The studio address and pickup instructions are sent after payment."
@@ -121,6 +146,7 @@
     "openOrder": "Open my order",
     "generic": "Something went wrong. Please try again.",
     "fix": "Please fix the highlighted fields.",
+    "destination": "There is a problem with the destination's city or postal code.",
     "just_reserved_items": "Sorry – another buyer has just reserved: {titles}. Remove {count, plural, one {it} other {them}} from your cart to continue.",
     "TOO_MANY_ITEMS": "Too many works for one order. Please remove some from your cart.",
     "MIXED_DEMO": "Demo works and other works cannot be bought in one order."

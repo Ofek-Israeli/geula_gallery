@@ -27,10 +27,15 @@ export interface CheckoutFormProps {
     country: string;
     method: string;
     currency: string;
+    /** From the destination step; posted only for a delivery (a pickup posts neither). */
+    city?: string;
+    postalCode?: string;
     expectedTotalMinor: number;
     clientRequestId: string;
     formStart: string;
   };
+  /** The destination chosen in step 1, shown under the street address. */
+  destination: { city: string; postalCode: string; countryName: string };
   needsAddress: boolean;
   international: boolean;
   holdMinutes: number;
@@ -41,7 +46,10 @@ export interface CheckoutFormProps {
   providers: { id: string; label: string; description?: string }[];
   /** The rendered pre-contract disclosure (server component output). */
   disclosure: ReactNode;
+  /** Locale-prefixed: the same choices, as far as they go ("show the updated total"). */
   reloadHref: string;
+  /** Locale-prefixed: step 1, prefilled. */
+  changeDestinationHref: string;
 }
 
 const FIELD_IDS: Record<string, string> = {
@@ -50,9 +58,7 @@ const FIELD_IDS: Record<string, string> = {
   phone: "co-phone",
   line1: "co-line1",
   line2: "co-line2",
-  city: "co-city",
   region: "co-region",
-  postalCode: "co-postal",
   companyName: "co-company",
   vatId: "co-vat",
   terms: "co-terms",
@@ -61,11 +67,15 @@ const FIELD_IDS: Record<string, string> = {
   providerId: "co-provider",
 };
 
+/** Fields set in step 1: an error on them sends the buyer back there. */
+const DESTINATION_FIELDS = new Set(["country", "city", "postalCode"]);
+
 /**
- * The checkout details form (spec §5.1 step 2): buyer details, the address (Latin abroad), the
- * pre-contract disclosure, the unticked consent checkboxes, the provider radios and the hold
- * notice. Works without JavaScript (a plain POST to the Server Action); with JavaScript the
- * values survive a failed submit.
+ * The checkout details form (step 3, spec §5.1 step 2): buyer details, the street address for a
+ * delivery (Latin abroad; city and postal code come from step 1), the pre-contract disclosure,
+ * the unticked consent checkboxes, the provider radios and the hold notice. Country, method,
+ * currency and destination are hidden fields from the page's URL, so what is posted is what the
+ * page priced. With JavaScript the values survive a failed submit.
  */
 export function CheckoutForm(props: CheckoutFormProps) {
   const t = useTranslations("checkout");
@@ -83,7 +93,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
     null,
   );
   const v = values.current;
-  /** Optional fields say so (M2 open item: the IL postal code had neither marker). */
+  /** Optional fields say so. */
   const optional = (label: string): ReactNode => (
     <>
       {label}
@@ -103,11 +113,26 @@ export function CheckoutForm(props: CheckoutFormProps) {
   if (state && !state.ok) {
     const code = state.error.code;
     if (code === "INVALID_INPUT") {
+      const destinationError = Object.keys(fieldErrors).some(
+        (name) => DESTINATION_FIELDS.has(name) && fieldErrors[name]?.length,
+      );
       for (const name of Object.keys(fieldErrors)) {
+        if (DESTINATION_FIELDS.has(name)) continue;
         const message = errorFor(name);
         if (message) summary.push({ fieldId: FIELD_IDS[name], message });
       }
-      if (summary.length === 0) summary.push({ message: t("errors.fix") });
+      if (destinationError) {
+        banner = (
+          <>
+            {t("errors.destination")}{" "}
+            <a href={props.changeDestinationHref} className="underline">
+              {t("steps.changeDestination")}
+            </a>
+          </>
+        );
+      } else if (summary.length === 0) {
+        summary.push({ message: t("errors.fix") });
+      }
     } else if (code === "RATE_LIMITED") {
       banner = tf("rateLimited");
     } else if (code === "TOO_FAST") {
@@ -163,6 +188,12 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <input type="hidden" name="country" value={h.country} />
       <input type="hidden" name="method" value={h.method} />
       <input type="hidden" name="currency" value={h.currency} />
+      {h.city !== undefined ? (
+        <input type="hidden" name="city" value={h.city} />
+      ) : null}
+      {h.postalCode !== undefined ? (
+        <input type="hidden" name="postalCode" value={h.postalCode} />
+      ) : null}
       <input
         type="hidden"
         name="expectedTotalMinor"
@@ -245,9 +276,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
             [
               ["line1", "address-line1", true],
               ["line2", "address-line2", false],
-              ["city", "address-level2", true],
               ["region", "address-level1", false],
-              ["postalCode", "postal-code", props.international],
             ] as const
           ).map(([name, auto, req]) => (
             <Field
@@ -270,6 +299,21 @@ export function CheckoutForm(props: CheckoutFormProps) {
               )}
             </Field>
           ))}
+          <p
+            className="text-sm text-ink-muted"
+            data-testid="details-destination"
+          >
+            {t("details.cityAndPostal")}:{" "}
+            <bdi dir="auto">{props.destination.city}</bdi>
+            {props.destination.postalCode ? (
+              <>
+                {" "}
+                <bdi dir="ltr">{props.destination.postalCode}</bdi>
+              </>
+            ) : null}
+            {", "}
+            {props.destination.countryName}
+          </p>
         </fieldset>
       ) : (
         <p className="text-sm text-ink-muted">{t("details.pickupNote")}</p>

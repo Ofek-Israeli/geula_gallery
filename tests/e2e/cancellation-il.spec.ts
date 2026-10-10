@@ -4,6 +4,7 @@ import { uniqueBuyer } from "../helpers/factories/core";
 import { ADMIN_STORAGE_STATE } from "./e2e-env";
 import {
   buyerIp,
+  checkoutUrl,
   continueToMockPay,
   e2eQuery,
   fillCheckout,
@@ -73,7 +74,7 @@ test("IL cancellation: form → ack → duplicate → admin accept → refund �
   const idNumber = validIsraeliId();
 
   // A paid order (studio pickup: nothing ships, so accepting refunds at once).
-  await page.goto(`/he/checkout/${SLUG}?to=IL&ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(SLUG, { locale: "he", ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, {
     locale: "he",
     name: buyer.name,

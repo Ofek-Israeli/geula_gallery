@@ -4,6 +4,7 @@ import {
   anotherBuyerBuys,
   artworkStatus,
   buyerIp,
+  checkoutUrl,
   cloneWork,
   continueToMockPay,
   drainOutbox,
@@ -34,7 +35,7 @@ test("hold lost to another buyer → the late payment is refunded with an email 
 }) => {
   const slug = "e2e-late-lost";
   const buyer = uniqueBuyer("late-lost");
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...buyer });
   const ref = await continueToMockPay(page);
 
@@ -88,7 +89,7 @@ test("hold lapsed but the work is still free → the late payment completes the 
   page,
 }) => {
   const slug = "e2e-late-free";
-  await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+  await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
   await fillCheckout(page, { locale: "en", ...uniqueBuyer("late-free") });
   const ref = await continueToMockPay(page);
   await releaseFromSecondTab(page, ref);

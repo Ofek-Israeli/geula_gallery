@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { uniqueBuyer } from "../helpers/factories/core";
-import { buyerIp, fillCheckout, messages } from "./support/commerce";
+import {
+  buyerIp,
+  checkoutUrl,
+  fillCheckout,
+  messages,
+} from "./support/commerce";
 
 /**
  * Spec §10.4 `race` (M2 acceptance): two buyers in two browser contexts press "Continue to
@@ -24,7 +29,7 @@ test("two buyers, one work: one pays, the other sees 'just reserved'", async ({
     const pages = await Promise.all(contexts.map((c) => c.newPage()));
     await Promise.all(
       pages.map(async (page, i) => {
-        await page.goto(`/en/checkout/${slug}?ship=LOCAL_PICKUP`);
+        await page.goto(checkoutUrl(slug, { ship: "LOCAL_PICKUP" }));
         await fillCheckout(page, {
           locale: "en",
           ...uniqueBuyer(`race-${i}`),
