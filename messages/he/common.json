@@ -91,5 +91,8 @@
   "breadcrumbs": "נתיב ניווט",
   "accordion": {
     "more": "פרטים נוספים"
+  },
+  "sale": {
+    "until": "עד {date}"
   }
 }

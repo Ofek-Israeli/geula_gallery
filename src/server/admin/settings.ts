@@ -5,6 +5,9 @@ import { env as defaultEnv, type Env } from "@/server/env";
 import {
   type BusinessProfile,
   type CheckoutSettings,
+  getSetting,
+  getSettingOrNull,
+  type SaleSettings,
   saveSetting,
 } from "@/server/settings";
 
@@ -64,9 +67,20 @@ export function saveBusinessProfile(
   return saveSetting(ctx, "business_profile", value);
 }
 
-export function saveCheckoutSettings(
+/** The checkout form: everything but the sale, which keeps its stored value (its own form). */
+export async function saveCheckoutSettings(
   ctx: AdminContext,
-  value: CheckoutSettings,
+  value: Omit<CheckoutSettings, "sale">,
 ): Promise<ServiceResult<CheckoutSettings>> {
-  return saveSetting(ctx, "checkout", value);
+  const current = await getSettingOrNull("checkout");
+  return saveSetting(ctx, "checkout", { ...value, sale: current?.sale ?? {} });
+}
+
+/** The sale form (`src/lib/sale.ts`): only `checkout.sale` changes. */
+export async function saveSaleSettings(
+  ctx: AdminContext,
+  sale: SaleSettings,
+): Promise<ServiceResult<CheckoutSettings>> {
+  const current = await getSetting("checkout");
+  return saveSetting(ctx, "checkout", { ...current, sale });
 }

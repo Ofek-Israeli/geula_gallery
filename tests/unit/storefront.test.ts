@@ -45,7 +45,14 @@ function artwork(over: Partial<ArtworkDetailDTO> = {}): ArtworkDetailDTO {
     sizeBucket: "S",
     saleStatus: "AVAILABLE",
     state: { kind: "available", buyable: true },
-    price: { ilsMinor: 320_000, usdMinor: 87_000, onRequest: false },
+    price: {
+      ilsMinor: 320_000,
+      usdMinor: 87_000,
+      onRequest: false,
+      wasIlsMinor: null,
+      wasUsdMinor: null,
+      saleEndsOn: null,
+    },
     image: null,
     isDemo: true,
     inventoryNumber: "A-2026-001",
@@ -199,7 +206,16 @@ describe("buy box decisions", () => {
     ).toBeNull();
     expect(
       shownPriceMinor(
-        artwork({ price: { ilsMinor: null, usdMinor: null, onRequest: true } }),
+        artwork({
+          price: {
+            ilsMinor: null,
+            usdMinor: null,
+            onRequest: true,
+            wasIlsMinor: null,
+            wasUsdMinor: null,
+            saleEndsOn: null,
+          },
+        }),
       ),
     ).toBeNull();
   });
@@ -263,6 +279,27 @@ describe("JSON-LD", () => {
     });
   });
 
+  it("gives a sale price with its last day (priceValidUntil)", () => {
+    const ld = artworkJsonLd({
+      ...input,
+      artwork: artwork({
+        price: {
+          ilsMinor: 160_000,
+          usdMinor: 43_500,
+          onRequest: false,
+          wasIlsMinor: 320_000,
+          wasUsdMinor: 87_000,
+          saleEndsOn: "2026-12-31",
+        },
+      }),
+    });
+    expect(ld.offers).toMatchObject({
+      price: "1600.00",
+      priceCurrency: "ILS",
+      priceValidUntil: "2026-12-31",
+    });
+  });
+
   it("maps every state and omits the Offer when the spec says so", () => {
     const states: [CommerceState, string | null][] = [
       [{ kind: "available", buyable: true }, "https://schema.org/InStock"],
@@ -298,7 +335,14 @@ describe("JSON-LD", () => {
       artworkJsonLd({
         ...input,
         artwork: artwork({
-          price: { ilsMinor: null, usdMinor: null, onRequest: true },
+          price: {
+            ilsMinor: null,
+            usdMinor: null,
+            onRequest: true,
+            wasIlsMinor: null,
+            wasUsdMinor: null,
+            saleEndsOn: null,
+          },
         }),
       }).offers,
     ).toBeUndefined();

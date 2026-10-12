@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { activeSale } from "@/lib/sale";
 import {
   candidateMethods,
+  declaredValueIlsMinor,
   insuredValueForDisplay,
   itemPriceMinor,
   orderAmounts,
@@ -20,6 +22,34 @@ describe("pricing", () => {
     expect(itemPriceMinor(art, "USD")).toBe(160_000);
     expect(itemPriceMinor({ ...art, priceUsdMinor: null }, "USD")).toBeNull();
     expect(itemPriceMinor({ ...art, priceOnRequest: true }, "ILS")).toBeNull();
+  });
+
+  it("charges the sale price while a sale runs, and declares what is paid", () => {
+    const sale = activeSale(
+      {
+        enabled: true,
+        percentOff: 50,
+        startsOn: null,
+        endsOn: null,
+        label: { he: "", en: "" },
+      },
+      new Date("2026-11-01T10:00:00Z"),
+    );
+    expect(itemPriceMinor(art, "ILS", sale)).toBe(290_000);
+    expect(itemPriceMinor(art, "USD", sale)).toBe(80_000);
+    expect(
+      itemPriceMinor({ ...art, priceOnRequest: true }, "ILS", sale),
+    ).toBeNull();
+    const withValue = { ...art, declaredValueOverrideMinor: null };
+    expect(declaredValueIlsMinor(withValue, sale)).toBe(290_000);
+    expect(declaredValueIlsMinor(withValue)).toBe(580_000);
+    // The painter's own declared value wins.
+    expect(
+      declaredValueIlsMinor(
+        { ...art, declaredValueOverrideMinor: 400_000 },
+        sale,
+      ),
+    ).toBe(400_000);
   });
 
   it("offers the courier and Israel Post everywhere, pickup only in Israel", () => {

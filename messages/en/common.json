@@ -91,5 +91,8 @@
   "breadcrumbs": "Breadcrumbs",
   "accordion": {
     "more": "More details"
+  },
+  "sale": {
+    "until": "until {date}"
   }
 }

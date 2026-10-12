@@ -79,6 +79,7 @@
     "paintedEdges": "Painted edges",
     "coaIncluded": "Certificate of authenticity included",
     "priceIls": "Price in ILS (incl. VAT if applicable)",
+    "salePriceNow": "During the sale ({percent}% off) the site shows {price}.",
     "priceUsd": "Price in USD (buyers abroad)",
     "priceUsdHint": "Needed to sell abroad. Empty = sold in Israel only.",
     "priceOnRequest": "Price on request (no buy button)",

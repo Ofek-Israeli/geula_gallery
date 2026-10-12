@@ -5,6 +5,7 @@ import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import type { Locale } from "@/lib/locale";
 import { money } from "@/lib/money";
 import { absoluteUrl, apiPaths, localePath, paths } from "@/lib/routes";
+import { activeSale } from "@/lib/sale";
 import { audit } from "@/server/audit";
 import { type Db, db as defaultDb, type Tx } from "@/server/db/client";
 import {
@@ -528,10 +529,11 @@ async function createHeldOrder(
       artworkIds: locked.filter((a) => a.isDemo).map((a) => a.id),
     });
   }
-  // Each work's price, under the lock, must be the quoted one.
+  // Each work's price, under the lock, must be the quoted one (the sale ending meanwhile too).
+  const sale = activeSale(i.checkout.sale, now);
   for (const item of quote.items) {
     const art = byId.get(item.artworkId) as LockedArtwork;
-    if (itemPriceMinor(art, quote.currency) !== item.priceMinor) {
+    if (itemPriceMinor(art, quote.currency, sale) !== item.priceMinor) {
       throw new StartAbort({ kind: "price_changed", quote });
     }
   }
@@ -617,6 +619,7 @@ async function createHeldOrder(
           byId.get(item.artworkId) as LockedArtwork,
           item.priceMinor,
           quote.currency,
+          sale,
         ),
       ),
     );

@@ -73,6 +73,27 @@ describe("settings schemas", () => {
     expect("artistDelivery" in parsed).toBe(false);
   });
 
+  it("reads a checkout row saved before the sale existed: no sale", () => {
+    const { sale: _ignored, ...old } = parseSettings(
+      "checkout",
+      settingsSeedValues(seedEnv).checkout,
+    );
+    const parsed = parseSettings("checkout", old);
+    expect(parsed.sale).toEqual({
+      enabled: false,
+      percentOff: 50,
+      startsOn: null,
+      endsOn: null,
+      label: {
+        he: "מבצע סוף שנה – 50% הנחה",
+        en: "End-of-Year Sale – 50% Off",
+      },
+    });
+    expect(() =>
+      parseSettings("checkout", { ...old, sale: { percentOff: 95 } }),
+    ).toThrow();
+  });
+
   it("reads a shipping row saved before the DHL estimate existed with its defaults", () => {
     const {
       dhlEstimate: _omitted,

@@ -1,18 +1,21 @@
 import "server-only";
 import type { Currency } from "@/lib/money";
+import { type ActiveSale, applySale } from "@/lib/sale";
 import type { orderItems } from "@/server/db/schema";
 import type { LockedArtwork } from "./reservations";
 
 /**
  * The immutable `order_items` row of an artwork (spec §3.3: items never change after insert; the
  * snapshot feeds the disclosure document, receipts and the customs paperwork). Shared by the WEB
- * checkout and link orders so both record the same facts.
+ * checkout and link orders so both record the same facts. During a sale the declared value is the
+ * sale price (the price actually paid) and the snapshot keeps the list price and the percentage.
  */
 export function orderItemValues(
   orderId: string,
   art: LockedArtwork,
   priceMinor: number,
   currency: Currency,
+  sale: ActiveSale | null = null,
 ): typeof orderItems.$inferInsert {
   return {
     orderId,
@@ -21,7 +24,8 @@ export function orderItemValues(
     titleEn: art.titleEn,
     priceMinor,
     currency,
-    declaredValueMinor: art.declaredValueOverrideMinor ?? art.priceIlsMinor,
+    declaredValueMinor:
+      art.declaredValueOverrideMinor ?? applySale(art.priceIlsMinor, sale),
     snapshot: {
       slug: art.slug,
       inventoryNumber: art.inventoryNumber,
@@ -37,6 +41,15 @@ export function orderItemValues(
       signed: art.signed,
       coaIncluded: art.coaIncluded,
       isDemo: art.isDemo,
+      ...(sale
+        ? {
+            sale: {
+              percentOff: sale.percentOff,
+              listPriceMinor:
+                currency === "ILS" ? art.priceIlsMinor : art.priceUsdMinor,
+            },
+          }
+        : {}),
     },
   };
 }

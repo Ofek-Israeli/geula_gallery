@@ -2600,3 +2600,30 @@ and production-data pieces below.
   `SALES_OPEN=true` and `EMAIL_TO_VISITORS=true`, the real ID number, Vercel Pro, and the crons
   back to `reconcile` and `outbox` every 5 minutes and `tracking` hourly (dashboard thresholds
   20 min and 3 h).
+
+### End-of-year sale (site-wide percentage off)
+
+- **The setting:** `checkout.sale` (`saleSettingsSchema`, prefaulted and off by default, so stored
+  rows parse): `enabled`, `percentOff` (1–90), `startsOn`/`endsOn` (Israel calendar, inclusive),
+  and the he/en strip text. It is edited in Admin → Settings → Checkout → Sale (`saveSaleAction` →
+  `saveSaleSettings`). `saveCheckoutSettings` keeps the stored sale when the checkout form saves.
+- **One helper,** `src/lib/sale.ts`: `activeSale(sale, now)` compares `jerusalemDateKey(now)` with
+  the dates; `salePriceMinor` rounds to whole shekels or dollars. The list prices never change.
+- **Display:** `cardDto` applies it. `PriceDTO.ilsMinor`/`usdMinor` are the sale prices, with
+  `wasIlsMinor`/`wasUsdMinor` (crossed out by `SalePrice`, with "−50%") and `saleEndsOn` (the
+  JSON-LD Offer's `priceValidUntil`). It is used on cards, the buy box, the mobile bar and the
+  cart. The works list's price bands filter the sale price (`listBound`). `SaleBanner` sits above
+  the header on public pages.
+- **Charging:** `itemPriceMinor(a, currency, sale)` in the quote, the locked re-price in `start.ts`,
+  and payment links (the list price that a quote, offer or manual order is compared with);
+  `markSoldOffline` defaults to the sale price. The declared value for customs and insurance is the
+  price paid (`declaredValueIlsMinor`, `orderItemValues`), and the order item's snapshot records
+  `sale: { percentOff, listPriceMinor }`. Offers' auto-decline threshold is absolute (no work takes
+  offers).
+- **The 2026 sale:** 50 %, 2026-10-12 to 2026-12-31, set on the server.
+- **Frozen contracts touched (change requests):** the settings schema (`checkout.sale`) and
+  `PriceDTO` (`src/lib/catalog.ts`); `components/ui/SalePrice.tsx` is a new file.
+- **Tests:** `tests/unit/sale.test.ts`, the pricing, settings and JSON-LD unit tests, and
+  `tests/integration/sale.test.ts`. There is no E2E spec: the sale is a global setting, and the
+  E2E workers share one database, so turning it on would change other specs' prices.
+

@@ -2,8 +2,11 @@
 
 import { z } from "zod";
 import { checkboxSchema } from "@/lib/validation/common";
-import { saveCheckoutSettings } from "@/server/admin/settings";
-import { adminAction } from "@/server/next/actions";
+import {
+  saveCheckoutSettings,
+  saveSaleSettings,
+} from "@/server/admin/settings";
+import { ActionFailure, adminAction } from "@/server/next/actions";
 import { domainErrors } from "../../_shared/action-errors";
 
 /** `/admin/settings/checkout` (spec §4.7 `checkout`): validated again by the settings schema. */
@@ -43,4 +46,36 @@ export const saveCheckoutAction = adminAction(
       }),
     ),
   { name: "settings.checkout", fresh: true },
+);
+
+const optionalDate = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+  z.iso.date().nullable(),
+);
+
+/** The sale box (`src/lib/sale.ts`): only `checkout.sale` changes. */
+export const saveSaleAction = adminAction(
+  z.object({
+    saleEnabled: checkboxSchema,
+    salePercentOff: int(1, 90),
+    saleStartsOn: optionalDate,
+    saleEndsOn: optionalDate,
+    saleLabelHe: z.string().trim().min(1).max(120),
+    saleLabelEn: z.string().trim().min(1).max(120),
+  }),
+  async (i, ctx) => {
+    if (i.saleStartsOn && i.saleEndsOn && i.saleEndsOn < i.saleStartsOn) {
+      throw new ActionFailure("DATES");
+    }
+    return domainErrors(() =>
+      saveSaleSettings(ctx, {
+        enabled: i.saleEnabled,
+        percentOff: i.salePercentOff,
+        startsOn: i.saleStartsOn,
+        endsOn: i.saleEndsOn,
+        label: { he: i.saleLabelHe, en: i.saleLabelEn },
+      }),
+    );
+  },
+  { name: "settings.sale", fresh: true },
 );

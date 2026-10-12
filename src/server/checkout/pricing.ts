@@ -1,5 +1,6 @@
 import "server-only";
 import type { Currency } from "@/lib/money";
+import { type ActiveSale, activeSale, applySale } from "@/lib/sale";
 import { vatForOrder } from "@/lib/vat";
 import type { CheckoutSettings, ShippingSettings } from "@/server/settings";
 import {
@@ -73,18 +74,28 @@ export function shipSpecOf(a: PricedArtwork): ArtworkShipSpec {
   };
 }
 
-/** The list price in `currency`, or null when the work has no price in it. */
+/**
+ * The price charged in `currency` (the list price, less the running sale when given), or null when
+ * the work has no price in it.
+ */
 export function itemPriceMinor(
   a: PricedArtwork,
   currency: Currency,
+  sale: ActiveSale | null = null,
 ): number | null {
   if (a.priceOnRequest) return null;
-  return currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor;
+  return applySale(
+    currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor,
+    sale,
+  );
 }
 
-/** Declared value for customs and insurance, in ILS minor units. */
-export function declaredValueIlsMinor(a: PricedArtwork): number {
-  return a.declaredValueOverrideMinor ?? a.priceIlsMinor ?? 0;
+/** Declared value for customs and insurance, in ILS minor units: the price actually paid. */
+export function declaredValueIlsMinor(
+  a: PricedArtwork,
+  sale: ActiveSale | null = null,
+): number {
+  return a.declaredValueOverrideMinor ?? applySale(a.priceIlsMinor, sale) ?? 0;
 }
 
 export function fxReference(s: CheckoutSettings): FxReference {
@@ -138,7 +149,11 @@ export function shippingOptions(i: {
   const specs = rolled
     ? listed.map((s) => (rollableAtCheckout(s) ? rolledSpec(s) : s))
     : listed;
-  const declared = i.items.reduce((s, a) => s + declaredValueIlsMinor(a), 0);
+  const sale = activeSale(i.checkout.sale, i.date);
+  const declared = i.items.reduce(
+    (s, a) => s + declaredValueIlsMinor(a, sale),
+    0,
+  );
   const all = candidateMethods(i.country).map((method) => {
     const q = quoteShipping({
       items: specs,

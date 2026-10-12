@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import type { Locale } from "@/lib/locale";
 import type { Currency } from "@/lib/money";
+import { type ActiveSale, activeSale } from "@/lib/sale";
 import { audit } from "@/server/audit";
 import { type Db, db as defaultDb, type Tx } from "@/server/db/client";
 import {
@@ -165,7 +166,15 @@ export async function createLinkOrder(
   for (let round = 1; round <= 3; round++) {
     try {
       const order = await withTx(
-        (tx) => createLinkOrderTx(tx, { input, country, hours, ctx, env: e }),
+        (tx) =>
+          createLinkOrderTx(tx, {
+            input,
+            country,
+            hours,
+            ctx,
+            env: e,
+            sale: activeSale(checkout.sale, new Date()),
+          }),
         { db, name: "checkout.link_order" },
       );
       return withEffects(
@@ -192,6 +201,8 @@ async function createLinkOrderTx(
     hours: number;
     ctx: AdminContext;
     env: Env;
+    /** The running sale: the list price a quote, offer or manual order is compared with. */
+    sale: ActiveSale | null;
   },
 ): Promise<Order> {
   const { input, country } = i;
@@ -209,7 +220,7 @@ async function createLinkOrderTx(
     );
   }
   if (input.kind !== "OFFER") {
-    const list = itemPriceMinor(art, input.currency);
+    const list = itemPriceMinor(art, input.currency, i.sale);
     if (
       list !== null &&
       list !== input.itemPriceMinor &&
@@ -342,7 +353,13 @@ async function createLinkOrderTx(
   await tx
     .insert(orderItems)
     .values(
-      orderItemValues(order.id, art, input.itemPriceMinor, input.currency),
+      orderItemValues(
+        order.id,
+        art,
+        input.itemPriceMinor,
+        input.currency,
+        i.sale,
+      ),
     );
 
   // 5. Reserve (row count must be 1) and expire a taken-over lapsed hold.
@@ -384,7 +401,7 @@ async function createLinkOrderTx(
         kind: input.kind,
         artworkId: art.id,
         itemPriceMinor: input.itemPriceMinor,
-        listPriceMinor: itemPriceMinor(art, input.currency),
+        listPriceMinor: itemPriceMinor(art, input.currency, i.sale),
         priceChangeReason: reason ?? null,
         currency: input.currency,
         country,

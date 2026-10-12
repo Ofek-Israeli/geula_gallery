@@ -5,10 +5,11 @@ import { ActionForm, FormCheckbox, FormField } from "@/components/admin/forms";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
+import { activeSale } from "@/lib/sale";
 import { providersPanel } from "@/server/admin/settings";
 import { requireAdmin } from "@/server/next/guards";
 import { getSetting } from "@/server/settings";
-import { saveCheckoutAction } from "./actions";
+import { saveCheckoutAction, saveSaleAction } from "./actions";
 
 export async function generateMetadata({
   params,
@@ -44,6 +45,7 @@ export default async function CheckoutSettingsPage({
   await requireAdmin({ locale });
   const t = await getTranslations({ locale, namespace: "admin-settings" });
   const s = await getSetting("checkout");
+  const running = activeSale(s.sale);
   const panel = providersPanel();
   const cfg = (ok: boolean) =>
     ok
@@ -87,6 +89,70 @@ export default async function CheckoutSettingsPage({
       </Link>
       <h1 className="text-3xl">{t("checkout.title")}</h1>
       <p className="text-sm text-ink-muted">{t("freshHint")}</p>
+      <section
+        className="flex flex-col gap-3 border border-line p-4"
+        data-testid="sale-settings"
+      >
+        <h2 className="text-xl">{t("checkout.sale.title")}</h2>
+        <p className="text-sm text-ink-muted">{t("checkout.sale.hint")}</p>
+        <p className="text-sm font-medium" data-testid="sale-status">
+          {running
+            ? t("checkout.sale.running", { percent: running.percentOff })
+            : t("checkout.sale.notRunning")}
+        </p>
+        <ActionForm
+          action={saveSaleAction}
+          locale={locale}
+          submitLabel={t("checkout.sale.save")}
+          successText={t("saved")}
+          errorNamespace="admin-settings.checkout.saleErrors"
+          testId="sale-settings-form"
+        >
+          <FormCheckbox
+            name="saleEnabled"
+            label={t("checkout.sale.enabled")}
+            defaultChecked={s.sale.enabled}
+          />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <FormField
+              name="salePercentOff"
+              label={t("checkout.sale.percentOff")}
+              type="number"
+              inputMode="numeric"
+              defaultValue={s.sale.percentOff}
+            />
+            <FormField
+              name="saleStartsOn"
+              label={t("checkout.sale.startsOn")}
+              type="date"
+              defaultValue={s.sale.startsOn ?? ""}
+            />
+            <FormField
+              name="saleEndsOn"
+              label={t("checkout.sale.endsOn")}
+              type="date"
+              defaultValue={s.sale.endsOn ?? ""}
+            />
+          </div>
+          <p className="text-sm text-ink-muted">
+            {t("checkout.sale.datesHint")}
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              name="saleLabelHe"
+              label={t("checkout.sale.labelHe")}
+              defaultValue={s.sale.label.he}
+              dir="rtl"
+            />
+            <FormField
+              name="saleLabelEn"
+              label={t("checkout.sale.labelEn")}
+              defaultValue={s.sale.label.en}
+              dir="ltr"
+            />
+          </div>
+        </ActionForm>
+      </section>
       <ActionForm
         action={saveCheckoutAction}
         locale={locale}

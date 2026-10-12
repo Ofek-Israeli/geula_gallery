@@ -122,6 +122,7 @@ blocks are gated by `*_CONTRACT` and skip cleanly.
 | `admin-catalog`, `admin-orders`, `admin-money` | artwork CRUD and publish checklist; Recheck payment and manual tracking; admin refunds, documents, dashboard cards |
 | `storefront-queries`, `catalog-seed` | filters, sitemap and SEO reads; the catalog seed (fixtures) |
 | `limits`, `transition`, `harness` | production rate limits and anti-hoarding caps; `transition()` and `withTx` retries; the test harness itself |
+| `sale` | the site-wide sale: shown and crossed-out prices with the last day, back to the list price after it; price bands filter the sale price; checkout charges it; the checkout form keeps it |
 | `showcase` | sales closed: the quote answers `SALES_CLOSED` (an unknown work stays a 404), no payment link is created or paid; visitor emails off: the acknowledgement is skipped, the painter's email carries the visitor's phone, jobs finish DONE; "Mark as answered" (once, no email, audited; quotes keep their status) |
 
 ### E2E (`tests/e2e`, Playwright)

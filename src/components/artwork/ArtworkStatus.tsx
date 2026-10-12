@@ -1,6 +1,6 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
-import { Price } from "@/components/ui/Price";
+import { SalePrice } from "@/components/ui/SalePrice";
 import type { CommerceState, PriceDTO } from "@/lib/catalog";
 import { formatTime } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
@@ -55,7 +55,12 @@ export function ArtworkStatus({
       return <span className="text-ink-muted">{t("priceOnRequest")}</span>;
     }
     return (
-      <Price amountMinor={price.ilsMinor} currency="ILS" locale={locale} />
+      <SalePrice
+        amountMinor={price.ilsMinor}
+        wasMinor={price.wasIlsMinor}
+        currency="ILS"
+        locale={locale}
+      />
     );
   }
   return <Badge tone={statusTone(state)}>{statusText(state)}</Badge>;

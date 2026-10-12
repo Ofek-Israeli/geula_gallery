@@ -167,6 +167,15 @@ abroad by quote only.
     price.
 \end{enumerate}
 
+\section{Sales}
+A site-wide sale takes a percentage off every work's price between two dates, Israel time, both
+days included (Admin $\to$ Settings $\to$ Checkout $\to$ Sale). The prices above never change:
+the site shows each list price crossed out next to the sale price, rounded to whole shekels or
+dollars, with a strip at the top of every public page, and checkout charges the sale price. The
+end-of-year sale of 2026 is 50\,\% off from 12 October to 31 December (a \nis{4{,}000} work
+shows \nis{2{,}000}); after the last day the list prices return by themselves. Shipping is not
+discounted. Customs and insurance declare the price actually paid.
+
 \section{Changing the formula}
 \begin{enumerate}
   \item Edit \code{PRICING} or a factor in \code{src/lib/price-formula.ts}. To raise all prices by

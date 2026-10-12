@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, count, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { activeSale, applySale } from "@/lib/sale";
 import { audit, auditBy } from "@/server/audit";
 import {
   type CreateLinkOrderInput,
@@ -53,6 +54,7 @@ import {
   retryRefund,
 } from "@/server/payments/refunds";
 import { orderAccessToken } from "@/server/security/tokens";
+import { getSetting } from "@/server/settings";
 
 /**
  * Admin order reads and the "Recheck payment" action (spec §6.10 `/admin/orders`, `/[id]`). Every
@@ -600,8 +602,12 @@ export async function createManualOrder(
     .from(artworks)
     .where(eq(artworks.id, input.artworkId));
   if (!artwork) throw new NotFoundError("artwork", input.artworkId);
-  const list =
-    input.currency === "ILS" ? artwork.priceIlsMinor : artwork.priceUsdMinor;
+  // The list price less the running sale, as on the site (`createLinkOrder` checks the same).
+  const sale = activeSale((await getSetting("checkout")).sale);
+  const list = applySale(
+    input.currency === "ILS" ? artwork.priceIlsMinor : artwork.priceUsdMinor,
+    sale,
+  );
   const itemPriceMinor = input.itemPriceMinor ?? list;
   if (itemPriceMinor === null) {
     throw new ConflictError("PRICE_REQUIRED", "the work has no list price");

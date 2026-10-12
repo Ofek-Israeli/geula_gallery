@@ -1,6 +1,6 @@
 import { useLocale, useTranslations } from "next-intl";
 import { buttonClasses } from "@/components/ui/Button";
-import { Price } from "@/components/ui/Price";
+import { SalePrice } from "@/components/ui/SalePrice";
 import { Link } from "@/i18n/navigation";
 import type { ArtworkDetailDTO, ZoneEstimateDTO } from "@/lib/catalog";
 import { LOCALE_FIELD } from "@/lib/forms";
@@ -71,7 +71,12 @@ export function LiveBuyBox({
       <div className="flex flex-col gap-1">
         {shownPrice !== null ? (
           <p className="text-3xl" data-testid="artwork-price">
-            <Price amountMinor={shownPrice} currency="ILS" locale={locale} />
+            <SalePrice
+              amountMinor={shownPrice}
+              wasMinor={price.wasIlsMinor}
+              currency="ILS"
+              locale={locale}
+            />
           </p>
         ) : null}
         {available && (price.onRequest || price.ilsMinor === null) ? (

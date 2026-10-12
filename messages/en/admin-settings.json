@@ -72,6 +72,23 @@
     "ilsPerGbp": "ILS per GBP",
     "asOf": "As of",
     "providers": "Providers (read-only)",
+    "sale": {
+      "title": "Sale",
+      "hint": "A percentage off every work's price between two dates (Israel time, both days included). The original price shows crossed out, and a strip appears at the top of the site. It ends by itself after the last day; the list prices never change.",
+      "enabled": "Sale on",
+      "percentOff": "Percent off",
+      "startsOn": "First day",
+      "endsOn": "Last day",
+      "datesHint": "Empty first day = from now; empty last day = until you turn it off.",
+      "labelHe": "Strip text (Hebrew)",
+      "labelEn": "Strip text (English)",
+      "running": "Running now: {percent}% off",
+      "notRunning": "Not running now.",
+      "save": "Save the sale"
+    },
+    "saleErrors": {
+      "DATES": "The last day must be on or after the first day."
+    },
     "providersHint": "Set in the server's environment variables. Secrets are never shown.",
     "provider": {
       "paymentProviders": "Active payment providers",

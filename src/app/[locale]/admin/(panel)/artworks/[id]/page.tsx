@@ -19,8 +19,9 @@ import { Link } from "@/i18n/navigation";
 import { ZONE_IDS } from "@/lib/countries";
 import { formatDate, formatTime, jerusalemDateKey } from "@/lib/format";
 import { isLocale, type Locale } from "@/lib/locale";
-import { toDecimalString } from "@/lib/money";
+import { formatMoney, toDecimalString } from "@/lib/money";
 import { paths } from "@/lib/routes";
+import { activeSale, applySale } from "@/lib/sale";
 import { getAdminArtwork } from "@/server/admin/catalog";
 import {
   ARTWORK_MEDIUMS,
@@ -31,6 +32,7 @@ import {
   packingSuggestion,
 } from "@/server/catalog/mutations";
 import { requireAdmin } from "@/server/next/guards";
+import { getSettingOrNull } from "@/server/settings";
 import {
   damagedAction,
   deleteDraftAction,
@@ -109,6 +111,8 @@ export default async function ArtworkEditorPage({
   const t = await getTranslations({ locale, namespace: "admin-catalog" });
   const tc = await getTranslations({ locale, namespace: "admin-shell.common" });
   const a = detail.artwork;
+  const sale = activeSale((await getSettingOrNull("checkout"))?.sale);
+  const saleIls = a.priceOnRequest ? null : applySale(a.priceIlsMinor, sale);
   const hidden = { artworkId: a.id };
   const save = { submitLabel: tc("save"), successText: tc("saved") };
   const err = "admin-catalog.errors";
@@ -628,6 +632,14 @@ export default async function ArtworkEditorPage({
             <FormField
               name="priceIls"
               label={t("fields.priceIls")}
+              hint={
+                sale && saleIls !== null
+                  ? t("fields.salePriceNow", {
+                      percent: sale.percentOff,
+                      price: formatMoney(saleIls, "ILS", locale),
+                    })
+                  : undefined
+              }
               type="number"
               defaultValue={major(a.priceIlsMinor)}
             />

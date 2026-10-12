@@ -20,10 +20,11 @@ import type {
   ZoneEstimateDTO,
 } from "@/lib/catalog";
 import type { Locale } from "@/lib/locale";
+import { type ActiveSale, activeSale, applySale } from "@/lib/sale";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import { artworkImages, artworks, series } from "@/server/db/schema";
 import { env } from "@/server/env";
-import { getSetting } from "@/server/settings";
+import { getSetting, getSettingOrNull } from "@/server/settings";
 import { zoneEstimates } from "@/server/shipping/rates";
 import type { ArtworkShipSpec } from "@/server/shipping/types";
 import { storage } from "@/server/storage";
@@ -97,8 +98,19 @@ function imageDto(row: ImageRow, locale: Locale): ArtworkImageDTO {
   };
 }
 
-function cardDto(r: CardRow, locale: Locale, now: Date): ArtworkCardDTO {
+/** The site-wide sale running now (`checkout.sale`), or null. */
+async function runningSale(db: DbOrTx): Promise<ActiveSale | null> {
+  return activeSale((await getSettingOrNull("checkout", db))?.sale);
+}
+
+function cardDto(
+  r: CardRow,
+  locale: Locale,
+  now: Date,
+  sale: ActiveSale | null,
+): ArtworkCardDTO {
   const he = locale === "he";
+  const onSale = sale !== null && !r.priceOnRequest;
   return {
     id: r.id,
     slug: r.slug,
@@ -114,9 +126,12 @@ function cardDto(r: CardRow, locale: Locale, now: Date): ArtworkCardDTO {
     saleStatus: r.saleStatus,
     state: commerceStateOf(r, now, env.SALES_OPEN),
     price: {
-      ilsMinor: r.priceOnRequest ? null : r.priceIlsMinor,
-      usdMinor: r.priceOnRequest ? null : r.priceUsdMinor,
+      ilsMinor: r.priceOnRequest ? null : applySale(r.priceIlsMinor, sale),
+      usdMinor: r.priceOnRequest ? null : applySale(r.priceUsdMinor, sale),
       onRequest: r.priceOnRequest,
+      wasIlsMinor: onSale ? r.priceIlsMinor : null,
+      wasUsdMinor: onSale ? r.priceUsdMinor : null,
+      saleEndsOn: onSale ? sale.endsOn : null,
     },
     image: r.image ? imageDto(r.image, locale) : null,
     isDemo: r.isDemo,
@@ -171,7 +186,20 @@ export interface ArtworkListQuery {
 const visiblePrice = sql`CASE WHEN ${artworks.priceOnRequest} THEN NULL ELSE ${artworks.priceIlsMinor} END`;
 const area = sql`(${artworks.heightMm}::bigint * ${artworks.widthMm})`;
 
-function listWhere(q: ArtworkListQuery): SQL | undefined {
+/**
+ * A price-band bound on the shown (sale) price, as a bound on the stored list price: the sale is
+ * one percentage for every work, so the order is unchanged.
+ */
+function listBound(boundMinor: number, sale: ActiveSale | null): number {
+  return sale
+    ? Math.ceil((boundMinor * 100) / (100 - sale.percentOff))
+    : boundMinor;
+}
+
+function listWhere(
+  q: ArtworkListQuery,
+  sale: ActiveSale | null = null,
+): SQL | undefined {
   const view = q.view ?? "current";
   const conds: (SQL | undefined)[] = [eq(artworks.isPublished, true)];
   if (view === "available") conds.push(eq(artworks.saleStatus, "AVAILABLE"));
@@ -188,9 +216,13 @@ function listWhere(q: ArtworkListQuery): SQL | undefined {
       isNotNull(artworks.priceIlsMinor),
     );
     if (q.priceMinIlsMinor != null)
-      conds.push(gte(artworks.priceIlsMinor, q.priceMinIlsMinor));
+      conds.push(
+        gte(artworks.priceIlsMinor, listBound(q.priceMinIlsMinor, sale)),
+      );
     if (q.priceMaxIlsMinor != null)
-      conds.push(lt(artworks.priceIlsMinor, q.priceMaxIlsMinor));
+      conds.push(
+        lt(artworks.priceIlsMinor, listBound(q.priceMaxIlsMinor, sale)),
+      );
   }
   return and(...conds);
 }
@@ -232,7 +264,8 @@ export async function listArtworks(
 ): Promise<CatalogPage<ArtworkCardDTO>> {
   const pageSize = opts.pageSize ?? PAGE_SIZE;
   const page = Math.max(1, Math.floor(opts.page ?? 1));
-  const where = listWhere(opts);
+  const sale = await runningSale(db);
+  const where = listWhere(opts, sale);
   const [rows, [total]] = await Promise.all([
     cardQuery(db)
       .where(where)
@@ -243,7 +276,7 @@ export async function listArtworks(
   ]);
   const now = new Date();
   return {
-    items: rows.map((r) => cardDto(r, locale, now)),
+    items: rows.map((r) => cardDto(r, locale, now, sale)),
     page,
     pageSize,
     total: total?.n ?? 0,
@@ -333,7 +366,7 @@ export async function getFeaturedArtwork(
     )
     .orderBy(desc(artworks.featured), asc(artworks.sortOrder))
     .limit(1);
-  return row ? cardDto(row, locale, new Date()) : null;
+  return row ? cardDto(row, locale, new Date(), await runningSale(db)) : null;
 }
 
 /** The painting behind the home page's quote and the site footer. */
@@ -359,7 +392,7 @@ export async function getArtworkCard(
   const [row] = await cardQuery(db)
     .where(and(eq(artworks.isPublished, true), eq(artworks.slug, slug)))
     .limit(1);
-  return row ? cardDto(row, locale, new Date()) : null;
+  return row ? cardDto(row, locale, new Date(), await runningSale(db)) : null;
 }
 
 const detailColumns = {
@@ -419,11 +452,12 @@ export async function getCartWorks(
     )
     .where(and(inArray(artworks.id, [...ids]), eq(artworks.isPublished, true)));
   const now = new Date();
+  const sale = await runningSale(db);
   const byId = new Map(
     rows.map((r) => [
       r.id,
       {
-        ...cardDto(r, locale, now),
+        ...cardDto(r, locale, now, sale),
         inventoryNumber: r.inventoryNumber,
         framed: r.framed,
         signed: r.signed,
@@ -532,7 +566,8 @@ export async function getArtworkPage(
     );
 
   const he = locale === "he";
-  const card = cardDto(row, locale, new Date());
+  const sale = await runningSale(db);
+  const card = cardDto(row, locale, new Date(), sale);
   const artwork: ArtworkDetailDTO = {
     ...card,
     inventoryNumber: row.inventoryNumber,
@@ -595,8 +630,9 @@ export async function getArtworkPage(
     artwork,
     shipSpec,
     seo,
+    // The price actually paid: the sale price while a sale runs.
     declaredValueIlsMinor:
-      row.declaredValueOverrideMinor ?? row.priceIlsMinor ?? 0,
+      row.declaredValueOverrideMinor ?? applySale(row.priceIlsMinor, sale) ?? 0,
   };
 }
 

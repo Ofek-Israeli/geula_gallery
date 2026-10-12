@@ -159,6 +159,10 @@ export function artworkJsonLd(i: ArtworkJsonLdInput): JsonLdObject {
         ? {
             price: (a.price.ilsMinor / 100).toFixed(2),
             priceCurrency: "ILS",
+            // A sale price says until when it holds.
+            ...(a.price.saleEndsOn
+              ? { priceValidUntil: a.price.saleEndsOn }
+              : {}),
           }
         : {}),
       ...(i.sellerId ? { seller: { "@id": i.sellerId } } : {}),

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { buttonClasses } from "@/components/ui/Button";
 import { Price } from "@/components/ui/Price";
+import { SalePrice } from "@/components/ui/SalePrice";
 import { Link } from "@/i18n/navigation";
 import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
@@ -111,8 +112,9 @@ export default async function CartPage({
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         {l.readiness === "ready" && l.work.price.ilsMinor !== null ? (
-          <Price
+          <SalePrice
             amountMinor={l.work.price.ilsMinor}
+            wasMinor={l.work.price.wasIlsMinor}
             currency="ILS"
             locale={locale}
           />

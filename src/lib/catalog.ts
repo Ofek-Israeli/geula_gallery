@@ -49,6 +49,14 @@ export interface PriceDTO {
   /** Shown only after a non-IL destination is chosen (spec §6.5). */
   usdMinor: number | null;
   onRequest: boolean;
+  /**
+   * While a site-wide sale runs (`src/lib/sale.ts`), the list prices, shown crossed out; the
+   * fields above are then the sale prices. Null when there is no sale.
+   */
+  wasIlsMinor: number | null;
+  wasUsdMinor: number | null;
+  /** The sale's last day (ISO date, Israel calendar) while the prices above are sale prices. */
+  saleEndsOn: string | null;
 }
 
 export interface ArtworkCardDTO {

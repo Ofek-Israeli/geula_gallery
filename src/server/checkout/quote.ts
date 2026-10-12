@@ -1,6 +1,7 @@
 import "server-only";
 import { eq, inArray } from "drizzle-orm";
 import type { Currency } from "@/lib/money";
+import { activeSale } from "@/lib/sale";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import { artworks } from "@/server/db/schema";
 import { env as defaultEnv, type Env } from "@/server/env";
@@ -135,6 +136,7 @@ async function quoteArtworks(
   // Sequential reads: `db` may be a single dedicated connection (race tests).
   const checkout = await getSetting("checkout", db);
   if (items.length > checkout.maxCartItems) return blocked("TOO_MANY_ITEMS");
+  const sale = activeSale(checkout.sale, now);
 
   // Per-work availability, in the original order of checks; the first culprit's reason wins.
   const expiredHolders = items
@@ -176,7 +178,7 @@ async function quoteArtworks(
     req.currency === "USD" && usdAvailable ? "USD" : "ILS";
   const quoted: CheckoutQuoteItem[] = [];
   for (const a of items) {
-    const price = itemPriceMinor(a, currency);
+    const price = itemPriceMinor(a, currency, sale);
     if (price === null) {
       return blocked("NOT_PRICED", [{ artworkId: a.id, reason: "NOT_PRICED" }]);
     }

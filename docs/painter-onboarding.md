@@ -189,6 +189,12 @@
 6. האתר מחשב את EMS לפי המשקל בפועל, כמו במחירון. אם בסניף גובים יותר על חבילה גדולה, מספרים
    למפתח.
 
+### מבצע (למשל מבצע סוף שנה)
+1. בממשק הניהול: **הגדרות ← קופה ← מבצע**.
+2. מסמנים "המבצע פעיל", אחוז הנחה, יום ראשון ויום אחרון, והטקסט לפס בראש האתר (עברית ואנגלית). שומרים.
+3. באתר כל מחיר מוצג מחוק ליד מחיר המבצע, ופס מוצג בראש כל עמוד. המבצע מסתיים מעצמו אחרי היום
+   האחרון; מחירי המחירון לא משתנים. לעצירה מוקדמת מבטלים את הסימון "המבצע פעיל".
+
 ### להדפיס
 - מסמך גילוי – מהקישור במייל אישור ההזמנה או מעמוד ההזמנה; חובה לצרף ליצירה.
 - תעודת משלוח וחשבונית מסחרית – ממסך "הכנה למשלוח".
@@ -447,6 +453,14 @@ order page:
    tracking number, and tick that the parcel was handed over.
 6. The site prices EMS by actual weight, as the price list does. If the counter charges more for a
    large parcel, tell the developer.
+
+### Run a sale (for example, the end-of-year sale)
+1. In the admin: **Settings → Checkout → Sale**.
+2. Tick "Sale on", set the percent off, the first and last day, and the text of the strip at the
+   top of the site (Hebrew and English). Save.
+3. The site shows each price crossed out next to the sale price, with a strip at the top of every
+   page. The sale ends by itself after the last day; the list prices never change. To stop it
+   early, untick "Sale on".
 
 ### Print
 - The disclosure document: from the link in the order confirmation email or from the order

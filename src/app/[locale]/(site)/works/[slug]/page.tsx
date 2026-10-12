@@ -21,7 +21,7 @@ import {
 } from "@/components/site/structured-data";
 import { Accordion } from "@/components/ui/Accordion";
 import { Badge } from "@/components/ui/Badge";
-import { Price } from "@/components/ui/Price";
+import { SalePrice } from "@/components/ui/SalePrice";
 import { Link } from "@/i18n/navigation";
 import type { ArtworkDetailDTO } from "@/lib/catalog";
 import { isLocale, type Locale } from "@/lib/locale";
@@ -113,7 +113,12 @@ function StickyBar({
       title={artwork.title}
       priceOrStatus={
         shown !== null ? (
-          <Price amountMinor={shown} currency="ILS" locale={locale} />
+          <SalePrice
+            amountMinor={shown}
+            wasMinor={artwork.price.wasIlsMinor}
+            currency="ILS"
+            locale={locale}
+          />
         ) : (
           statusText(artwork.state)
         )

@@ -53,6 +53,22 @@ export const fxSchema = z.object({
   asOf: isoDate,
 });
 
+/**
+ * The site-wide sale (`src/lib/sale.ts`): a percentage off every work between two Israel-calendar
+ * dates (inclusive). Off by default, so rows saved before it existed parse unchanged.
+ */
+export const saleSettingsSchema = z.object({
+  enabled: z.boolean().default(false),
+  percentOff: z.number().int().min(1).max(90).default(50),
+  startsOn: isoDate.nullable().default(null),
+  endsOn: isoDate.nullable().default(null),
+  label: localized.default({
+    he: "מבצע סוף שנה – 50% הנחה",
+    en: "End-of-Year Sale – 50% Off",
+  }),
+});
+export type SaleSettings = z.infer<typeof saleSettingsSchema>;
+
 export const checkoutSettingsSchema = z.object({
   reservationMinutes: z.number().int().min(1).default(35),
   linkHoursDefault: z.number().int().min(1).default(48),
@@ -70,6 +86,7 @@ export const checkoutSettingsSchema = z.object({
   receiptForRefundedPayments: z.boolean().default(true),
   conversationLookbackDays: z.number().int().min(0).default(365),
   fx: fxSchema,
+  sale: saleSettingsSchema.prefault({}),
 });
 export type CheckoutSettings = z.infer<typeof checkoutSettingsSchema>;
 

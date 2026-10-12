@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { orientationOf, sizeBucketOf } from "@/lib/dimensions";
 import type { Currency } from "@/lib/money";
+import { activeSale, applySale } from "@/lib/sale";
 import { slugify } from "@/lib/validation/identifiers";
 import { audit, auditBy } from "@/server/audit";
 import {
@@ -32,6 +33,7 @@ import {
 } from "@/server/domain/errors";
 import { transition } from "@/server/domain/transition";
 import { log } from "@/server/log";
+import { getSetting } from "@/server/settings";
 import type { PackagingType } from "@/server/shipping/types";
 import {
   storage as defaultStorage,
@@ -918,9 +920,14 @@ export async function markSoldOffline(
       }
       const expired = await clearCheckoutHold(tx, ctx, a, holder, input);
       const currency = input.currency ?? "ILS";
+      // Empty price = the list price, less the running sale.
+      const discount = activeSale((await getSetting("checkout", tx)).sale);
       const priceMinor =
         input.priceMinor ??
-        (currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor) ??
+        applySale(
+          currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor,
+          discount,
+        ) ??
         0;
       let saleId: string;
       try {

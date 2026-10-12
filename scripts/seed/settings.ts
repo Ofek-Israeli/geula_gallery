@@ -65,6 +65,14 @@ export const checkoutDefaults: CheckoutSettings = {
   conversationLookbackDays: 365,
   // Placeholder reference rates (dated); never used to compute a charged amount.
   fx: { ilsPerUsd: 3.7, ilsPerEur: 4.0, ilsPerGbp: 4.7, asOf: "2026-10-01" },
+  // No sale by default (the admin's Settings → Checkout → Sale turns one on).
+  sale: {
+    enabled: false,
+    percentOff: 50,
+    startsOn: null,
+    endsOn: null,
+    label: { he: "מבצע סוף שנה – 50% הנחה", en: "End-of-Year Sale – 50% Off" },
+  },
 };
 
 const EUROPE = [
