@@ -2474,7 +2474,7 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
     texts.
   - `orderDetailsComplete` no longer needs `age_confirmed_at`. The column stays, unwritten, for
     older rows.
-- The seed's `business_profile.legalName` is "Geula Levi" (was the "(למילוי)" placeholder). It is
+- The seed's `business_profile.legalName` is "Geula Levy" (was the "(למילוי)" placeholder). It is
   one string in Latin script because it also names the shipper on the English customs invoice.
   The rest of the profile is still placeholders, so `completed` stays false.
 

@@ -28,9 +28,9 @@ export function businessProfileDefaults(env: SeedEnv): BusinessProfile {
     );
   }
   return {
-    legalName: "Geula Levi",
-    tradeName: { he: "גאולה לוי", en: "Geula Levi" },
-    artistName: { he: "גאולה לוי", en: "Geula Levi" },
+    legalName: "Geula Levy",
+    tradeName: { he: "גאולה לוי", en: "Geula Levy" },
+    artistName: { he: "גאולה לוי", en: "Geula Levy" },
     signatureName: TBD_EN,
     idNumber: "000000018",
     vatMode: "OSEK_PATUR",

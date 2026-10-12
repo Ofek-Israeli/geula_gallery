@@ -35,7 +35,7 @@ email the Resend account's owner. See `docs/architecture.md`, "Showcase launch".
      | `APP_URL` | `https://<project>.vercel.app` |
      | `DEMO_MODE` | `false` |
      | `SALES_OPEN`, `EMAIL_TO_VISITORS` | `false`, `false` |
-     | `EMAIL_DRIVER`, `EMAIL_FROM` | `resend`, `Geula Levi <onboarding@resend.dev>` |
+     | `EMAIL_DRIVER`, `EMAIL_FROM` | `resend`, `Geula Levy <onboarding@resend.dev>` |
      | `STORAGE_DRIVER` | `blob` |
      | `TAX_DOCUMENTS_MODE`, `SHIPPING_CARRIER` | `none`, `manual` |
      | `APP_SECRET`, `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MOCK_WEBHOOK_SECRET` | `openssl rand -base64 48` each |

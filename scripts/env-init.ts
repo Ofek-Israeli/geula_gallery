@@ -114,7 +114,7 @@ const lines: string[] = [
   "# Email",
   "EMAIL_DRIVER=log",
   "RESEND_API_KEY=",
-  "EMAIL_FROM=Geula Levi <studio@example.com>",
+  "EMAIL_FROM=Geula Levy <studio@example.com>",
   "",
   "# Storage",
   "STORAGE_DRIVER=local",

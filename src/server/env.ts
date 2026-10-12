@@ -181,7 +181,7 @@ const rawSchema = z.object({
   ),
   RESEND_API_KEY: optStr(),
   EMAIL_FROM: z.preprocess(
-    (v) => emptyToUndefined(v) ?? "Geula Levi <studio@example.com>",
+    (v) => emptyToUndefined(v) ?? "Geula Levy <studio@example.com>",
     z.string(),
   ),
   EMAIL_REPLY_TO: z.preprocess(emptyToUndefined, z.email().optional()),

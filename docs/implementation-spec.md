@@ -1742,7 +1742,7 @@ AIC URLs never go through next/image.
 ### 8.4 Seed (`scripts/seed/index.ts` registry; idempotent upserts; called by `db:reset`)
 | Module | Owner | Contents |
 |---|---|---|
-| `settings.ts` | M1 | Business profile placeholders ("Geula Levi / גאולה לוי", legal name "Geula Levi" (Latin script: it also goes on the customs invoice), ID `000000018`, phones `03-000-0000` / `+972-3-000-0000`, `studio@example.com`, `notificationEmail=ADMIN_EMAIL`, OSEK_PATUR, `completed=false`); checkout defaults; STATUTORY_MAX; shipping defaults (below) |
+| `settings.ts` | M1 | Business profile placeholders ("Geula Levy / גאולה לוי", legal name "Geula Levy" (Latin script: it also goes on the customs invoice), ID `000000018`, phones `03-000-0000` / `+972-3-000-0000`, `studio@example.com`, `notificationEmail=ADMIN_EMAIL`, OSEK_PATUR, `completed=false`); checkout defaults; STATUTORY_MAX; shipping defaults (below) |
 | `catalog.ts` | **M2** | 5 series and 16 artworks (`is_demo=true`) ingested via `media/ingest.ts` and the StorageAdapter; OG images; 121377 ON_HOLD RESERVED_OFFLINE; 270002 NOT_FOR_SALE; the three sold works get their state from `orders.ts` |
 | `orders.ts` | WS6 (M2 ships a stub that marks the three works SOLD through `sales` OFFLINE `is_mock`) | Sample orders below |
 | `users.ts` | M1 | `admin:create` logic |

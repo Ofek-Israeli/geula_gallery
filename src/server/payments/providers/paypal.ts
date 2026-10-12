@@ -83,7 +83,7 @@ const verifySchema = z.looseObject({
   verification_status: z.string(),
 });
 
-/** "Geula Levi <studio@…>" → "Geula Levi" (shown on the PayPal page). */
+/** "Geula Levy <studio@…>" → "Geula Levy" (shown on the PayPal page). */
 export function brandNameFrom(emailFrom: string): string | undefined {
   const m = /^\s*"?([^"<]+?)"?\s*</.exec(emailFrom);
   return m?.[1]?.trim() || undefined;

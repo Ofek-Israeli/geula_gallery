@@ -687,11 +687,11 @@ export function shipperFromProfile(
 
 /** The mock carrier needs no real shipper; the demo profile is a placeholder. */
 const MOCK_SHIPPER: ShipmentParty = {
-  name: "Geula Levi (demo)",
-  companyName: "Geula Levi",
+  name: "Geula Levy (demo)",
+  companyName: "Geula Levy",
   email: "studio@example.com",
   address: {
-    name: "Geula Levi (demo)",
+    name: "Geula Levy (demo)",
     line1: "Demo studio",
     city: "Tel Aviv",
     postalCode: "6100000",
