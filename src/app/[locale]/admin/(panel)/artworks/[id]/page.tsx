@@ -44,6 +44,7 @@ import {
   publishAction,
   releaseHoldAction,
   relistAction,
+  saveWorkSaleAction,
   soldOfflineAction,
   unpublishAction,
   updateCustomsAction,
@@ -111,8 +112,12 @@ export default async function ArtworkEditorPage({
   const t = await getTranslations({ locale, namespace: "admin-catalog" });
   const tc = await getTranslations({ locale, namespace: "admin-shell.common" });
   const a = detail.artwork;
-  const sale = activeSale((await getSettingOrNull("checkout"))?.sale);
-  const saleIls = a.priceOnRequest ? null : applySale(a.priceIlsMinor, sale);
+  const saleConfig = (await getSettingOrNull("checkout"))?.sale;
+  const sale = activeSale(saleConfig);
+  const ownSalePercent = saleConfig?.perWork?.[a.id] ?? null;
+  const saleIls = a.priceOnRequest
+    ? null
+    : applySale(a.priceIlsMinor, sale, a.id);
   const hidden = { artworkId: a.id };
   const save = { submitLabel: tc("save"), successText: tc("saved") };
   const err = "admin-catalog.errors";
@@ -674,6 +679,31 @@ export default async function ArtworkEditorPage({
               hint={t("fields.confirmPriceChangeHint")}
             />
           </ShowOnError>
+        </ActionForm>
+        <h3 className="mt-4 font-sans font-semibold">
+          {t("editor.saleOwn.title")}
+        </h3>
+        <ActionForm
+          action={saveWorkSaleAction}
+          locale={locale}
+          hidden={hidden}
+          errorNamespace={err}
+          testId="work-sale-form"
+          submitLabel={t("editor.saleOwn.save")}
+          successText={tc("saved")}
+        >
+          <FormField
+            name="salePercentOff"
+            label={t("editor.saleOwn.label")}
+            hint={
+              saleConfig
+                ? t("editor.saleOwn.hint", { percent: saleConfig.percentOff })
+                : t("editor.saleOwn.hintNoSale")
+            }
+            type="number"
+            inputMode="numeric"
+            defaultValue={ownSalePercent ?? ""}
+          />
         </ActionForm>
       </Section>
 

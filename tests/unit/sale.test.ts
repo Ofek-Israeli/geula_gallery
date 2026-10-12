@@ -22,6 +22,7 @@ describe("activeSale", () => {
       percentOff: 50,
       label: sale.label,
       endsOn: "2026-12-31",
+      perWork: {},
     });
     expect(activeSale(sale, new Date("2026-10-11T20:50:00Z"))).toBeNull();
     // 31 December 23:59 in Israel (IST, UTC+2) is still on; 1 January 00:00 is off.
@@ -49,10 +50,20 @@ describe("salePriceMinor", () => {
     expect(salePriceMinor(100, 90)).toBe(100);
   });
 
+  it("uses a work's own percentage when it has one", () => {
+    const on = activeSale(
+      { ...sale, perWork: { dancer: 20 } },
+      new Date("2026-11-01T10:00:00Z"),
+    );
+    // ₪12,500 at 20 % → ₪10,000; other works keep the sale's 50 %.
+    expect(applySale(1_250_000, on, "dancer")).toBe(1_000_000);
+    expect(applySale(1_250_000, on, "other")).toBe(625_000);
+  });
+
   it("leaves a missing price or no sale alone", () => {
     const on = activeSale(sale, new Date("2026-11-01T10:00:00Z"));
-    expect(applySale(null, on)).toBeNull();
-    expect(applySale(400_000, null)).toBe(400_000);
-    expect(applySale(400_000, on)).toBe(200_000);
+    expect(applySale(null, on, "a")).toBeNull();
+    expect(applySale(400_000, null, "a")).toBe(400_000);
+    expect(applySale(400_000, on, "a")).toBe(200_000);
   });
 });

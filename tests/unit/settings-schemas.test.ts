@@ -88,6 +88,7 @@ describe("settings schemas", () => {
         he: "מבצע סוף שנה – 50% הנחה",
         en: "End-of-Year Sale – 50% Off",
       },
+      perWork: {},
     });
     expect(() =>
       parseSettings("checkout", { ...old, sale: { percentOff: 95 } }),

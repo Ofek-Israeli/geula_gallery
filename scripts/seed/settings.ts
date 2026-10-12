@@ -72,6 +72,7 @@ export const checkoutDefaults: CheckoutSettings = {
     startsOn: null,
     endsOn: null,
     label: { he: "מבצע סוף שנה – 50% הנחה", en: "End-of-Year Sale – 50% Off" },
+    perWork: {},
   },
 };
 

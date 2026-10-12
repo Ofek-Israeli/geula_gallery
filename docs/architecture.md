@@ -2620,7 +2620,12 @@ and production-data pieces below.
   price paid (`declaredValueIlsMinor`, `orderItemValues`), and the order item's snapshot records
   `sale: { percentOff, listPriceMinor }`. Offers' auto-decline threshold is absolute (no work takes
   offers).
-- **The 2026 sale:** 50 %, 2026-10-12 to 2026-12-31, set on the server.
+- **Single works:** `checkout.sale.perWork` (artwork id → percent) gives a work its own
+  percentage (`percentOffFor`, `applySale(list, sale, artworkId)`), set in the artwork editor
+  (`saveWorkSaleAction` → `saveWorkSalePercent`; the sale box keeps it). The works list filters and
+  sorts by the shown price in SQL (`shownPriceSql`).
+- **The 2026 sale:** 50 %, 2026-10-12 to 2026-12-31, set on the server. "The Dancer" is listed at
+  ₪12,500 with 20 % off (₪10,000).
 - **Frozen contracts touched (change requests):** the settings schema (`checkout.sale`) and
   `PriceDTO` (`src/lib/catalog.ts`); `components/ui/SalePrice.tsx` is a new file.
 - **Tests:** `tests/unit/sale.test.ts`, the pricing, settings and JSON-LD unit tests, and

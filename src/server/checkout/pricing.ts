@@ -87,6 +87,7 @@ export function itemPriceMinor(
   return applySale(
     currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor,
     sale,
+    a.id,
   );
 }
 
@@ -95,7 +96,9 @@ export function declaredValueIlsMinor(
   a: PricedArtwork,
   sale: ActiveSale | null = null,
 ): number {
-  return a.declaredValueOverrideMinor ?? applySale(a.priceIlsMinor, sale) ?? 0;
+  return (
+    a.declaredValueOverrideMinor ?? applySale(a.priceIlsMinor, sale, a.id) ?? 0
+  );
 }
 
 export function fxReference(s: CheckoutSettings): FxReference {

@@ -14,9 +14,8 @@ const { getArtworkPage, listArtworks } = await import(
 );
 const { getCheckoutQuote } = await import("@/server/checkout/quote");
 const { getSetting, saveSetting } = await import("@/server/settings");
-const { saveCheckoutSettings, saveSaleSettings } = await import(
-  "@/server/admin/settings"
-);
+const { saveCheckoutSettings, saveSaleSettings, saveWorkSalePercent } =
+  await import("@/server/admin/settings");
 
 cleanDatabaseBeforeEach();
 afterAll(() => resetDatabase());
@@ -28,6 +27,7 @@ const SALE = {
   startsOn: "2026-01-01",
   endsOn: "2099-12-31",
   label: { he: "מבצע סוף שנה – 50% הנחה", en: "End-of-Year Sale – 50% Off" },
+  perWork: {} as Record<string, number>,
 };
 
 async function startSale(over: Partial<typeof SALE> = {}) {
@@ -76,6 +76,56 @@ describe("the site-wide sale", () => {
     const slugs = (await listArtworks("en", band)).items.map((w) => w.slug);
     expect(slugs).toEqual([cheap.slug]);
     expect(slugs).not.toContain(dear.slug);
+  });
+
+  it("gives a single work its own percentage, on the page, in the bands and at checkout", async () => {
+    const dancer = await insertArtwork(db, {
+      priceIlsMinor: 1_250_000,
+      priceUsdMinor: 340_000,
+      isDemo: true,
+    });
+    const other = await insertArtwork(db, { priceIlsMinor: 1_250_000 });
+    await startSale();
+    await saveWorkSalePercent(ctx, dancer.id, 20);
+    const page = await getArtworkPage("en", dancer.slug);
+    expect(page?.artwork.price).toMatchObject({
+      ilsMinor: 1_000_000,
+      wasIlsMinor: 1_250_000,
+      usdMinor: 272_000,
+    });
+    expect(
+      (await getArtworkPage("en", other.slug))?.artwork.price.ilsMinor,
+    ).toBe(625_000);
+    // ₪10,000 is in the 10,000–20,000 band; the other work (₪6,250) is not.
+    const band = (
+      await listArtworks("en", {
+        priceMinIlsMinor: 1_000_000,
+        priceMaxIlsMinor: 2_000_000,
+      })
+    ).items.map((w) => w.slug);
+    expect(band).toEqual([dancer.slug]);
+    const quote = await getCheckoutQuote({
+      slug: dancer.slug,
+      locale: "en",
+      country: "IL",
+    });
+    expect(quote.kind === "ok" && quote.items[0]?.priceMinor).toBe(1_000_000);
+
+    // Saving the sale box keeps it; clearing it brings back the sale's percentage.
+    await saveSaleSettings(ctx, {
+      enabled: true,
+      percentOff: 50,
+      startsOn: null,
+      endsOn: null,
+      label: SALE.label,
+    });
+    expect((await getSetting("checkout")).sale.perWork).toEqual({
+      [dancer.id]: 20,
+    });
+    await saveWorkSalePercent(ctx, dancer.id, null);
+    expect(
+      (await getArtworkPage("en", dancer.slug))?.artwork.price.ilsMinor,
+    ).toBe(625_000);
   });
 
   it("charges the sale price at checkout", async () => {

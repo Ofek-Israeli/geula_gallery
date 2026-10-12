@@ -10,6 +10,7 @@ import {
   slugSchema,
   uuidSchema,
 } from "@/lib/validation/common";
+import { saveWorkSalePercent } from "@/server/admin/settings";
 import {
   ARTWORK_MEDIUMS,
   ARTWORK_SURFACES,
@@ -379,4 +380,12 @@ export const forSaleAction = adminAction(
   id,
   async (i, ctx) => domainErrors(() => markForSale(ctx, i.artworkId)),
   { name: "artworks.for_sale", fresh: true },
+);
+
+/** This work's own percentage during the sale (`checkout.sale.perWork`); empty = the sale's. */
+export const saveWorkSaleAction = adminAction(
+  id.extend({ salePercentOff: optionalIntSchema(1, 90) }),
+  async (i, ctx) =>
+    domainErrors(() => saveWorkSalePercent(ctx, i.artworkId, i.salePercentOff)),
+  { name: "artworks.sale_percent", fresh: true },
 );

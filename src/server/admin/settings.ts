@@ -76,11 +76,30 @@ export async function saveCheckoutSettings(
   return saveSetting(ctx, "checkout", { ...value, sale: current?.sale ?? {} });
 }
 
-/** The sale form (`src/lib/sale.ts`): only `checkout.sale` changes. */
+/** The sale form (`src/lib/sale.ts`): only `checkout.sale` changes; single works keep theirs. */
 export async function saveSaleSettings(
   ctx: AdminContext,
-  sale: SaleSettings,
+  sale: Omit<SaleSettings, "perWork">,
 ): Promise<ServiceResult<CheckoutSettings>> {
   const current = await getSetting("checkout");
-  return saveSetting(ctx, "checkout", { ...current, sale });
+  return saveSetting(ctx, "checkout", {
+    ...current,
+    sale: { ...sale, perWork: current.sale.perWork },
+  });
+}
+
+/** One work's own percentage during the sale (artwork editor); null = the sale's percentage. */
+export async function saveWorkSalePercent(
+  ctx: AdminContext,
+  artworkId: string,
+  percentOff: number | null,
+): Promise<ServiceResult<CheckoutSettings>> {
+  const current = await getSetting("checkout");
+  const perWork = { ...current.sale.perWork };
+  if (percentOff === null) delete perWork[artworkId];
+  else perWork[artworkId] = percentOff;
+  return saveSetting(ctx, "checkout", {
+    ...current,
+    sale: { ...current.sale, perWork },
+  });
 }

@@ -5,10 +5,8 @@ import {
   count,
   desc,
   eq,
-  gte,
   inArray,
   isNotNull,
-  lt,
   type SQL,
   sql,
 } from "drizzle-orm";
@@ -126,8 +124,12 @@ function cardDto(
     saleStatus: r.saleStatus,
     state: commerceStateOf(r, now, env.SALES_OPEN),
     price: {
-      ilsMinor: r.priceOnRequest ? null : applySale(r.priceIlsMinor, sale),
-      usdMinor: r.priceOnRequest ? null : applySale(r.priceUsdMinor, sale),
+      ilsMinor: r.priceOnRequest
+        ? null
+        : applySale(r.priceIlsMinor, sale, r.id),
+      usdMinor: r.priceOnRequest
+        ? null
+        : applySale(r.priceUsdMinor, sale, r.id),
       onRequest: r.priceOnRequest,
       wasIlsMinor: onSale ? r.priceIlsMinor : null,
       wasUsdMinor: onSale ? r.priceUsdMinor : null,
@@ -182,19 +184,28 @@ export interface ArtworkListQuery {
   sort?: WorksSort;
 }
 
-/** The visible ILS price (null when the price is on request). */
-const visiblePrice = sql`CASE WHEN ${artworks.priceOnRequest} THEN NULL ELSE ${artworks.priceIlsMinor} END`;
-const area = sql`(${artworks.heightMm}::bigint * ${artworks.widthMm})`;
-
 /**
- * A price-band bound on the shown (sale) price, as a bound on the stored list price: the sale is
- * one percentage for every work, so the order is unchanged.
+ * The shown ILS price in SQL: the list price, less the running sale (each work's own percentage),
+ * rounded to whole shekels like `salePriceMinor`.
  */
-function listBound(boundMinor: number, sale: ActiveSale | null): number {
-  return sale
-    ? Math.ceil((boundMinor * 100) / (100 - sale.percentOff))
-    : boundMinor;
+function shownPriceSql(sale: ActiveSale | null): SQL {
+  if (!sale) return sql`${artworks.priceIlsMinor}`;
+  const own = Object.entries(sale.perWork);
+  const pct =
+    own.length === 0
+      ? sql`${sale.percentOff}::int`
+      : sql`CASE ${artworks.id} ${sql.join(
+          own.map(([id, p]) => sql`WHEN ${id}::uuid THEN ${p}::int`),
+          sql` `,
+        )} ELSE ${sale.percentOff}::int END`;
+  return sql`GREATEST(100, ROUND(${artworks.priceIlsMinor} * (100 - ${pct}) / 10000.0) * 100)`;
 }
+
+/** The visible ILS price (null when the price is on request). */
+function visiblePrice(sale: ActiveSale | null): SQL {
+  return sql`CASE WHEN ${artworks.priceOnRequest} THEN NULL ELSE ${shownPriceSql(sale)} END`;
+}
+const area = sql`(${artworks.heightMm}::bigint * ${artworks.widthMm})`;
 
 function listWhere(
   q: ArtworkListQuery,
@@ -215,19 +226,16 @@ function listWhere(
       eq(artworks.priceOnRequest, false),
       isNotNull(artworks.priceIlsMinor),
     );
+    // The bands filter the shown (sale) price.
     if (q.priceMinIlsMinor != null)
-      conds.push(
-        gte(artworks.priceIlsMinor, listBound(q.priceMinIlsMinor, sale)),
-      );
+      conds.push(sql`${shownPriceSql(sale)} >= ${q.priceMinIlsMinor}`);
     if (q.priceMaxIlsMinor != null)
-      conds.push(
-        lt(artworks.priceIlsMinor, listBound(q.priceMaxIlsMinor, sale)),
-      );
+      conds.push(sql`${shownPriceSql(sale)} < ${q.priceMaxIlsMinor}`);
   }
   return and(...conds);
 }
 
-function listOrder(q: ArtworkListQuery): SQL[] {
+function listOrder(q: ArtworkListQuery, sale: ActiveSale | null): SQL[] {
   const view = q.view ?? "current";
   const sort = q.sort ?? "featured";
   // Available works always come first in the current view (spec §1.2 "available works first").
@@ -241,9 +249,9 @@ function listOrder(q: ArtworkListQuery): SQL[] {
         asc(artworks.sortOrder),
       ];
     case "price-asc":
-      return [...rank, sql`${visiblePrice} ASC NULLS LAST`];
+      return [...rank, sql`${visiblePrice(sale)} ASC NULLS LAST`];
     case "price-desc":
-      return [...rank, sql`${visiblePrice} DESC NULLS LAST`];
+      return [...rank, sql`${visiblePrice(sale)} DESC NULLS LAST`];
     case "size-asc":
       return [...rank, sql`${area} ASC`];
     case "size-desc":
@@ -269,7 +277,7 @@ export async function listArtworks(
   const [rows, [total]] = await Promise.all([
     cardQuery(db)
       .where(where)
-      .orderBy(...listOrder(opts), asc(artworks.id))
+      .orderBy(...listOrder(opts, sale), asc(artworks.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
     db.select({ n: count() }).from(artworks).where(where),
@@ -632,7 +640,9 @@ export async function getArtworkPage(
     seo,
     // The price actually paid: the sale price while a sale runs.
     declaredValueIlsMinor:
-      row.declaredValueOverrideMinor ?? applySale(row.priceIlsMinor, sale) ?? 0,
+      row.declaredValueOverrideMinor ??
+      applySale(row.priceIlsMinor, sale, row.id) ??
+      0,
   };
 }
 

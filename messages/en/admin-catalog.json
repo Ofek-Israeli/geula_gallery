@@ -46,7 +46,14 @@
     "deleteDraftConfirm": "Delete the draft and its photos? This cannot be undone.",
     "liveHold": "A buyer is checking out right now (order {order}) until {time}.",
     "liveHoldInFlight": "A payment for this work (order {order}) is being confirmed. The sale status cannot change until it finishes.",
-    "lapsedHold": "The hold of order {order} lapsed at {time}; it will be released automatically."
+    "lapsedHold": "The hold of order {order} lapsed at {time}; it will be released automatically.",
+    "saleOwn": {
+      "title": "Discount for this work during the sale",
+      "label": "Percent off for this work",
+      "hint": "Empty = the sale's percentage ({percent}%). For example 20 shows a ₪12,500 work at ₪10,000.",
+      "hintNoSale": "Empty = the sale's percentage. Used only while a sale runs (Settings → Checkout → Sale).",
+      "save": "Save the discount"
+    }
   },
   "fields": {
     "titleHe": "Title (Hebrew)",

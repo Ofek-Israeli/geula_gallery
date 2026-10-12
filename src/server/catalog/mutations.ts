@@ -927,6 +927,7 @@ export async function markSoldOffline(
         applySale(
           currency === "ILS" ? a.priceIlsMinor : a.priceUsdMinor,
           discount,
+          a.id,
         ) ??
         0;
       let saleId: string;

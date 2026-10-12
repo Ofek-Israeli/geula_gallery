@@ -194,6 +194,8 @@
 2. מסמנים "המבצע פעיל", אחוז הנחה, יום ראשון ויום אחרון, והטקסט לפס בראש האתר (עברית ואנגלית). שומרים.
 3. באתר כל מחיר מוצג מחוק ליד מחיר המבצע, ופס מוצג בראש כל עמוד. המבצע מסתיים מעצמו אחרי היום
    האחרון; מחירי המחירון לא משתנים. לעצירה מוקדמת מבטלים את הסימון "המבצע פעיל".
+4. הנחה אחרת ליצירה אחת: בעמוד היצירה בממשק הניהול, תחת המחיר, "אחוז הנחה ליצירה הזו" (ריק = אחוז
+   המבצע).
 
 ### להדפיס
 - מסמך גילוי – מהקישור במייל אישור ההזמנה או מעמוד ההזמנה; חובה לצרף ליצירה.
@@ -461,6 +463,8 @@ order page:
 3. The site shows each price crossed out next to the sale price, with a strip at the top of every
    page. The sale ends by itself after the last day; the list prices never change. To stop it
    early, untick "Sale on".
+4. A different discount for one work: on the work's admin page, under the price, "Percent off for
+   this work" (empty = the sale's percentage).
 
 ### Print
 - The disclosure document: from the link in the order confirmation email or from the order

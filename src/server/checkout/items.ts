@@ -1,6 +1,6 @@
 import "server-only";
 import type { Currency } from "@/lib/money";
-import { type ActiveSale, applySale } from "@/lib/sale";
+import { type ActiveSale, applySale, percentOffFor } from "@/lib/sale";
 import type { orderItems } from "@/server/db/schema";
 import type { LockedArtwork } from "./reservations";
 
@@ -25,7 +25,8 @@ export function orderItemValues(
     priceMinor,
     currency,
     declaredValueMinor:
-      art.declaredValueOverrideMinor ?? applySale(art.priceIlsMinor, sale),
+      art.declaredValueOverrideMinor ??
+      applySale(art.priceIlsMinor, sale, art.id),
     snapshot: {
       slug: art.slug,
       inventoryNumber: art.inventoryNumber,
@@ -44,7 +45,7 @@ export function orderItemValues(
       ...(sale
         ? {
             sale: {
-              percentOff: sale.percentOff,
+              percentOff: percentOffFor(sale, art.id),
               listPriceMinor:
                 currency === "ILS" ? art.priceIlsMinor : art.priceUsdMinor,
             },

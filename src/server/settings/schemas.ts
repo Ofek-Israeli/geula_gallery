@@ -66,6 +66,8 @@ export const saleSettingsSchema = z.object({
     he: "מבצע סוף שנה – 50% הנחה",
     en: "End-of-Year Sale – 50% Off",
   }),
+  /** A different percentage for single works, by artwork id (the artwork editor sets it). */
+  perWork: z.record(z.uuid(), z.number().int().min(1).max(90)).default({}),
 });
 export type SaleSettings = z.infer<typeof saleSettingsSchema>;
 

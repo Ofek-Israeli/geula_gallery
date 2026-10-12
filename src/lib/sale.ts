@@ -2,8 +2,9 @@ import { jerusalemDateKey } from "@/lib/format";
 
 /**
  * The site-wide sale (`checkout.sale` in the settings): a percentage off every work's price
- * between two Israel-calendar dates, both inclusive. The list prices stay as they are; the sale is
- * applied on top of them wherever a price is shown or charged, so it ends by itself.
+ * between two Israel-calendar dates, both inclusive, with an optional different percentage for
+ * single works (`perWork`, by artwork id). The list prices stay as they are; the sale is applied
+ * on top of them wherever a price is shown or charged, so it ends by itself.
  */
 export interface SaleConfig {
   enabled: boolean;
@@ -13,12 +14,15 @@ export interface SaleConfig {
   /** ISO date (Israel calendar) of the last day; null = no end. */
   endsOn: string | null;
   label: { he: string; en: string };
+  /** A different percentage for single works, by artwork id. */
+  perWork?: Record<string, number>;
 }
 
 export interface ActiveSale {
   percentOff: number;
   label: { he: string; en: string };
   endsOn: string | null;
+  perWork: Record<string, number>;
 }
 
 /** The sale running at `now` (Israel time), or null. */
@@ -34,7 +38,13 @@ export function activeSale(
     percentOff: sale.percentOff,
     label: sale.label,
     endsOn: sale.endsOn,
+    perWork: sale.perWork ?? {},
   };
+}
+
+/** The percentage off one work: its own, else the sale's. */
+export function percentOffFor(sale: ActiveSale, artworkId: string): number {
+  return sale.perWork[artworkId] ?? sale.percentOff;
 }
 
 /** A list price after the sale, in minor units, rounded to whole shekels or dollars. */
@@ -45,11 +55,12 @@ export function salePriceMinor(listMinor: number, percentOff: number): number {
   );
 }
 
-/** `listMinor` with the sale applied (null stays null). */
+/** A work's `listMinor` with the sale applied (null stays null). */
 export function applySale(
   listMinor: number | null,
   sale: ActiveSale | null,
+  artworkId: string,
 ): number | null {
   if (listMinor === null || !sale) return listMinor;
-  return salePriceMinor(listMinor, sale.percentOff);
+  return salePriceMinor(listMinor, percentOffFor(sale, artworkId));
 }

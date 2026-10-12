@@ -607,6 +607,7 @@ export async function createManualOrder(
   const list = applySale(
     input.currency === "ILS" ? artwork.priceIlsMinor : artwork.priceUsdMinor,
     sale,
+    input.artworkId,
   );
   const itemPriceMinor = input.itemPriceMinor ?? list;
   if (itemPriceMinor === null) {
