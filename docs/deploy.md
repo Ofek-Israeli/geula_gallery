@@ -95,6 +95,9 @@ Cloudflare Tunnel (no open ports at home).
 - **Email:** home connections are on Spamhaus's PBL, so the server cannot email Gmail directly.
   While sales are closed it runs with `EMAIL_DRIVER=log` (nothing is sent; messages wait in the
   admin inbox); for emails, set `EMAIL_DRIVER=resend` and a `RESEND_API_KEY` in `/etc/geula/env`.
+- **Domain:** `https://geulalevy.com` (since 2026-10-12). The tunnel also routes the old
+  `geulalevi.com`, and `REDIRECT_HOSTS=geulalevi.com,www.geulalevi.com,www.geulalevy.com` (build
+  time, `next.config.ts`) sends those hosts permanently to `APP_URL`, keeping the path.
 - **Updates:** `DEPLOY_HOST=user@host sh scripts/deploy-home.sh` copies the sources, installs,
   migrates, builds and restarts.
 

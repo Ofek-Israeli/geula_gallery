@@ -2590,6 +2590,8 @@ and production-data pieces below.
   - `src/server/env.ts`: Resend is required only while sales are open; a showcase may use
     `EMAIL_DRIVER=log` (each email stays in `email_messages`, nothing is sent) and the painter
     reads the admin inbox.
+  - `next.config.ts`: `REDIRECT_HOSTS` (build time) redirects old or alternate hostnames
+    permanently to `APP_URL`, for the move to geulalevy.com.
 - **Tests:** `tests/unit/env.test.ts` (the showcase env), `tests/unit/commerce-state.test.ts`,
   `tests/integration/showcase.test.ts` (quote, link and payment refusals, the email skip, Mark as
   answered) and `tests/integration/invariants.test.ts` (the legal approval). The E2E suite runs

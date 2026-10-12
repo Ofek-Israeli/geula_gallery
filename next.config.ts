@@ -13,6 +13,13 @@ function buildConfig(phase: string): NextConfig {
   const isProduction = process.env.APP_ENV === "production";
   const demoMode = process.env.DEMO_MODE === "true";
   const blobHost = process.env.NEXT_PUBLIC_BLOB_HOST?.trim();
+  // Old or alternate hostnames (comma-separated) that move permanently to APP_URL.
+  const appUrl = process.env.APP_URL?.trim().replace(/\/+$/, "");
+  const appHost = appUrl ? new URL(appUrl).host : "";
+  const redirectHosts = (process.env.REDIRECT_HOSTS ?? "")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter((h) => h && h !== appHost);
 
   // Static CSP, no nonces (§7). Redirect-only payments: no third-party scripts or frames.
   const csp = [
@@ -101,6 +108,17 @@ function buildConfig(phase: string): NextConfig {
           ],
         },
       ];
+    },
+    // A renamed domain (REDIRECT_HOSTS) keeps its links and search results: every path moves to
+    // the same path on APP_URL (308, the query string kept).
+    async redirects() {
+      if (!appUrl) return [];
+      return redirectHosts.map((host) => ({
+        source: "/:path*",
+        has: [{ type: "host" as const, value: host.replace(/\./g, "\\.") }],
+        destination: `${appUrl}/:path*`,
+        permanent: true,
+      }));
     },
   };
 }
