@@ -2707,6 +2707,11 @@ service (on PayMe) over a separate gateway, with the card form on our site. Runb
 - **Tests:** unit `isracard-map`, `csp` (path matching with Next's matcher), `proxy`, `env`,
   `security`; integration `checkout-preview`, `test-payments`, `isracard-charge` (a fake adapter:
   one charge under concurrency, decline, timeout, adoption, stuck charge, unsubmitted page, sweep).
-  The pay page was checked in Chromium against a local PayMe stub (full page load, nonce CSP, test
-  payment, decline); a committed E2E needs a second server and a PayMe stub (not done).
+  Unit `checkout-form` renders the payment step with and without a provider ("activation
+  pending": no provider posted, submit disabled, no hold promised). E2E project `preview`
+  (`preview.spec.ts`, docs/testing.md): a second server configured like the review site, against
+  `tests/e2e/support/payme-stub.mjs`; it walks Buy now → checkout → our pay page (full page load,
+  nonce CSP, axe) → a declined card → a test card, and checks that nothing was sold and that the
+  server sent PayMe only the order's amount and one-time tokens. `playwright.config.ts` and
+  `tests/e2e/support/commerce.ts` (`cloneWork(…, { real })`) changed for it.
 

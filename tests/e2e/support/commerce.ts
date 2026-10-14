@@ -257,12 +257,18 @@ export async function orderStatusByRef(
  * buys its own published copy of a demo work (`e2e-<name>`, same images, prices and packaging;
  * last in the sort order, never featured). This is the only state these specs arrange directly;
  * everything else goes through the app. Storefront specs that count works should ignore `e2e-`
- * slugs.
+ * slugs. With `real`, the copy is a real listing (`is_demo = false`), as the painter's works are
+ * in production: there a TEST payment never sells it (the `preview` spec).
  */
-export async function cloneWork(source: string, slug: string): Promise<void> {
+export async function cloneWork(
+  source: string,
+  slug: string,
+  o: { real?: boolean } = {},
+): Promise<void> {
   const skip = new Set([
     "id",
     "slug",
+    "is_demo",
     "inventory_number",
     "featured",
     "sort_order",
@@ -291,10 +297,11 @@ export async function cloneWork(source: string, slug: string): Promise<void> {
       .filter((c) => !skip.has(c));
     const list = cols.map((c) => `"${c}"`).join(", ");
     const inserted = await client.query<{ id: string }>(
-      `INSERT INTO artworks (slug, featured, sort_order, sale_status, ${list})
-       SELECT $2, false, 9999, 'AVAILABLE', ${list} FROM artworks WHERE slug = $1
+      `INSERT INTO artworks (slug, featured, sort_order, sale_status, is_demo, ${list})
+       SELECT $2, false, 9999, 'AVAILABLE', COALESCE($3::boolean, is_demo), ${list}
+         FROM artworks WHERE slug = $1
        ON CONFLICT (slug) DO NOTHING RETURNING id`,
-      [source, slug],
+      [source, slug, o.real ? false : null],
     );
     const id = inserted.rows[0]?.id;
     if (!id) return; // already cloned in this run

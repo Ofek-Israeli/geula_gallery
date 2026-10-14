@@ -326,7 +326,7 @@ Rules enforced when `APP_ENV=production`:
 | `STORAGE_DRIVER`, `BLOB_READ_WRITE_TOKEN`, `BLOB_PRIVATE_READ_WRITE_TOKEN`, `NEXT_PUBLIC_BLOB_HOST` | separate preview stores | production stores |
 | `CARDCOM_LATE_WATCH_HOURS`, `CARDCOM_TAIL_DAYS` | defaults (72, 30) | defaults |
 | `MOCK_PAYMENT_FLOW`, `MOCK_CARRIER_DELIVERY_SECONDS` | defaults | unused |
-| `TEST_DATABASE_URL`, `E2E_DATABASE_URL`, `E2E_PORT`, `SEED_E2E_USERS`, `NEXT_DIST_DIR`, `LOCAL_STORAGE_DIR`, `ADMIN_PASSWORD`, `DHL_OPENAPI_URL`, `*_CONTRACT`, `RECORD_FIXTURES` | unset | unset (local development and test only) |
+| `TEST_DATABASE_URL`, `E2E_DATABASE_URL`, `E2E_PORT`, `E2E_PREVIEW_PORT`, `E2E_PAYME_STUB_PORT`, `SEED_E2E_USERS`, `NEXT_DIST_DIR`, `LOCAL_STORAGE_DIR`, `ADMIN_PASSWORD`, `DHL_OPENAPI_URL`, `*_CONTRACT`, `RECORD_FIXTURES` | unset | unset (local development and test only) |
 
 Scope secrets per environment in Vercel. Never share a production secret with Preview.
 

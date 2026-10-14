@@ -10,7 +10,7 @@
 | `npm test` | Vitest `unit` and `contract` projects (no database) |
 | `npm run test:unit` / `npm run test:contract` | one Vitest project |
 | `npm run test:integration` | Vitest `integration` project on a real local Postgres (`TEST_DATABASE_URL`, dropped and re-migrated on every run, files run one at a time, tables truncated before each test) |
-| `npm run test:e2e [-- <specs or playwright args>]` | Playwright: resets `E2E_DATABASE_URL` with the fixtures seed (the 16 test works), builds into `.next-e2e`, serves on `E2E_PORT` (3100) |
+| `npm run test:e2e [-- <specs or playwright args>]` | Playwright: resets `E2E_DATABASE_URL` with the fixtures seed (the 16 test works), builds into `.next-e2e`, serves on `E2E_PORT` (3100), plus the preview server (`E2E_PREVIEW_PORT`, 3101) and the PayMe stand-in (`E2E_PAYME_STUB_PORT`, 3102) |
 | `npm run verify` | lint + typecheck + check:secrets + test + test:integration |
 | `npm run verify:all` | verify + build + test:e2e |
 
@@ -30,13 +30,25 @@ git log -p --all --format= | npm run check:secrets -- --stdin
   - fixed `e2e-` secrets.
 - Every provider credential from the shell or `.env.local` is blanked, so real keys never reach
   the E2E server.
-- `E2E_REUSE_SERVER=1` reuses a server already listening on `E2E_PORT`, for local iteration.
+- A second server for the `preview` project runs the same build on the same database at
+  `E2E_PREVIEW_PORT` (`E2E_PORT` + 1), configured as the site runs for Isracard's review:
+  `SALES_OPEN=false`, `CHECKOUT_PREVIEW=true`, `DEMO_MODE=false`, `PAYMENT_PROVIDERS=isracard`,
+  `ISRACARD_MODE=test` with fake keys. Its `ISRACARD_BASE_URL` and `ISRACARD_HF_SCRIPT_URL` point at
+  `tests/e2e/support/payme-stub.mjs` on `E2E_PAYME_STUB_PORT` (`E2E_PORT` + 2), a stand-in for
+  PayMe's API and hosted-fields script: the card number stays in the browser and becomes a token,
+  a card ending 0002 is declined, and `GET /__log` lists what the server sent. Playwright starts
+  the web servers in order, so the preview server starts once the build is done.
+- `E2E_REUSE_SERVER=1` reuses servers already listening on these ports, for local iteration.
   Specs that buy a fixed `e2e-*` clone need a fresh `db:reset`, so on a reused server they fail
   the second time, because the clone is already SOLD.
 - Projects:
-  - `desktop-chromium`: every spec except `admin-auth`;
+  - `desktop-chromium`: every spec except `admin-auth` and `preview`;
   - `mobile-chromium` (Pixel 7): specs tagged `@mobile` or `@smoke`;
-  - `auth-limits`: `admin-auth`, which runs last because it trips the sign-in limits.
+  - `auth-limits`: `admin-auth`, which runs last because it trips the sign-in limits;
+  - `preview`: `preview.spec.ts` on the preview server (banner, Buy now with sales closed,
+    Isracard in test mode, the pay page's full page load and nonce CSP, a declined card, then a
+    test payment that sells nothing). It buys its own real (`is_demo = false`) `e2e-preview-*`
+    clone, which stays available, so it also passes on a reused server.
 - `global-setup.ts` signs in once and saves `tests/e2e/.auth/admin.json`. Cron jobs are
   triggered through Playwright's `request` fixture.
 
