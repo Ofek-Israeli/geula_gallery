@@ -18,6 +18,7 @@ import { isLocale } from "@/lib/locale";
 import { type CheckoutQuery, localePath, paths } from "@/lib/routes";
 import { loadCart } from "@/server/cart/cart";
 import { getCheckoutQuote } from "@/server/checkout/quote";
+import { env } from "@/server/env";
 import { readCartIds } from "@/server/next/cart";
 import { issueFormStartToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
@@ -27,6 +28,7 @@ import {
   OrderSummary,
   preContractDoc,
   providerOptions,
+  wasPriceOf,
 } from "./_components/parts";
 import {
   CheckoutSteps,
@@ -97,6 +99,7 @@ export default async function CartCheckoutPage({
   const action = localePath(locale, paths.cartCheckout());
   const href = (q: CheckoutQuery) => paths.cartCheckout(q);
   const titleOf = new Map(ready.map((l) => [l.work.id, l.work.title]));
+  const workOf = new Map(ready.map((l) => [l.work.id, l.work]));
 
   const header = (
     <header className="flex flex-col gap-3">
@@ -310,11 +313,25 @@ export default async function CartCheckoutPage({
       <OrderSummary
         quote={quote}
         locale={locale}
-        lines={quote.items.map((i) => ({
-          id: i.artworkId,
-          title: titleOf.get(i.artworkId) ?? "",
-          priceMinor: i.priceMinor,
-        }))}
+        lines={quote.items.map((i) => {
+          const work = workOf.get(i.artworkId);
+          return {
+            id: i.artworkId,
+            title: titleOf.get(i.artworkId) ?? "",
+            priceMinor: i.priceMinor,
+            wasMinor: work ? wasPriceOf(work.price, quote.currency) : null,
+            image: work?.image ?? null,
+            ...(work
+              ? {
+                  dimensions: {
+                    heightMm: work.heightMm,
+                    widthMm: work.widthMm,
+                    depthMm: work.depthMm,
+                  },
+                }
+              : {}),
+          };
+        })}
       />
       <CheckoutForm
         action={startCartCheckoutAction}
@@ -347,6 +364,7 @@ export default async function CartCheckoutPage({
         reloadHref={localePath(locale, links.details)}
         changeDestinationHref={localePath(locale, links.destination)}
         contactHref={localePath(locale, paths.contact())}
+        cardBrands={env.PAYMENT_CARD_BRANDS}
       />
     </div>
   );

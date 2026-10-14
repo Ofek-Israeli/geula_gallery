@@ -61,6 +61,7 @@ export default async function OrderPage({
     notFound();
   }
   const t = await getTranslations({ locale, namespace: "orders" });
+  const tp = await getTranslations({ locale, namespace: "checkout.provider" });
   const payment = one(sp.payment);
   const err = one(sp.err);
   const settling =
@@ -235,7 +236,7 @@ export default async function OrderPage({
                         defaultChecked={i === 0}
                         className="size-5 accent-ink"
                       />
-                      {p}
+                      {tp(p)}
                     </label>
                   ))}
                 </fieldset>

@@ -27,6 +27,8 @@
     "title": "Your order",
     "item": "Original painting",
     "items": "Work",
+    "itemsTotal": "{count, plural, one {# work} other {# works}}",
+    "qty": "Original · qty 1",
     "shipping": "Shipping",
     "insurance": "Insurance",
     "total": "Total",
@@ -108,6 +110,8 @@
     "region": "State / region",
     "postalCode": "Postal code",
     "cityAndPostal": "City and postal code",
+    "receiptTitle": "Receipt details",
+    "receiptHint": "Only if the receipt should be in a company's or business's name.",
     "companyName": "Company name",
     "vatId": "VAT / company ID for the receipt",
     "pickupNote": "The studio address and pickup instructions are sent after payment."
@@ -139,6 +143,18 @@
       "google_pay": "Google Pay"
     },
     "redirectNote": "On the next page you pay securely: card details go only to the payment provider."
+  },
+  "secure": {
+    "title": "Secure payment",
+    "body": "Card details are entered only in the payment provider's secure fields or page (PCI DSS) and never reach this site's servers. Where required, the payment is verified with 3-D Secure by your card issuer.",
+    "cards": "Accepted cards:"
+  },
+  "cards": {
+    "visa": "Visa",
+    "mastercard": "Mastercard",
+    "isracard": "Isracard",
+    "amex": "American Express",
+    "diners": "Diners"
   },
   "privacy": "We use your details only to fulfil this order: payment, delivery and the receipt. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
   "holdNotice": "When you continue, {count, plural, one {the work is} other {the # works are}} reserved for you for {minutes} minutes.",

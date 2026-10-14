@@ -16,6 +16,7 @@ import { isLocale } from "@/lib/locale";
 import { type CheckoutQuery, localePath, paths } from "@/lib/routes";
 import { getArtworkPage } from "@/server/catalog/queries";
 import { getCheckoutQuote } from "@/server/checkout/quote";
+import { env } from "@/server/env";
 import { issueFormStartToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import { CheckoutForm } from "../_components/CheckoutForm";
@@ -23,6 +24,7 @@ import {
   OrderSummary,
   preContractDoc,
   providerOptions,
+  wasPriceOf,
 } from "../_components/parts";
 import {
   CheckoutSteps,
@@ -273,7 +275,22 @@ export default async function CheckoutPage({
         destination={destination}
         links={links}
       />
-      <OrderSummary quote={quote} locale={locale} />
+      <OrderSummary
+        quote={quote}
+        locale={locale}
+        lines={quote.items.map((i) => ({
+          id: i.artworkId,
+          title: artwork.title,
+          priceMinor: i.priceMinor,
+          wasMinor: wasPriceOf(artwork.price, quote.currency),
+          image: main,
+          dimensions: {
+            heightMm: artwork.heightMm,
+            widthMm: artwork.widthMm,
+            depthMm: artwork.depthMm,
+          },
+        }))}
+      />
       <CheckoutForm
         action={startCheckoutAction}
         locale={locale}
@@ -304,6 +321,7 @@ export default async function CheckoutPage({
         reloadHref={localePath(locale, links.details)}
         changeDestinationHref={localePath(locale, links.destination)}
         contactHref={localePath(locale, paths.contact())}
+        cardBrands={env.PAYMENT_CARD_BRANDS}
       />
     </div>
   );

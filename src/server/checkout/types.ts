@@ -84,6 +84,8 @@ export type CheckoutQuote =
         label: string;
         wallets: Wallet[];
         installments: boolean;
+        /** A TEST-mode provider: payments are verified but nothing is charged (labelled so). */
+        test: boolean;
       }[];
       notices: NoticeCode[];
       usdAvailable: boolean;

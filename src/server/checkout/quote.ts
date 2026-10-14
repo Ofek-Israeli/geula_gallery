@@ -288,6 +288,7 @@ async function quoteArtworks(
       label: p.id,
       wallets: p.capabilities.wallets,
       installments: p.capabilities.installments,
+      test: p.mode === "TEST",
     })),
     notices: selected.notices,
     usdAvailable,

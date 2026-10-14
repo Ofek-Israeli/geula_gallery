@@ -52,6 +52,8 @@ export interface CheckoutFormProps {
   providers: { id: string; label: string; description?: string }[];
   /** Locale-prefixed contact page, for "buy a work now" while payments are pending. */
   contactHref: string;
+  /** `PAYMENT_CARD_BRANDS`: the card brands named under the payment methods (none when empty). */
+  cardBrands: readonly string[];
   /** The rendered pre-contract disclosure (server component output). */
   disclosure: ReactNode;
   /** Locale-prefixed: the same choices, as far as they go ("show the updated total"). */
@@ -331,6 +333,8 @@ export function CheckoutForm(props: CheckoutFormProps) {
       )}
 
       <fieldset className="flex flex-col gap-4">
+        <legend className="mbe-1 text-xl">{t("details.receiptTitle")}</legend>
+        <p className="text-sm text-ink-muted">{t("details.receiptHint")}</p>
         <Field
           id={FIELD_IDS.companyName ?? "co-company"}
           label={optional(t("details.companyName"))}
@@ -424,6 +428,28 @@ export function CheckoutForm(props: CheckoutFormProps) {
           error={fieldErrors.providerId ? tf("invalid") : undefined}
         />
       )}
+
+      <section
+        aria-labelledby="co-secure-title"
+        className="flex flex-col gap-2 border-s-2 border-line ps-4"
+        data-testid="checkout-secure"
+      >
+        <h2 id="co-secure-title" className="text-lg font-medium">
+          {t("secure.title")}
+        </h2>
+        <p className="max-w-prose text-sm">{t("secure.body")}</p>
+        {props.cardBrands.length > 0 ? (
+          <p className="text-sm" data-testid="checkout-cards">
+            {t("secure.cards")}{" "}
+            {props.cardBrands.map((b, i) => (
+              <span key={b}>
+                {i > 0 ? " · " : null}
+                <span className="font-medium">{t(`cards.${b}` as never)}</span>
+              </span>
+            ))}
+          </p>
+        ) : null}
+      </section>
 
       <p className="text-sm text-ink-muted">{t("privacy")}</p>
       <p className="font-medium">

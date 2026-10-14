@@ -117,6 +117,15 @@ const rawSchema = z.object({
   // Payments
   PAYMENT_PROVIDERS: csv(["mock", "cardcom", "paypal"] as const, ["mock"]),
   MOCK_WEBHOOK_SECRET: secret(16),
+  /**
+   * Card brands named at checkout ("Accepted cards: …"), in this order; empty shows none. Set it to
+   * what the merchant agreement covers (Isracard: isracard, mastercard, visa; amex with its own
+   * agreement).
+   */
+  PAYMENT_CARD_BRANDS: csv(
+    ["visa", "mastercard", "isracard", "amex", "diners"] as const,
+    [],
+  ),
   MOCK_PAYMENT_FLOW: z.preprocess(
     (v) => emptyToUndefined(v) ?? "direct",
     z.enum(["direct", "capture"]),

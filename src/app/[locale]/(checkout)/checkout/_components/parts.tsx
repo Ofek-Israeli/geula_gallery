@@ -1,5 +1,8 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
+import { Dimensions } from "@/components/ui/Dimensions";
 import { Price } from "@/components/ui/Price";
+import { SalePrice } from "@/components/ui/SalePrice";
 import { buildPreContract } from "@/content/disclosure";
 import { LEGAL_VERSIONS } from "@/content/legal/versions";
 import type { Locale } from "@/lib/locale";
@@ -139,7 +142,30 @@ export async function DeliveryNotices({
   );
 }
 
-/** The money summary; `lines` lists each work when the order has several. */
+/** One work in the order summary. `priceMinor` is the quote's (charged) price. */
+export interface SummaryLine {
+  id: string;
+  title: string;
+  priceMinor: number;
+  /** The list price while a sale runs (shown struck through); null otherwise. */
+  wasMinor?: number | null;
+  image?: { src: string; alt: string; width: number; height: number } | null;
+  dimensions?: { heightMm: number; widthMm: number; depthMm?: number | null };
+}
+
+/** The list price in the quote currency while a sale runs, for `SummaryLine.wasMinor`. */
+export function wasPriceOf(
+  price: { wasIlsMinor: number | null; wasUsdMinor: number | null },
+  currency: OkQuote["currency"],
+): number | null {
+  return currency === "USD" ? price.wasUsdMinor : price.wasIlsMinor;
+}
+
+/**
+ * The order summary: each work (thumbnail, title, dimensions, "original · qty 1", the sale price
+ * with the list price struck through), then shipping, insurance, the total and the VAT line, in
+ * the quote currency. Each original is unique, so the quantity is always 1.
+ */
 export async function OrderSummary({
   quote,
   locale,
@@ -147,7 +173,7 @@ export async function OrderSummary({
 }: {
   quote: OkQuote;
   locale: Locale;
-  lines?: { id: string; title: string; priceMinor: number }[];
+  lines: SummaryLine[];
 }) {
   const t = await getTranslations({ locale, namespace: "checkout" });
   const s = quote.shipping;
@@ -155,29 +181,56 @@ export async function OrderSummary({
   return (
     <section
       aria-labelledby="summary-title"
-      className="flex flex-col gap-2 border border-line p-5"
+      className="flex flex-col gap-3 border border-line p-5"
       data-testid="checkout-summary"
     >
       <h2 id="summary-title" className="text-2xl">
         {t("summary.title")}
       </h2>
-      <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
-        {lines && lines.length > 1 ? (
-          lines.map((l) => (
-            <div key={l.id} className="contents" data-testid="summary-line">
-              <dt>{l.title}</dt>
-              <dd>
-                <Price
-                  amountMinor={l.priceMinor}
-                  currency={quote.currency}
+      <ul className="flex flex-col gap-3">
+        {lines.map((l) => (
+          <li
+            key={l.id}
+            className="flex items-start gap-3"
+            data-testid="summary-line"
+          >
+            {l.image ? (
+              <Image
+                src={l.image.src}
+                alt=""
+                width={l.image.width}
+                height={l.image.height}
+                sizes="56px"
+                className="h-14 w-14 shrink-0 object-contain"
+              />
+            ) : null}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="font-serif">{l.title}</span>
+              {l.dimensions ? (
+                <Dimensions
                   locale={locale}
+                  heightMm={l.dimensions.heightMm}
+                  widthMm={l.dimensions.widthMm}
+                  depthMm={l.dimensions.depthMm ?? null}
+                  className="text-sm text-ink-muted"
                 />
-              </dd>
+              ) : null}
+              <span className="text-sm text-ink-muted">{t("summary.qty")}</span>
             </div>
-          ))
-        ) : (
+            <SalePrice
+              amountMinor={l.priceMinor}
+              wasMinor={l.wasMinor ?? null}
+              currency={quote.currency}
+              locale={locale}
+              className="shrink-0"
+            />
+          </li>
+        ))}
+      </ul>
+      <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 border-t border-line pbs-3">
+        {lines.length > 1 ? (
           <>
-            <dt>{t("summary.items")}</dt>
+            <dt>{t("summary.itemsTotal", { count: lines.length })}</dt>
             <dd>
               <Price
                 amountMinor={quote.itemsTotalMinor}
@@ -186,7 +239,7 @@ export async function OrderSummary({
               />
             </dd>
           </>
-        )}
+        ) : null}
         <dt>{t("summary.shipping")}</dt>
         <dd>
           {s.shippingMinor === 0 ? (
@@ -244,7 +297,7 @@ export async function providerOptions(quote: OkQuote, locale: Locale) {
     );
     return {
       id: p.id,
-      label: t(`provider.${p.id}`),
+      label: `${t(`provider.${p.id}`)}${p.test ? t("provider.testSuffix") : ""}`,
       ...(wallets.length
         ? {
             description: t("provider.wallets", {
