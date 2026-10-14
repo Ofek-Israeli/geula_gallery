@@ -168,6 +168,7 @@ export async function loadDisclosureInput(
       returns: link(paths.legal("returns")),
       privacy: link(paths.legal("privacy")),
       shipping: link(paths.legal("shipping")),
+      warranty: link(paths.legal("warranty")),
       cancel: link(paths.cancel(order.number)),
     },
     versions: {

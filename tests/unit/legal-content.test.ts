@@ -42,6 +42,7 @@ const links = {
   terms: "/x/legal/terms",
   returns: "/x/legal/returns",
   shipping: "/x/legal/shipping",
+  warranty: "/x/legal/warranty",
   privacy: "/x/legal/privacy",
   accessibility: "/x/legal/accessibility",
   cancel: "/x/cancel",
@@ -289,6 +290,7 @@ describe("pre-contract disclosure: s.14C(a) elements", () => {
       expect(text).toMatch(/14/);
       expect(text).toMatch(locale === "he" ? /4 חודשים/ : /4 months/);
       expect(text).toContain("A-2026-001");
+      expect(text).toContain("/x/legal/warranty");
       for (const re of FORBIDDEN) expect(text).not.toMatch(re);
     });
 

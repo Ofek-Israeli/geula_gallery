@@ -465,12 +465,14 @@ export function CheckoutForm(props: CheckoutFormProps) {
       </section>
 
       <p className="text-sm text-ink-muted">{t("privacy")}</p>
-      <p className="font-medium">
-        {t("holdNotice", {
-          minutes: props.holdMinutes,
-          count: props.itemCount,
-        })}
-      </p>
+      {paymentsPending ? null : (
+        <p className="font-medium">
+          {t("holdNotice", {
+            minutes: props.holdMinutes,
+            count: props.itemCount,
+          })}
+        </p>
+      )}
       <div>
         <SubmitButton
           pendingLabel={t("submitting")}

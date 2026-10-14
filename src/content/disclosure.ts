@@ -52,6 +52,7 @@ export interface DisclosureLinks {
   returns: string;
   privacy: string;
   shipping: string;
+  warranty: string;
   cancel: string;
 }
 
@@ -207,6 +208,7 @@ const PRE_TEXT = {
     returns: "ביטולים והחזרות",
     privacyPolicy: "מדיניות פרטיות",
     shippingPolicy: "משלוחים ומכס",
+    warrantyPolicy: "מדיניות אחריות",
     cancelForm: "טופס ביטול עסקה",
     methods: {
       CARRIER_TABLE: "שליח עד הבית",
@@ -285,6 +287,7 @@ const PRE_TEXT = {
     returns: "Cancellations and returns",
     privacyPolicy: "Privacy policy",
     shippingPolicy: "Shipping and duties",
+    warrantyPolicy: "Warranty",
     cancelForm: "Cancellation form",
     methods: {
       CARRIER_TABLE: "Courier delivery",
@@ -451,6 +454,7 @@ export function buildPreContract(
         { label: t.returns, value: input.links.returns },
         { label: t.privacyPolicy, value: input.links.privacy },
         { label: t.shippingPolicy, value: input.links.shipping },
+        { label: t.warrantyPolicy, value: input.links.warranty },
         { label: t.cancelForm, value: input.links.cancel },
       ],
     },

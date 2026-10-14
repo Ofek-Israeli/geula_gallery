@@ -388,6 +388,7 @@ export async function preContractDoc(
         returns: localePath(locale, paths.legal("returns")),
         privacy: localePath(locale, paths.legal("privacy")),
         shipping: localePath(locale, paths.legal("shipping")),
+        warranty: localePath(locale, paths.legal("warranty")),
         cancel: localePath(locale, paths.cancel()),
       },
       versions: {
