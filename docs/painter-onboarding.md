@@ -197,6 +197,14 @@
 4. הנחה אחרת ליצירה אחת: בעמוד היצירה בממשק הניהול, תחת המחיר, "אחוז הנחה ליצירה הזו" (ריק = אחוז
    המבצע).
 
+### הזמנות בדיקה (לפני הפעלת התשלום בישראכרט)
+כל עוד התשלום המקוון לא פעיל, האתר במצב "תצוגה מקדימה": כל אחד יכול לעבור את תהליך הרכישה, ופס בראש
+האתר מסביר שלא מתבצעת הזמנה ולא נגבה כסף. כשישראכרט תיתן מפתחות בדיקה, אפשר לשלם בכרטיס בדיקה בלבד.
+- תשלום בדיקה **לעולם לא מוכר יצירה**: היצירה נשארת זמינה, והשמירה עליה משתחררת מיד.
+- בממשק הניהול הזמנה כזו מסומנת "הזמנת בדיקה", והניסיון "מצב בדיקה – ללא חיוב". אין צורך לעשות
+  בה דבר; פרטי הקונה נמחקים אוטומטית אחרי 30 יום.
+- למכירה אמיתית כבר עכשיו: "שאלה על היצירה" או טלפון, כמו קודם.
+
 ### להדפיס
 - מסמך גילוי – מהקישור במייל אישור ההזמנה או מעמוד ההזמנה; חובה לצרף ליצירה.
 - תעודת משלוח וחשבונית מסחרית – ממסך "הכנה למשלוח".
@@ -465,6 +473,15 @@ order page:
    early, untick "Sale on".
 4. A different discount for one work: on the work's admin page, under the price, "Percent off for
    this work" (empty = the sale's percentage).
+
+### Test orders (before Isracard switches payment on)
+While online payment is not active, the site is in "preview": anyone can go through the purchase
+flow, and a strip at the top says no order is placed and no money is charged. Once Isracard gives
+test keys, only test cards can be used.
+- A test payment **never sells a work**: the work stays available and its hold ends at once.
+- In the admin such an order is marked "Test order", and its attempt "Test mode – no charge".
+  Nothing needs doing; the buyer's details are erased automatically after 30 days.
+- To sell a work now: "Ask about this work" or the phone, as before.
 
 ### Print
 - The disclosure document: from the link in the order confirmation email or from the order

@@ -2120,7 +2120,8 @@ SOLD/closed orders, one receipt per paid attempt, no DEAD/pending outbox jobs, n
 - **What stays the same.**
   - Live providers are still refused while any other go-live blocker exists (`golive.ts`):
     `DEMO_MODE`, `PROFILE_INCOMPLETE`, `LEGAL_NOT_APPROVED`, `RATES_UNCALIBRATED`,
-    `INSURANCE_UNCONFIRMED`, `MOCK_SALES_ON_REAL_WORKS`, `ADMIN_2FA_MISSING`, `CARDCOM_NOT_LIVE`.
+    `INSURANCE_UNCONFIRMED`, `MOCK_SALES_ON_REAL_WORKS`, `ADMIN_2FA_MISSING`, `PAYMENTS_NOT_LIVE`
+    (`CARDCOM_NOT_LIVE` until 2026-10-14).
   - In production the mock provider never sells a real work. A deployment with `DEMO_MODE=true`
     therefore offers no way to pay for her works; it is a preview, not a store.
   - Locally (`APP_ENV≠production`) the mock provider still sells them, so the dev site's checkout
@@ -2631,4 +2632,81 @@ and production-data pieces below.
 - **Tests:** `tests/unit/sale.test.ts`, the pricing, settings and JSON-LD unit tests, and
   `tests/integration/sale.test.ts`. There is no E2E spec: the sale is a global setting, and the
   E2E workers share one database, so turning it on would change other specs' prices.
+
+### Isracard checkout: preview, test payments and the pay page (2026-10-14)
+
+Isracard's review asked for "a secure payment page completed on the website". Its online-acceptance
+form (business.isracard.co.il) requires a working secure payment page built with an Isracard-
+certified Service Provider (iframe or redirect), a warranty policy, a contact area with full
+address, country and phone, and a PCI DSS commitment. The owner chose Isracard's own e-commerce
+service (on PayMe) over a separate gateway, with the card form on our site. Runbook: `deploy.md`
+§0c.
+
+- **Preview** (`CHECKOUT_PREVIEW=true` with `SALES_OPEN=false`; `env.salesAccess`: open | preview |
+  closed): the purchase flow is public with `PreviewBanner`; `liveProvidersBlocked` refuses every
+  live provider outside `open`; without a usable provider the quote is ok with `providers: []` and
+  the form shows "activation pending" (disabled submit; `startCheckout` refuses before writing).
+  Admin payment links, the inbox and the go-live digest stay on `SALES_OPEN`.
+- **A TEST payment never sells a real work.** `finalize.ts#handleVerified` sends any money state
+  of a TEST attempt on a non-demo order to `closeTestPayment` (`apply.ts`): attempt CANCELED
+  (FAILED from review) with `failure_reason` `TEST_PAYMENT`; the order's holds released and an
+  AWAITING_PAYMENT order EXPIRED with the new status reason `TEST_PAYMENT` (migration 0005), so the
+  purge anonymises it. No sale, shipment, email, document, capture or refund. `testAttemptRetired`
+  closes a TEST attempt whose terminal is gone (`TEST_RETIRED`) before `providerForAttempt` would
+  raise CONFIG_DRIFT. Invariant `test_payment_never_sells_real_work`; env: an open production store
+  lists live providers only; `orderPaymentProviders` (one list for the order page and "Pay now";
+  no live provider for an order with a TEST attempt).
+- **The pay page** (`/[locale]/checkout/pay/[attemptId]?t=<HMAC isracard-pay>`): Isracard's
+  `createCheckout` makes no network call (`provider_ref` = `hf:<attemptId>`) and redirects here.
+  PayMe's hosted fields (`https://cdn.payme.io/hf/v1/hostedfields.js`, frames from `hf.payme.io`)
+  tokenize the card (`tokenIsPermanent: false`); `PayMe.clientData()` gives the 3-D Secure data.
+  Only the token, that data, the card holder's ID number and the installments reach
+  `payWithCardAction`. The page needs a full page load (own CSP): checkout returns
+  `{ kind: "navigate" }` (navigated from the action callback, without revalidation, which would
+  re-render the checkout as reserved first), the order page links to an unsubmitted pay page,
+  and the page reloads itself after a client-router navigation.
+- **The charge** (`payments/charge.ts`): claim (PENDING → CAPTURING under the locks: hold live,
+  quote bound, no other attempt in flight; holds extended ≥ 10 min; the one-winner index refuses a
+  second charging attempt), `generate-sale` (sale id stored), one `pay-sale` (`buyer_key`,
+  `meta_data_jwt`). Completed → `finalizeForBuyer`; status 5 + `redirect_url` → the 3-D Secure
+  challenge (the return route finalizes; `cancel_url` is our failed return); declined → FAILED and
+  a new attempt's pay page (`payDeclineIp`: 5 per hour); unknown → left CAPTURING. The adapter has
+  no `capture` and never reports `requires_capture`, so nothing re-charges.
+- **Finalize for `hf:` refs:** PENDING + `hf:` is never sent to the provider (closed as
+  `NOT_SUBMITTED` once its hold lapsed); a sale found by our `transaction_id` is adopted
+  (`VerifiedPayment.providerRef`); CAPTURING past `CHARGE_WATCH_MS` (1 h) with nothing paid →
+  CANCELED `CHARGE_NOT_COMPLETED`, hold ended, WARNING alert. The return route reports
+  `not_completed` for a failed return with nothing verified.
+- **Verification and API facts** (docs.payme.io, read 2026-10-14; `isracard-map.ts`): hosts
+  `sandbox.payme.io/api` and `live.payme.io/api` picked by `ISRACARD_MODE` only; amounts in
+  agorot, minimum 500; `get-transactions` by our `transaction_id` (`transaction_error_code` 20000 =
+  success); callbacks are form-encoded (`notify_type`, `payme_sale_id`, `sale_status`…) and only a
+  hint (HMAC `isracard-notify` in the URL); `refund-sale` needs the partner key
+  (`ISRACARD_CLIENT_KEY`, otherwise manual refunds). `merchant_ref` stores a fingerprint of the
+  seller id, never the key. **Still assumed until the sandbox confirms:** the exact
+  `get-transactions` row shape, the callback signature scheme, and 3-D Secure with tokens;
+  `npm run check:isracard -- --record` records real fixtures.
+- **CSP:** `src/lib/csp.ts` — the static policy (every path but the pay page, from
+  `next.config.ts`) and `payPageCsp(nonce)` from `src/proxy.ts`: `'nonce-…' 'strict-dynamic'`,
+  frames only `hf.payme.io`, `base-uri 'none'`, `form-action 'self'` (PCI SSC FAQ 1588: an
+  iframe page protected against script attacks). Referrer `strict-origin` (Server Action POSTs).
+- **Daily sweep:** `runPaymentDailyChecks` (Cardcom tail and sweep, Isracard sweep in live mode);
+  money on an attempt we closed as unpaid → CRITICAL `PAYMENT_ON_CLOSED_ATTEMPT`.
+- **Security:** `CLIENT_IP_HEADER` (`cf-connecting-ip`) as the only client-IP source behind
+  Cloudflare; an HTTPS redirect on `CF-Visitor` "http" in production; redaction of PayMe fields.
+- **Site content for the form:** `/legal/warranty` (new, he/en), the contact page's address and
+  country, the privacy policy's hosting and processors (no Vercel/Neon), and the terms' and
+  disclosure's payment paragraph; versions 2026-10-14. These texts were published at the owner's
+  request **before the lawyer reviewed them** (go-live checklist).
+- **Checkout summary:** per-work lines (thumbnail, dimensions, "original · qty 1", struck list
+  price), accepted cards (`PAYMENT_CARD_BRANDS`), a secure-payment note, receipt details; the order
+  page names payment methods.
+- **Frozen files touched (change requests):** `env.ts`, the schema enums and migrations 0005-0006,
+  `next.config.ts`, `src/proxy.ts`, `payments/types.ts`, `checkout/types.ts`, `http.ts`,
+  `security/keys.ts`, `package.json` (`check:isracard`), `vitest.config.ts`, `AGENTS.md`.
+- **Tests:** unit `isracard-map`, `csp` (path matching with Next's matcher), `proxy`, `env`,
+  `security`; integration `checkout-preview`, `test-payments`, `isracard-charge` (a fake adapter:
+  one charge under concurrency, decline, timeout, adoption, stuck charge, unsubmitted page, sweep).
+  The pay page was checked in Chromium against a local PayMe stub (full page load, nonce CSP, test
+  payment, decline); a committed E2E needs a second server and a PayMe stub (not done).
 

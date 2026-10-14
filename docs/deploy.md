@@ -101,6 +101,96 @@ Cloudflare Tunnel (no open ports at home).
 - **Updates:** `DEPLOY_HOST=user@host sh scripts/deploy-home.sh` copies the sources, installs,
   migrates, builds and restarts.
 
+## 0c. Checkout preview and Isracard (online card payments)
+
+In October 2026 Isracard reviewed the site for online card acceptance and asked that "a secure
+payment page must be completed on the website". The owner chose Isracard's own e-commerce service
+(it runs on PayMe, an SP on Isracard's certified list) instead of a separate gateway, with the card
+form on our own pay page: card number, expiry and CVV are **PayMe hosted fields** (iframes from
+`hf.payme.io`), so card data never reaches our servers (PCI DSS SAQ A, iframe). The adapter is
+`src/server/payments/providers/isracard.ts`; the API facts and what is still assumed are in
+`isracard-map.ts`.
+
+What Isracard's online-acceptance form checks, and where the site answers it:
+
+| Form item | On the site |
+|---|---|
+| Site URL (or a temporary one) | `https://geulalevy.com` |
+| Product range | `/works` |
+| Cancellation and returns policy | `/legal/returns`, the `/cancel` form |
+| Warranty policy | `/legal/warranty` |
+| Contact area with full address, country and phone | `/contact` |
+| Working secure payment page from a certified SP | `/checkout/pay/<attempt>` (PayMe hosted fields); implementation "Iframe" |
+| SP confirmation | from Isracard / PayMe |
+| PCI DSS commitment | SAQ A: card data only in the hosted fields; the pay page has a nonce CSP (`src/proxy.ts`) |
+
+### Phase A — no credentials yet ("activation pending")
+
+In `/etc/geula/env` on the server, then `sudo systemctl restart geula-web`:
+
+```
+SALES_OPEN=false
+CHECKOUT_PREVIEW=true
+CLIENT_IP_HEADER=cf-connecting-ip
+PAYMENT_CARD_BRANDS=isracard,mastercard,visa   # what the merchant agreement covers
+```
+
+The purchase flow is public with a banner ("online payment is not active yet: no order is placed
+and no money is charged"); the payment step shows the card option as "activation pending" with
+its submit disabled, and nothing is created. In Cloudflare (dashboard → geulalevy.com):
+
+- SSL/TLS → Edge Certificates → **Always Use HTTPS** on (the app also redirects on `CF-Visitor`);
+- Security → WAF: no challenge on `POST /api/payments/*/webhook` (a Skip rule if a rule matches);
+  Bot Fight Mode off;
+- Speed / Scrape Shield / Zaraz: Rocket Loader, Email Obfuscation, Zaraz and automatic Web
+  Analytics **off** (they inject scripts into pages).
+
+Check: `curl -sI http://geulalevy.com/he` answers 301/308 to https; a work shows "Buy now"; the
+checkout reaches the payment step.
+
+### Phase B — Isracard sandbox keys (working card fields for the reviewer)
+
+Ask Isracard / PayMe for the **test** hosted-fields (JSAPI) key and test `seller_payme_id` ("MPL…"),
+and whether a partner key (`payme_client_key`) comes with the account (API refunds). Then:
+
+```
+PAYMENT_PROVIDERS=isracard
+ISRACARD_MODE=test
+ISRACARD_SELLER_ID=MPL…
+ISRACARD_JSAPI_KEY=…
+# ISRACARD_CLIENT_KEY=…   # only if issued
+```
+
+1. Locally, with the same keys in `.env.local`: `npm run check:isracard -- --record`
+   (generate-sale ₪5, nothing charged), then `npm test`; commit the recorded fixtures.
+2. On the site: a work → Buy now → the pay page shows "Test mode" and the card fields. Pay with
+   PayMe's staging card `5326105300985846`, 12/30, CVV 658, ID 008336174 → "Test payment
+   verified; no money was charged and no order was placed". The work stays available and the
+   order ends EXPIRED (`TEST_PAYMENT`); the admin shows "Test order".
+3. A declined card (`4000000000000002`) shows the decline on a fresh pay page.
+4. The callback reaches `/api/payments/isracard/webhook` (Cloudflare does not challenge it).
+
+Then send Isracard the form: URL `https://geulalevy.com`, implementation "Iframe", the SP section
+as Isracard instructs, and the questionnaire.
+
+### Phase C — live (after Isracard's approval)
+
+```
+ISRACARD_MODE=live
+ISRACARD_SELLER_ID=<live MPL>
+ISRACARD_JSAPI_KEY=<live key>
+SALES_OPEN=true
+CHECKOUT_PREVIEW=false
+EMAIL_TO_VISITORS=true
+EMAIL_DRIVER=resend          # with RESEND_API_KEY and a verified domain
+TAX_DOCUMENTS_MODE=morning   # with MORNING_MODE=live and its keys
+```
+
+Clear the go-live blockers (§13), then make a ₪5 live purchase (PayMe's minimum) and refund it
+(through `refund-sale`, or in the PayMe dashboard without a partner key). TEST attempts still open
+from the preview are retired automatically (`TEST_RETIRED`). The environment refuses test
+providers while sales are open in production, and the mode alone picks sandbox or live.
+
 ## 1. Vercel project
 
 - **Plan: Vercel Pro** (about $20 per month). Hobby is for non-commercial use only, so it does
@@ -190,7 +280,11 @@ Rules enforced when `APP_ENV=production`:
 - with `DEMO_MODE=false`: `EMAIL_DRIVER=resend` and `STORAGE_DRIVER=blob`, and while
   `SALES_OPEN=true` also no `mock` provider, tax documents set to `morning` or `gateway`, and a
   carrier other than `mock`;
-- with `STORAGE_DRIVER=blob`: both tokens and `NEXT_PUBLIC_BLOB_HOST`.
+- with `STORAGE_DRIVER=blob`: both tokens and `NEXT_PUBLIC_BLOB_HOST`;
+- while `SALES_OPEN=true` outside demo mode: every listed provider in `live` mode (a TEST payment
+  never sells a real work);
+- `CHECKOUT_PREVIEW=true` only with `SALES_OPEN=false`; `ISRACARD_BASE_URL` and
+  `ISRACARD_HF_SCRIPT_URL` never.
 
 `DEMO_MODE=true` forbids every `live` provider mode. `ADMIN_REQUIRE_2FA` is forced on whenever
 `APP_URL` is https.
@@ -209,7 +303,13 @@ Rules enforced when `APP_ENV=production`:
 | `ADMIN_EMAIL` | painter's email | painter's email |
 | `RATE_LIMIT_SCALE` | `1` | `1` (enforced) |
 | `FORM_MIN_AGE_MS` | `3000` | at least `3000` (enforced) |
-| `PAYMENT_PROVIDERS` | `cardcom,mock` | `cardcom`, plus `paypal` once enabled; never `mock` when `DEMO_MODE=false` |
+| `PAYMENT_PROVIDERS` | `cardcom,mock` | `isracard` (or `cardcom`), plus `paypal` once enabled; never `mock` when `DEMO_MODE=false` |
+| `CHECKOUT_PREVIEW` | `false` | `true` only for the pre-activation review (§0c) |
+| `ISRACARD_MODE`, `ISRACARD_SELLER_ID`, `ISRACARD_JSAPI_KEY` | `test` + sandbox keys | `live` + live keys (§0c) |
+| `ISRACARD_CLIENT_KEY` | optional | optional: API refunds (otherwise manual) |
+| `ISRACARD_CURRENCIES` | `ILS` | `ILS` |
+| `PAYMENT_CARD_BRANDS` | as agreed | the brands the merchant agreement covers |
+| `CLIENT_IP_HEADER` | unset | `cf-connecting-ip` behind Cloudflare |
 | `CARDCOM_MODE` | `test` | `live` |
 | `CARDCOM_TERMINAL_NUMBER`, `CARDCOM_API_NAME` | test terminal | live terminal |
 | `CARDCOM_API_PASSWORD` | optional | **required**: refunds, the daily sweep, gateway documents |
@@ -269,6 +369,8 @@ protected URL that has no session, and provider webhooks are such requests.
 
 ## 8. Cardcom
 
+Dormant since October 2026 (the shop uses Isracard, §0c); the adapter stays for a later switch.
+
 - The webhook and return URLs are built per payment
   (`/api/payments/cardcom/{webhook,return}`), so nothing needs to be registered at Cardcom.
 - `live` requires `CARDCOM_API_PASSWORD`. Without it, refunds become MANUAL_REQUIRED and the
@@ -322,7 +424,9 @@ without it and a `DISCLOSURE_PDF_FAILED` warning appears in Alerts.
 The admin dashboard and the `daily` job list the go-live blockers (`src/server/golive.ts`). A
 live provider is refused while any blocker exists. The blocker codes are `DEMO_MODE`,
 `PROFILE_INCOMPLETE`, `LEGAL_NOT_APPROVED`, `RATES_UNCALIBRATED`, `INSURANCE_UNCONFIRMED`,
-`MOCK_SALES_ON_REAL_WORKS`, `DEMO_WORKS_PUBLISHED`, `ADMIN_2FA_MISSING` and `CARDCOM_NOT_LIVE`.
+`MOCK_SALES_ON_REAL_WORKS`, `DEMO_WORKS_PUBLISHED`, `ADMIN_2FA_MISSING` and `PAYMENTS_NOT_LIVE`
+(no listed card provider live and complete: Isracard with its keys, or Cardcom with its
+ApiPassword).
 
 - [ ] `DEMO_MODE=false`. The demo works are removed or unpublished, and no mock sales exist on
       real works.
@@ -337,14 +441,19 @@ live provider is refused while any blocker exists. The blocker codes are `DEMO_M
 - [ ] DHL types regenerated from the current MyDHL spec (`npm run gen:api-types`), then
       `npm run verify`.
 - [ ] Every admin enrolled in TOTP 2FA.
-- [ ] Cardcom live terminal with **ApiPassword**, which enables refunds and the sweep
-      **(owner)**.
+- [ ] Isracard live keys (§0c): `ISRACARD_MODE=live`, seller id and hosted-fields key; the
+      partner key if issued (API refunds) **(owner)**.
+- [ ] Cloudflare: Always Use HTTPS; no challenge on the webhook path; no script-injecting
+      features (§0c) **(owner)**.
 - [ ] PayPal live with its webhook id and merchant id; Morning production keys; DHL account
       **(owner)**.
 - [ ] Resend domain verified (SPF, DKIM, DMARC).
 - [ ] Vercel Pro, `fra1`, crons visible under Project → Settings → Cron Jobs, `CRON_SECRET`
       set.
 - [ ] Next.js on the latest 16.3.x security patch.
-- [ ] A ₪1 live purchase and its refund, end to end, with the receipt and credit note issued.
+- [ ] A ₪5 live purchase (PayMe's minimum) and its refund, end to end, with the receipt and
+      credit note issued.
+- [ ] The lawyer has reviewed the 2026-10-14 changes: the warranty policy, the terms' and the
+      disclosure's payment paragraph, and the privacy policy's hosting and processors.
 - [ ] `PII_ENCRYPTION_KEY` and the Neon restore procedure written down in the owner's password
       manager.
