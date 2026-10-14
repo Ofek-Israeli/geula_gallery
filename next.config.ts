@@ -111,12 +111,33 @@ function buildConfig(phase: string): NextConfig {
     // the same path on APP_URL (308, the query string kept).
     async redirects() {
       if (!appUrl) return [];
-      return redirectHosts.map((host) => ({
+      const hosts = redirectHosts.map((host) => ({
         source: "/:path*",
         has: [{ type: "host" as const, value: host.replace(/\./g, "\\.") }],
         destination: `${appUrl}/:path*`,
         permanent: true,
       }));
+      // Plain HTTP through Cloudflare (CF-Visitor carries the visitor's scheme; `"http"` never
+      // matches `"https"`) moves to the HTTPS address. Cloudflare's "Always Use HTTPS" does the
+      // same at the edge; this is the backstop. Production with an https APP_URL only.
+      const https =
+        isProduction && appUrl.startsWith("https://")
+          ? [
+              {
+                source: "/:path*",
+                has: [
+                  {
+                    type: "header" as const,
+                    key: "cf-visitor",
+                    value: '.*"scheme":"http".*',
+                  },
+                ],
+                destination: `${appUrl}/:path*`,
+                permanent: true,
+              },
+            ]
+          : [];
+      return [...hosts, ...https];
     },
   };
 }

@@ -9,7 +9,7 @@ import "server-only";
 export const REDACTED = "[REDACTED]";
 
 const SENSITIVE_KEY =
-  /pass(word|wd)?|secret|token|authorization|cookie|api[-_]?(key|name|password)|signature|card(number)?|cvv|cvc|pan|iban|id[-_]?number|identity|passport|totp|backup[-_]?codes?|otp/i;
+  /pass(word|wd)?|secret|token|authorization|cookie|api[-_]?(key|name|password)|signature|card(number)?|cvv|cvc|pan|iban|id[-_]?number|identity|passport|totp|backup[-_]?codes?|otp|buyer[-_]?key|social[-_]?id|client[-_]?(data|key)|jwt|seller[-_]?payme[-_]?id/i;
 
 /** Keys that are safe even though they match the pattern above. */
 const ALLOWED_KEYS = new Set([

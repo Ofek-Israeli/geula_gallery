@@ -1,13 +1,23 @@
 import "server-only";
+import { env } from "@/server/env";
 import { hmacHex } from "./crypto";
 import { appKey } from "./keys";
 
 /**
- * Client IP handling (spec §7: IPs are stored only as HMAC hashes).
- * On Vercel, `x-real-ip` / `x-forwarded-for` are set by the platform edge; locally `next start`
- * sets `x-forwarded-for`. The raw IP is used only transiently to compute the hash.
+ * Client IP handling (spec §7: IPs are stored only as HMAC hashes). The raw IP is used only
+ * transiently to compute the hash.
+ * - `CLIENT_IP_HEADER` set (behind Cloudflare: `cf-connecting-ip`, which Cloudflare overwrites):
+ *   only that header counts, so a visitor cannot pick their own rate-limit key with a forged
+ *   `x-real-ip` / `x-forwarded-for`.
+ * - Otherwise (Vercel, local `next start`): `x-real-ip`, then the first `x-forwarded-for` entry.
  */
-export function clientIp(headers: Headers): string | null {
+export function clientIp(
+  headers: Headers,
+  trusted: string | undefined = env.CLIENT_IP_HEADER,
+): string | null {
+  if (trusted) {
+    return headers.get(trusted)?.split(",")[0]?.trim() || null;
+  }
   const real = headers.get("x-real-ip")?.trim();
   if (real) return real;
   const forwarded = headers.get("x-forwarded-for");

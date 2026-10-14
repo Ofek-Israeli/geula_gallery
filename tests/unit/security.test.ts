@@ -117,6 +117,35 @@ describe("redact", () => {
     });
   });
 
+  it("redacts the pay page's and PayMe's sensitive fields", () => {
+    const out = redact.redact({
+      buyerKey: "BUYER-1",
+      buyer_key: "BUYER-2",
+      socialId: "000000018",
+      buyer_social_id: "000000018",
+      clientData: "hash",
+      meta_data_jwt: "jwt",
+      seller_payme_id: "MPL-1",
+      payme_client_key: "partner",
+      payme_signature: "sig",
+      attemptId: "a-1",
+      installments: 3,
+    });
+    expect(out).toEqual({
+      buyerKey: redact.REDACTED,
+      buyer_key: redact.REDACTED,
+      socialId: redact.REDACTED,
+      buyer_social_id: redact.REDACTED,
+      clientData: redact.REDACTED,
+      meta_data_jwt: redact.REDACTED,
+      seller_payme_id: redact.REDACTED,
+      payme_client_key: redact.REDACTED,
+      payme_signature: redact.REDACTED,
+      attemptId: "a-1",
+      installments: 3,
+    });
+  });
+
   it("masks emails, ID numbers and phones", () => {
     expect(redact.maskEmail("painter@example.com")).toBe("p*****r@example.com");
     expect(redact.maskEmail("ab@example.com")).toBe("a*@example.com");
@@ -155,6 +184,19 @@ describe("ip", () => {
       "198.51.100.7",
     );
     expect(ip.clientIp(new Headers())).toBeNull();
+    // Behind Cloudflare (CLIENT_IP_HEADER=cf-connecting-ip) only that header counts.
+    const forged = new Headers({
+      "cf-connecting-ip": "192.0.2.10",
+      "x-real-ip": "198.51.100.66",
+      "x-forwarded-for": "198.51.100.77, 192.0.2.10",
+    });
+    expect(ip.clientIp(forged, "cf-connecting-ip")).toBe("192.0.2.10");
+    expect(
+      ip.clientIp(
+        new Headers({ "x-real-ip": "198.51.100.66" }),
+        "cf-connecting-ip",
+      ),
+    ).toBeNull();
     const hash = ip.ipHashFrom(h);
     expect(hash).toMatch(/^[0-9a-f]{32}$/);
     expect(hash).not.toContain("203");

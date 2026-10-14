@@ -109,6 +109,19 @@ const rawSchema = z.object({
 
   // Abuse
   RATE_LIMIT_SCALE: num(1),
+  /**
+   * The one header that carries the client IP (lower case), e.g. `cf-connecting-ip` behind
+   * Cloudflare. Unset: `x-real-ip`, then `x-forwarded-for` (Vercel, local).
+   */
+  CLIENT_IP_HEADER: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z0-9-]+$/, "must be a header name")
+      .optional(),
+  ),
   FORM_MIN_AGE_MS: int(3000),
 
   // Cron

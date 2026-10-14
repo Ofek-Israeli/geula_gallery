@@ -148,6 +148,38 @@ describe("csp", () => {
     expect(dev.get("connect-src")).toContain("ws:");
   });
 
+  it("production with an https APP_URL moves plain HTTP (CF-Visitor) to https", async () => {
+    Object.assign(process.env, {
+      APP_ENV: "production",
+      APP_URL: "https://geula.example.test",
+      REDIRECT_HOSTS: "",
+    });
+    const rules =
+      (await nextConfig(PHASE_PRODUCTION_BUILD).redirects?.()) ?? [];
+    const https = rules.find((r) =>
+      r.has?.some((h) => h.type === "header" && h.key === "cf-visitor"),
+    );
+    expect(https).toMatchObject({
+      source: "/:path*",
+      destination: "https://geula.example.test/:path*",
+      permanent: true,
+    });
+    const value =
+      https?.has?.[0] && "value" in https.has[0] ? https.has[0].value : "";
+    const matcher = new RegExp(`^${value}$`); // how Next matches `has` values
+    expect(matcher.test('{"scheme":"http"}')).toBe(true);
+    expect(matcher.test('{"scheme":"https"}')).toBe(false);
+
+    Object.assign(process.env, {
+      APP_ENV: "development",
+      APP_URL: "http://localhost:3000",
+    });
+    const dev = (await nextConfig(PHASE_PRODUCTION_BUILD).redirects?.()) ?? [];
+    expect(dev.some((r) => r.has?.some((h) => h.type === "header"))).toBe(
+      false,
+    );
+  });
+
   it("token pages send no Referer; admin is noindex and no-store", async () => {
     const rules = (await nextConfig(PHASE_PRODUCTION_BUILD).headers?.()) ?? [];
     const bySource = new Map(
