@@ -17,6 +17,9 @@ import {
  */
 export interface ProvidersPanel {
   paymentProviders: string[];
+  /** open | preview (CHECKOUT_PREVIEW) | closed. */
+  salesAccess: "open" | "preview" | "closed";
+  isracard: { mode: string; configured: boolean; apiRefunds: boolean };
   cardcom: { mode: string; configured: boolean };
   paypal: { mode: string; configured: boolean };
   taxDocuments: { mode: string };
@@ -32,6 +35,12 @@ export interface ProvidersPanel {
 export function providersPanel(env: Env = defaultEnv): ProvidersPanel {
   return {
     paymentProviders: [...env.PAYMENT_PROVIDERS],
+    salesAccess: env.salesAccess,
+    isracard: {
+      mode: env.ISRACARD_MODE,
+      configured: Boolean(env.ISRACARD_SELLER_ID && env.ISRACARD_JSAPI_KEY),
+      apiRefunds: Boolean(env.ISRACARD_CLIENT_KEY),
+    },
     cardcom: {
       mode: env.CARDCOM_MODE,
       configured: Boolean(env.CARDCOM_TERMINAL_NUMBER && env.CARDCOM_API_NAME),

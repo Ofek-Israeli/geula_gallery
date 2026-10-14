@@ -97,12 +97,20 @@ export function CheckoutForm(props: CheckoutFormProps) {
         [...formData.entries()].map(([k, v]) => [k, String(v)]),
       );
       submits.current += 1;
-      return props.action(prev, formData);
+      const next = await props.action(prev, formData);
+      // Our own pay page opens with a full page load (its own CSP), started here: the page under
+      // the form may re-render before an effect would run.
+      if (next?.ok && next.data.kind === "navigate") {
+        window.location.assign(next.data.url);
+      }
+      return next;
     },
     null,
   );
   const v = values.current;
   const paymentsPending = props.providers.length === 0;
+  const navigateTo =
+    state?.ok && state.data.kind === "navigate" ? state.data.url : null;
   /** Optional fields say so. */
   const optional = (label: string): ReactNode => (
     <>
@@ -215,6 +223,11 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <input type="hidden" name="clientRequestId" value={h.clientRequestId} />
       <HoneypotField />
 
+      {navigateTo ? (
+        <p role="status" className="font-medium" data-testid="checkout-opening">
+          {t("opening")}
+        </p>
+      ) : null}
       {banner ? (
         <div
           role="alert"

@@ -221,7 +221,18 @@ export default async function OrderPage({
           ) : settling ? (
             <p role="status">{t("checking")}</p>
           ) : null}
-          {view.canPay ? (
+          {view.payPageUrl ? (
+            <div>
+              {/* A plain link: the pay page needs a full page load (its own CSP). */}
+              <a
+                href={view.payPageUrl}
+                className={buttonClasses("primary")}
+                data-testid="pay-now"
+              >
+                {t("payNow")}
+              </a>
+            </div>
+          ) : view.canPay ? (
             <form action={payOrderAction} className="flex flex-col gap-3">
               {hidden}
               {view.providers.length > 1 ? (

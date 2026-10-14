@@ -5,6 +5,7 @@ import { env as defaultEnv, type Env } from "@/server/env";
 import type { FetchLike } from "@/server/integrations/http";
 import { log } from "@/server/log";
 import { createCardcomProvider } from "./providers/cardcom";
+import { createIsracardProvider } from "./providers/isracard";
 import { createMockProvider } from "./providers/mock";
 import { createPaypalProvider } from "./providers/paypal";
 import type {
@@ -28,6 +29,7 @@ const FACTORIES: Record<ProviderId, ProviderFactory> = {
   mock: createMockProvider,
   cardcom: createCardcomProvider,
   paypal: createPaypalProvider,
+  isracard: createIsracardProvider,
 };
 
 /** True when the adapter is enabled and its credentials exist (no network). */
@@ -47,6 +49,12 @@ export function isProviderConfigured(id: ProviderId, e: Env): boolean {
         !!e.PAYPAL_CLIENT_ID &&
         !!e.PAYPAL_CLIENT_SECRET &&
         !!e.PAYPAL_MERCHANT_ID
+      );
+    case "isracard":
+      return (
+        e.ISRACARD_MODE !== "disabled" &&
+        !!e.ISRACARD_SELLER_ID &&
+        !!e.ISRACARD_JSAPI_KEY
       );
   }
 }
@@ -122,7 +130,7 @@ export function checkoutProviders(
 /** The attempt columns `providerForAttempt` needs. */
 export interface AttemptProviderRef {
   id: string;
-  provider: "MOCK" | "CARDCOM" | "PAYPAL" | "OFFLINE";
+  provider: "MOCK" | "CARDCOM" | "PAYPAL" | "ISRACARD" | "OFFLINE";
   providerMode: ProviderMode | "MANUAL";
   merchantRef: string | null;
 }
@@ -142,6 +150,7 @@ const ID_FROM_DB = {
   MOCK: "mock",
   CARDCOM: "cardcom",
   PAYPAL: "paypal",
+  ISRACARD: "isracard",
 } as const satisfies Record<string, ProviderId>;
 
 /**
@@ -157,7 +166,7 @@ export function testAttemptRetired(
   if (attempt.provider === "OFFLINE") return false;
   if (attempt.providerMode !== "TEST" || attempt.isDemo) return false;
   const provider = buildProvider(ID_FROM_DB[attempt.provider], deps);
-  if (!provider || provider.mode !== "TEST") return true;
+  if (provider?.mode !== "TEST") return true;
   let merchantRef: string | null;
   try {
     merchantRef = provider.merchantRef();

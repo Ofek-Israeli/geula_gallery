@@ -328,6 +328,7 @@ export async function executeRefund(
     try {
       const result = await pfa.provider.refund({
         refundId: refund.id,
+        ...(attempt.providerRef ? { providerRef: attempt.providerRef } : {}),
         transactionId: attempt.transactionId ?? attempt.captureId ?? "",
         ...(attempt.captureId ? { captureId: attempt.captureId } : {}),
         amount: { amountMinor: refund.amountMinor, currency: refund.currency },

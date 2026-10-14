@@ -388,41 +388,57 @@ export async function handlePaymentReturn(
       effects: NO_EFFECTS,
     };
   }
-  let outcome: FinalizeOutcome | "pending" = "pending";
-  let effects: Effects = NO_EFFECTS;
-  try {
-    const timeout = new Promise<null>((resolve) =>
-      setTimeout(() => resolve(null), RETURN_FINALIZE_BUDGET_MS).unref?.(),
-    );
-    const finalized = await Promise.race([
-      finalizeAttempt(a, { trigger: "return", db, env: e }),
-      timeout,
-    ]);
-    if (finalized) {
-      // The webhook often finalizes first: report the final state, including why it ended.
-      const [final] =
-        finalized.result.outcome === "already_final"
-          ? await db
-              .select({ failureReason: paymentAttempts.failureReason })
-              .from(paymentAttempts)
-              .where(eq(paymentAttempts.id, a))
-          : [];
-      outcome = buyerOutcome(
-        finalized.result.outcome,
-        finalized.result.attemptStatus,
-        final?.failureReason ?? null,
-      );
-      effects = mergeEffects(effects, finalized.effects);
-    }
-  } catch (error) {
-    log.error("payments.return_finalize_failed", { attemptId: a }, error);
-    outcome = "pending";
-  }
+  const { outcome, effects } = await finalizeForBuyer(a, { db, env: e });
   return {
     status: 303,
     location: orderUrlFor(row, locale, { payment: outcome }, e),
     effects,
   };
+}
+
+/**
+ * `finalizeAttempt('return')` within `RETURN_FINALIZE_BUDGET_MS`, reported for the buyer's order
+ * page (the return route and the pay page's charge). Past the budget, or on an error, the payment
+ * is "pending": the webhook and reconcile finish it.
+ */
+export async function finalizeForBuyer(
+  attemptId: string,
+  deps: { db?: Db; env?: Env } = {},
+): Promise<{ outcome: FinalizeOutcome | "pending"; effects: Effects }> {
+  const db = deps.db ?? defaultDb;
+  try {
+    const timeout = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), RETURN_FINALIZE_BUDGET_MS).unref?.(),
+    );
+    const finalized = await Promise.race([
+      finalizeAttempt(attemptId, {
+        trigger: "return",
+        db,
+        ...(deps.env ? { env: deps.env } : {}),
+      }),
+      timeout,
+    ]);
+    if (!finalized) return { outcome: "pending", effects: NO_EFFECTS };
+    // The webhook often finalizes first: report the final state, including why it ended.
+    const [final] =
+      finalized.result.outcome === "already_final"
+        ? await db
+            .select({ failureReason: paymentAttempts.failureReason })
+            .from(paymentAttempts)
+            .where(eq(paymentAttempts.id, attemptId))
+        : [];
+    return {
+      outcome: buyerOutcome(
+        finalized.result.outcome,
+        finalized.result.attemptStatus,
+        final?.failureReason ?? null,
+      ),
+      effects: mergeEffects(NO_EFFECTS, finalized.effects),
+    };
+  } catch (error) {
+    log.error("payments.return_finalize_failed", { attemptId }, error);
+    return { outcome: "pending", effects: NO_EFFECTS };
+  }
 }
 
 /**

@@ -153,6 +153,7 @@
     "MOCK": "תשלום הדגמה",
     "CARDCOM": "Cardcom",
     "PAYPAL": "PayPal",
+    "ISRACARD": "ישראכרט",
     "OFFLINE": "תשלום ידני"
   },
   "refundStatus": {

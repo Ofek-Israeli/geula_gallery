@@ -115,7 +115,9 @@ const rawSchema = z.object({
   CRON_SECRET: secret(16),
 
   // Payments
-  PAYMENT_PROVIDERS: csv(["mock", "cardcom", "paypal"] as const, ["mock"]),
+  PAYMENT_PROVIDERS: csv(["mock", "cardcom", "paypal", "isracard"] as const, [
+    "mock",
+  ]),
   MOCK_WEBHOOK_SECRET: secret(16),
   /**
    * Card brands named at checkout ("Accepted cards: …"), in this order; empty shows none. Set it to
@@ -151,6 +153,23 @@ const rawSchema = z.object({
   CARDCOM_WALLETS: csv(["bit", "applepay", "googlepay"] as const, []),
   CARDCOM_LATE_WATCH_HOURS: int(72),
   CARDCOM_TAIL_DAYS: int(30),
+
+  // Isracard (its e-commerce service runs on PayMe: hosted fields on our pay page)
+  ISRACARD_MODE: z.preprocess(
+    (v) => emptyToUndefined(v) ?? "disabled",
+    z.enum(PROVIDER_MODE),
+  ),
+  /** PayMe `seller_payme_id` ("MPL…"): a credential, server only. */
+  ISRACARD_SELLER_ID: optStr(),
+  /** PayMe JSAPI key for the hosted fields (Dashboard → Apps & Integrations); sent to the browser. */
+  ISRACARD_JSAPI_KEY: optStr(),
+  /** PayMe partner key (`payme_client_key`), if issued: API refunds. Without it refunds are manual. */
+  ISRACARD_CLIENT_KEY: optStr(),
+  ISRACARD_CURRENCIES: csv(["ILS", "USD"] as const, ["ILS"]),
+  /** Tests only (a fixture server); refused in production, where the mode picks the PayMe host. */
+  ISRACARD_BASE_URL: optUrl(),
+  /** Tests only (a stub of the hosted-fields script); refused in production. */
+  ISRACARD_HF_SCRIPT_URL: optUrl(),
 
   // PayPal
   PAYPAL_MODE: z.preprocess(
@@ -251,6 +270,7 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
     for (const key of [
       "CARDCOM_MODE",
       "PAYPAL_MODE",
+      "ISRACARD_MODE",
       "MORNING_MODE",
       "DHL_EXPRESS_MODE",
     ] as const) {
@@ -291,6 +311,14 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
       if (e.PAYMENT_PROVIDERS.includes("paypal") && e.PAYPAL_MODE !== "live")
         issue("PAYPAL_MODE", "must be live while sales are open in production");
       if (
+        e.PAYMENT_PROVIDERS.includes("isracard") &&
+        e.ISRACARD_MODE !== "live"
+      )
+        issue(
+          "ISRACARD_MODE",
+          "must be live while sales are open in production",
+        );
+      if (
         e.TAX_DOCUMENTS_MODE !== "morning" &&
         e.TAX_DOCUMENTS_MODE !== "gateway"
       )
@@ -318,6 +346,30 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
     issue("PAYMENT_PROVIDERS", "lists cardcom but CARDCOM_MODE=disabled");
   if (e.PAYMENT_PROVIDERS.includes("paypal") && e.PAYPAL_MODE === "disabled")
     issue("PAYMENT_PROVIDERS", "lists paypal but PAYPAL_MODE=disabled");
+  if (
+    e.PAYMENT_PROVIDERS.includes("isracard") &&
+    e.ISRACARD_MODE === "disabled"
+  )
+    issue("PAYMENT_PROVIDERS", "lists isracard but ISRACARD_MODE=disabled");
+
+  // Isracard (PayMe): the mode alone picks sandbox or live, so a test setup can never reach the
+  // live account; URL overrides exist only for tests.
+  if (e.ISRACARD_MODE !== "disabled") {
+    if (!e.ISRACARD_SELLER_ID)
+      issue("ISRACARD_SELLER_ID", "required when ISRACARD_MODE is enabled");
+    if (!e.ISRACARD_JSAPI_KEY)
+      issue("ISRACARD_JSAPI_KEY", "required when ISRACARD_MODE is enabled");
+  }
+  if (e.ISRACARD_MODE === "live" && e.DEMO_MODE)
+    issue("ISRACARD_MODE", "live requires DEMO_MODE=false");
+  if (isProduction) {
+    for (const key of [
+      "ISRACARD_BASE_URL",
+      "ISRACARD_HF_SCRIPT_URL",
+    ] as const) {
+      if (e[key]) issue(key, "must not be set in production");
+    }
+  }
 
   // Cardcom
   if (e.CARDCOM_MODE !== "disabled") {

@@ -21,7 +21,7 @@ import { transition } from "@/server/domain/transition";
 import { env } from "@/server/env";
 import { goLiveBlockers } from "@/server/golive";
 import { checkInvariants } from "@/server/invariants";
-import { runCardcomDailyChecks } from "@/server/payments/sweep";
+import { runPaymentDailyChecks } from "@/server/payments/sweep";
 import { getSettingOrNull } from "@/server/settings";
 import { notifyCriticalAlerts } from "./alert-emails";
 import type { CronJob, CronJobContext } from "./index";
@@ -39,9 +39,10 @@ import type { CronJob, CronJobContext } from "./index";
  * 2. COMPLETED transitions (spec §3.6): PAID, delivered or collected, the window has passed (4
  *    months after the window start when a conversation took place, else 14 days), no open
  *    cancellation, no fulfillment block, no pending export declaration.
- * 3. Cardcom checks (WS2's `payments/sweep.ts#runCardcomDailyChecks`): the 30-day tail poll of
+ * 3. Payment checks (WS2's `payments/sweep.ts#runPaymentDailyChecks`): the 30-day Cardcom tail poll of
  *    expired attempts and, in live mode with an ApiPassword, the ListTransactions sweep (unmatched
- *    money → CRITICAL alert). Stats: `cardcomTail`, `cardcomSweep`.
+ *    money → CRITICAL alert), and the same sweep for Isracard in live mode. Stats: `cardcomTail`,
+ *    `cardcomSweep`, `isracardSweep`.
  * 4. `checkInvariants()` (Tier B) → one CRITICAL alert per violation.
  * 5. Go-live digest (outside demo mode, while online sales are open): CRITICAL alert listing the
  *    blockers. A showcase site (`SALES_OPEN=false`) takes no payments, so it has none to report.
@@ -60,9 +61,10 @@ export const dailyJob: CronJob = async (ctx) => {
     [
       "cardcom",
       async () => {
-        const r = await runCardcomDailyChecks(ctx, { db });
+        const r = await runPaymentDailyChecks(ctx, { db });
         stats.cardcomTail = r.cardcomTail;
         stats.cardcomSweep = r.cardcomSweep;
+        stats.isracardSweep = r.isracardSweep;
         return r.cardcomSweep.skipped ?? "ok";
       },
     ],

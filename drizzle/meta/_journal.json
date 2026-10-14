@@ -43,6 +43,13 @@
       "when": 1791972261007,
       "tag": "0005_test_payment_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791972908080,
+      "tag": "0006_isracard_provider",
+      "breakpoints": true
     }
   ]
 }

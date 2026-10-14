@@ -33,6 +33,7 @@
     "gen:api-types": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/gen-api-types.ts",
     "cron": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/cron.ts",
     "check:cardcom": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-cardcom.ts",
+    "check:isracard": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-isracard.ts",
     "check:paypal": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-paypal.ts",
     "check:morning": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-morning.ts",
     "check:dhl": "node --conditions=react-server --env-file-if-exists=.env.local --import tsx scripts/check-dhl.ts"

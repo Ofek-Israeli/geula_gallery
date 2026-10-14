@@ -68,7 +68,7 @@
         "MOCK_SALES_ON_REAL_WORKS": "No demo payments on real works",
         "DEMO_WORKS_PUBLISHED": "Demo works unpublished",
         "ADMIN_2FA_MISSING": "Two-step verification for every user",
-        "CARDCOM_NOT_LIVE": "Cardcom live, with an API password",
+        "PAYMENTS_NOT_LIVE": "A live card payment provider (Isracard, or Cardcom with an API password)",
         "taxDocuments": "Tax documents connected",
         "email": "Real email sending",
         "storage": "Cloud file storage"

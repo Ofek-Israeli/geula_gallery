@@ -149,6 +149,11 @@ export type StartCheckoutResult =
       orderNumber: string;
       accessToken: string;
       url: string;
+      /**
+       * True for our own pay page (hosted fields): it must be opened with a full page load, which
+       * carries its own CSP; a client-router navigation would keep the previous page's.
+       */
+      fullPageLoad: boolean;
       /** The order's works (the cart action removes them from the cart). */
       artworkIds: string[];
     }

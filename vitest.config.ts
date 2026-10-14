@@ -28,6 +28,8 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           include: ["tests/unit/**/*.test.ts"],
+          // next-intl's ESM imports `next/server` without an extension (`tests/unit/proxy.test.ts`).
+          server: { deps: { inline: ["next-intl"] } },
         },
       },
       {

@@ -160,6 +160,7 @@
   "holdNotice": "When you continue, {count, plural, one {the work is} other {the # works are}} reserved for you for {minutes} minutes.",
   "submit": "Continue to payment",
   "submitting": "Reserving…",
+  "opening": "Opening the secure payment page…",
   "errors": {
     "price_changed": "The price or delivery cost has changed. Please review the updated total.",
     "reload": "Show the updated total",
@@ -245,6 +246,42 @@
       "SIZE_QUOTE": "Needs a quoted shipment to this destination",
       "VALUE_CAP": "Above the carrier's value limit for this destination",
       "MIXED_DEMO": "Demo work – cannot be bought with real works"
+    }
+  },
+  "pay": {
+    "title": "Payment",
+    "orderLine": "Order {number}",
+    "testBanner": "Test mode: use one of Isracard's test cards. No money is charged and no order is placed.",
+    "cardTitle": "Card details",
+    "cardNumber": "Card number",
+    "expiry": "Expiry (MM/YY)",
+    "cvc": "CVV (3 or 4 digits)",
+    "holderTitle": "Card holder",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "socialId": "ID number",
+    "socialIdHint": "For an Israeli card: the card holder's ID number.",
+    "email": "Email",
+    "phone": "Phone",
+    "installments": "Payments",
+    "installmentsOption": "{count, plural, one {Single payment} other {# payments}}",
+    "submit": "Pay {amount}",
+    "submitting": "Processing the payment…",
+    "loading": "Loading the secure card fields…",
+    "loadFailed": "The secure card fields did not load. Please refresh the page; if it happens again, please contact us.",
+    "secure": "Card number, expiry and CVV are typed into Isracard's secure fields (PCI DSS) and go directly to Isracard; they never reach this site's servers.",
+    "declined": "The card was declined and you were not charged. You can try another card.",
+    "holdUntil": "Reserved for you until {time}",
+    "expiredTitle": "This payment page is no longer active",
+    "expiredBody": "The reservation ended before payment. You were not charged.",
+    "backToOrder": "To the order page",
+    "notConfigured": "Card payment is not available right now. To buy the work, please contact us.",
+    "errors": {
+      "generic": "Something went wrong and you were not charged. Please try again.",
+      "rateLimited": "Too many attempts. Please try again in a few minutes.",
+      "card": "Please check the card details.",
+      "invalid": "Something in the payment details was wrong. Please try again.",
+      "not_configured": "Card payment is not available right now."
     }
   }
 }

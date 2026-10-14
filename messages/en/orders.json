@@ -93,7 +93,8 @@
     "generic": "Something went wrong. Please try again.",
     "rate_limited": "Too many attempts. Please try again in a few minutes.",
     "details_required": "Please complete the delivery details first.",
-    "SALES_CLOSED": "Online payment isn't open yet. Please contact us."
+    "SALES_CLOSED": "Online payment isn't open yet. Please contact us.",
+    "declined": "The card was declined several times. Please try again later or contact us."
   },
   "link": {
     "title": "Complete your order",

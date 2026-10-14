@@ -92,6 +92,13 @@
     "providersHint": "Set in the server's environment variables. Secrets are never shown.",
     "provider": {
       "paymentProviders": "Active payment providers",
+      "salesAccess": "Online purchase",
+      "access": {
+        "open": "open",
+        "preview": "preview (payment not active yet)",
+        "closed": "closed (showcase)"
+      },
+      "isracard": "Isracard (PayMe)",
       "cardcom": "Cardcom",
       "paypal": "PayPal",
       "taxDocuments": "Tax documents",
@@ -103,7 +110,9 @@
       "demo": "Demo mode",
       "twoFactor": "Two-step verification required",
       "configured": "configured",
-      "notConfigured": "not configured"
+      "notConfigured": "not configured",
+      "apiRefunds": "API refunds",
+      "manualRefunds": "manual refunds"
     }
   }
 }

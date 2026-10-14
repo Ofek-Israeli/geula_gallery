@@ -168,10 +168,13 @@ export function startBase(
 }
 
 /**
- * What the form shows after a submit that did not redirect. `redirect` and `provider_error` never
- * reach the form: both go to a page (the provider, or the order page with the error).
+ * What the form gets back after a submit that did not redirect. `redirect` and `provider_error`
+ * never reach it: both go to a page (the provider, or the order page with the error). `navigate`
+ * is our own pay page, which the form opens with a full page load (it has its own CSP).
  */
-export type CheckoutActionData = Exclude<
-  StartCheckoutResult,
-  { kind: "redirect" } | { kind: "provider_error" }
->;
+export type CheckoutActionData =
+  | Exclude<
+      StartCheckoutResult,
+      { kind: "redirect" } | { kind: "provider_error" }
+    >
+  | { kind: "navigate"; url: string };

@@ -153,6 +153,7 @@
     "MOCK": "Demo payment",
     "CARDCOM": "Cardcom",
     "PAYPAL": "PayPal",
+    "ISRACARD": "Isracard",
     "OFFLINE": "Recorded payment"
   },
   "refundStatus": {

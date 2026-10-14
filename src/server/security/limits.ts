@@ -24,6 +24,10 @@ export const LIMITS = {
   paypalPreverifyIp: { limit: 60, windowSec: 60 },
   /** Bad order `k` tokens: 30 per minute per IP. */
   badOrderKeyIp: { limit: 30, windowSec: 60 },
+  /** Card charges on the pay page: 10 per 10 min per IP. */
+  payChargeIp: { limit: 10, windowSec: 600 },
+  /** Declined cards on the pay page (card testing): 5 per hour per IP; then no new attempt. */
+  payDeclineIp: { limit: 5, windowSec: 3600 },
 } as const satisfies Record<string, { limit: number; windowSec: number }>;
 
 export type LimitName = keyof typeof LIMITS;

@@ -104,6 +104,8 @@ export interface SweepStats {
   alreadyApplied: number;
   finalized: number;
   unmatched: number;
+  /** Charges on attempts we had closed as unpaid (FAILED / CANCELED): CRITICAL alerts. */
+  onClosedAttempt: number;
   outcomes: Record<string, number>;
 }
 
@@ -111,28 +113,67 @@ export async function sweepCardcomTransactions(
   ctx: SweepContext,
   deps: SweepDeps = {},
 ): Promise<SweepStats> {
-  const db = deps.db ?? defaultDb;
   const e = deps.env ?? defaultEnv;
-  const now = deps.now ?? new Date();
-  const stats: SweepStats = {
+  const provider = deps.provider ?? buildProvider("cardcom", { env: e });
+  if (!deps.provider) {
+    if (provider?.mode !== "LIVE")
+      return { ...emptyStats(), skipped: "not_live" };
+    if (!e.CARDCOM_API_PASSWORD)
+      return { ...emptyStats(), skipped: "no_api_password" };
+  }
+  return sweepTransactions(ctx, provider, "CARDCOM", deps);
+}
+
+/**
+ * The same sweep for Isracard (PayMe `get-transactions`, which needs only the seller id): live
+ * mode only. Its listed sales carry our attempt id (`transaction_id`) and the PayMe sale id.
+ */
+export async function sweepIsracardTransactions(
+  ctx: SweepContext,
+  deps: SweepDeps = {},
+): Promise<SweepStats> {
+  const e = deps.env ?? defaultEnv;
+  const provider = deps.provider ?? buildProvider("isracard", { env: e });
+  if (!deps.provider && provider?.mode !== "LIVE") {
+    return { ...emptyStats(), skipped: "not_live" };
+  }
+  return sweepTransactions(ctx, provider, "ISRACARD", deps);
+}
+
+function emptyStats(): SweepStats {
+  return {
     listed: 0,
     matched: 0,
     alreadyApplied: 0,
     finalized: 0,
     unmatched: 0,
+    onClosedAttempt: 0,
     outcomes: {},
   };
-  const provider = deps.provider ?? buildProvider("cardcom", { env: e });
-  if (!deps.provider) {
-    if (provider?.mode !== "LIVE") {
-      return { ...stats, skipped: "not_live" };
-    }
-    if (!e.CARDCOM_API_PASSWORD)
-      return { ...stats, skipped: "no_api_password" };
-  }
+}
+
+/** Attempts that ended without money: a listed charge matching one is money we did not expect. */
+const CLOSED = new Set(["FAILED", "CANCELED"]);
+
+/**
+ * Lists the provider's completed charges of the last `SWEEP_DAYS` and matches each to an attempt
+ * (transaction id, our attempt id echoed back, or the provider's payment id). Unmatched money →
+ * CRITICAL `UNMATCHED_<PROVIDER>_TRANSACTION`; money on an attempt we closed as unpaid → CRITICAL
+ * `PAYMENT_ON_CLOSED_ATTEMPT`; a matched attempt not applied yet → finalized.
+ */
+async function sweepTransactions(
+  ctx: SweepContext,
+  provider: PaymentProvider | null,
+  dbProvider: "CARDCOM" | "ISRACARD",
+  deps: SweepDeps,
+): Promise<SweepStats> {
+  const db = deps.db ?? defaultDb;
+  const now = deps.now ?? new Date();
+  const stats = emptyStats();
   if (!provider?.listTransactions) {
     return { ...stats, skipped: "no_list_transactions" };
   }
+  const label = dbProvider.toLowerCase();
   const txs = await provider.listTransactions({
     from: new Date(now.getTime() - SWEEP_DAYS * 24 * 60 * 60_000),
     to: now,
@@ -154,18 +195,18 @@ export async function sweepCardcomTransactions(
     const [attempt] = await db
       .select({ id: paymentAttempts.id, status: paymentAttempts.status })
       .from(paymentAttempts)
-      .where(and(eq(paymentAttempts.provider, "CARDCOM"), or(...keys)))
+      .where(and(eq(paymentAttempts.provider, dbProvider), or(...keys)))
       .limit(1);
     if (!attempt) {
       stats.unmatched += 1;
-      log.error("payments.cardcom_unmatched_transaction", {
+      log.error(`payments.${label}_unmatched_transaction`, {
         transactionId: t.transactionId,
       });
       await raiseAlert(
         {
           severity: "CRITICAL",
-          kind: "UNMATCHED_CARDCOM_TRANSACTION",
-          dedupeKey: `cardcom-unmatched:${t.transactionId}`,
+          kind: `UNMATCHED_${dbProvider}_TRANSACTION`,
+          dedupeKey: `${label}-unmatched:${t.transactionId}`,
           entity: "payment_attempt",
           params: {
             transactionId: t.transactionId,
@@ -178,6 +219,29 @@ export async function sweepCardcomTransactions(
       continue;
     }
     stats.matched += 1;
+    if (CLOSED.has(attempt.status)) {
+      stats.onClosedAttempt += 1;
+      log.error("payments.payment_on_closed_attempt", {
+        attemptId: attempt.id,
+        provider: dbProvider,
+      });
+      await raiseAlert(
+        {
+          severity: "CRITICAL",
+          kind: "PAYMENT_ON_CLOSED_ATTEMPT",
+          dedupeKey: `payment-on-closed:${attempt.id}:${t.transactionId}`,
+          entity: "payment_attempt",
+          entityId: attempt.id,
+          params: {
+            transactionId: t.transactionId,
+            amountMinor: t.amount.amountMinor,
+            currency: t.amount.currency,
+          },
+        },
+        db,
+      );
+      continue;
+    }
     if (APPLIED.has(attempt.status)) stats.alreadyApplied += 1;
     else toFinalize.push(attempt.id);
   }
@@ -199,24 +263,26 @@ export async function sweepCardcomTransactions(
   return stats;
 }
 
-/** Both checks, for WS6's `daily` job: `{ cardcomTail, cardcomSweep }` go into its stats. */
-export async function runCardcomDailyChecks(
+/**
+ * The daily payment checks, for WS6's `daily` job: the Cardcom tail and the transaction sweeps of
+ * Cardcom and Isracard (`{ cardcomTail, cardcomSweep, isracardSweep }` go into its stats).
+ */
+export async function runPaymentDailyChecks(
   ctx: SweepContext,
   deps: SweepDeps = {},
 ): Promise<{
   cardcomTail: Awaited<ReturnType<typeof pollCardcomTail>>;
   cardcomSweep: SweepStats;
+  isracardSweep: SweepStats;
 }> {
   const cardcomTail = await pollCardcomTail(ctx, deps);
   const cardcomSweep = ctx.expired()
-    ? {
-        listed: 0,
-        matched: 0,
-        alreadyApplied: 0,
-        finalized: 0,
-        unmatched: 0,
-        outcomes: {},
-      }
+    ? emptyStats()
     : await sweepCardcomTransactions(ctx, deps);
-  return { cardcomTail, cardcomSweep };
+  // `deps.provider` is a Cardcom fixture in tests: the Isracard sweep builds its own adapter.
+  const { provider: _cardcomFixture, ...isracardDeps } = deps;
+  const isracardSweep = ctx.expired()
+    ? emptyStats()
+    : await sweepIsracardTransactions(ctx, isracardDeps);
+  return { cardcomTail, cardcomSweep, isracardSweep };
 }

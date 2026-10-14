@@ -30,7 +30,7 @@ export function isLegalDoc(value: unknown): value is LegalDoc {
 
 export type RequestKind = "question" | "quote" | "offer";
 export type UploadPurpose = "artwork" | "packing" | "return";
-export type PaymentProviderSlug = "mock" | "cardcom" | "paypal";
+export type PaymentProviderSlug = "mock" | "cardcom" | "paypal" | "isracard";
 export type CronJobName =
   | "reconcile"
   | "outbox"
@@ -103,6 +103,12 @@ export const paths = {
   checkoutReturned: (query: Record<string, QueryValue> = {}) =>
     withQuery("/checkout/returned", query),
   mockPay: (ref: string) => `/mock-pay/${seg(ref)}`,
+  /**
+   * Our own pay page (Isracard/PayMe hosted fields) for one attempt; `t` is its HMAC token. Always
+   * reached by a full page load (it has its own nonce CSP, `src/proxy.ts`).
+   */
+  payPage: (attemptId: string, token: string) =>
+    withQuery(`/checkout/pay/${seg(attemptId)}`, { t: token }),
   /** Buyer order page; `k` is the order access token. */
   order: (orderNumber: string, token: string) =>
     withQuery(`/orders/${seg(orderNumber)}`, { k: token }),

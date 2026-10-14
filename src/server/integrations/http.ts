@@ -17,6 +17,7 @@ import { log } from "@/server/log";
 
 export type ProviderName =
   | "cardcom"
+  | "isracard"
   | "paypal"
   | "morning"
   | "dhl"

@@ -5,6 +5,8 @@ import { deriveKey } from "./crypto";
 /** Purposes for HKDF sub-keys of `APP_SECRET`. One key per purpose; never reuse across purposes. */
 export type KeyPurpose =
   | "cardcom-notify"
+  | "isracard-notify"
+  | "isracard-pay"
   | "return"
   | "order-access"
   | "file-url"

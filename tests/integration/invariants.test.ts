@@ -147,7 +147,7 @@ describe("goLiveBlockers", () => {
       "RATES_UNCALIBRATED",
       "INSURANCE_UNCONFIRMED",
       "DEMO_WORKS_PUBLISHED",
-      "CARDCOM_NOT_LIVE",
+      "PAYMENTS_NOT_LIVE",
     ]) {
       expect(r.blockers).toContain(b);
     }

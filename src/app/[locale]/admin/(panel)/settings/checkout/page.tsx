@@ -57,6 +57,18 @@ export default async function CheckoutSettingsPage({
       panel.paymentProviders.join(", "),
     ],
     [
+      t("checkout.provider.salesAccess"),
+      t(`checkout.provider.access.${panel.salesAccess}`),
+    ],
+    [
+      t("checkout.provider.isracard"),
+      `${panel.isracard.mode} · ${cfg(panel.isracard.configured)} · ${t(
+        panel.isracard.apiRefunds
+          ? "checkout.provider.apiRefunds"
+          : "checkout.provider.manualRefunds",
+      )}`,
+    ],
+    [
       t("checkout.provider.cardcom"),
       `${panel.cardcom.mode} · ${cfg(panel.cardcom.configured)}`,
     ],

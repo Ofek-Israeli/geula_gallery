@@ -92,6 +92,13 @@
     "providersHint": "מוגדרים במשתני הסביבה של השרת. סודות לעולם אינם מוצגים.",
     "provider": {
       "paymentProviders": "ספקי תשלום פעילים",
+      "salesAccess": "רכישה מקוונת",
+      "access": {
+        "open": "פתוחה",
+        "preview": "תצוגה מקדימה (התשלום עוד לא פעיל)",
+        "closed": "סגורה (חלון ראווה)"
+      },
+      "isracard": "ישראכרט (PayMe)",
       "cardcom": "Cardcom",
       "paypal": "PayPal",
       "taxDocuments": "מסמכים חשבונאיים",
@@ -103,7 +110,9 @@
       "demo": "מצב הדגמה",
       "twoFactor": "אימות דו־שלבי חובה",
       "configured": "מוגדר",
-      "notConfigured": "לא מוגדר"
+      "notConfigured": "לא מוגדר",
+      "apiRefunds": "החזרים דרך API",
+      "manualRefunds": "החזרים ידניים"
     }
   }
 }

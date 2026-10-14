@@ -6,6 +6,8 @@
 export const publicEnv = {
   /** Host of the public Vercel Blob store, e.g. `abc123.public.blob.vercel-storage.com`. */
   blobHost: process.env.NEXT_PUBLIC_BLOB_HOST || undefined,
+  /** `next dev` (inlined by Next): the pay page's CSP then allows eval and the HMR socket. */
+  devServer: process.env.NODE_ENV === "development",
 } as const;
 
 export type PublicEnv = typeof publicEnv;

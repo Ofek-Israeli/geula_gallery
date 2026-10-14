@@ -21,7 +21,8 @@ export const GOLIVE_BLOCKERS = [
   "MOCK_SALES_ON_REAL_WORKS",
   "DEMO_WORKS_PUBLISHED",
   "ADMIN_2FA_MISSING",
-  "CARDCOM_NOT_LIVE",
+  /** No listed card provider is live and complete (Cardcom with its API password, Isracard). */
+  "PAYMENTS_NOT_LIVE",
 ] as const;
 export type GoLiveBlocker = (typeof GOLIVE_BLOCKERS)[number];
 
@@ -81,11 +82,29 @@ export async function goLiveBlockers(
     blockers.push("ADMIN_2FA_MISSING");
   }
 
-  if (e.CARDCOM_MODE !== "live" || !e.CARDCOM_API_PASSWORD) {
-    blockers.push("CARDCOM_NOT_LIVE");
+  if (!e.PAYMENT_PROVIDERS.some((id) => liveReady(id, e))) {
+    blockers.push("PAYMENTS_NOT_LIVE");
   }
 
   return { ok: blockers.length === 0, blockers };
+}
+
+/** A listed provider that can take real payments, refunds included where its API allows. */
+function liveReady(id: Env["PAYMENT_PROVIDERS"][number], e: Env): boolean {
+  switch (id) {
+    case "cardcom":
+      return e.CARDCOM_MODE === "live" && !!e.CARDCOM_API_PASSWORD;
+    case "isracard":
+      return (
+        e.ISRACARD_MODE === "live" &&
+        !!e.ISRACARD_SELLER_ID &&
+        !!e.ISRACARD_JSAPI_KEY
+      );
+    case "paypal":
+      return e.PAYPAL_MODE === "live";
+    case "mock":
+      return false;
+  }
 }
 
 /** True while any blocker exists (live providers are refused; spec §5.1 step 3.4). */

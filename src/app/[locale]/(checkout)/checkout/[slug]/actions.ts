@@ -32,6 +32,16 @@ const run = publicAction(
       ...startBase(input, meta),
       slug: input.slug,
     });
+    if (result.kind === "redirect" && result.fullPageLoad) {
+      // Our own pay page: the form opens it with a full page load (its own CSP). No revalidation:
+      // the buyer is leaving this page, and a refresh would re-render it as "reserved" first.
+      await removeCartIds(result.artworkIds);
+      const navigate: CheckoutActionData = {
+        kind: "navigate",
+        url: result.url,
+      };
+      return { result: navigate, effects: {} };
+    }
     if (result.kind === "redirect" || result.kind === "provider_error") {
       await removeCartIds(result.artworkIds);
       applyEffects(effects);

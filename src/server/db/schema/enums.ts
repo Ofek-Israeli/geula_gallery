@@ -94,6 +94,8 @@ export const paymentProviderEnum = pgEnum("payment_provider", [
   "CARDCOM",
   "PAYPAL",
   "OFFLINE",
+  /** Isracard's e-commerce service (PayMe hosted fields on our pay page). */
+  "ISRACARD",
 ]);
 export const providerModeEnum = pgEnum("provider_mode", [
   "MOCK",

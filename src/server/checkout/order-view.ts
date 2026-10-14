@@ -2,6 +2,7 @@ import "server-only";
 import { asc, eq } from "drizzle-orm";
 import type { Locale } from "@/lib/locale";
 import type { Currency } from "@/lib/money";
+import { localePath, paths } from "@/lib/routes";
 import { type DbOrTx, db as defaultDb } from "@/server/db/client";
 import {
   artworks,
@@ -17,8 +18,9 @@ import {
   type OrderStatus,
 } from "@/server/domain/state-machines";
 import { env as defaultEnv, type Env } from "@/server/env";
+import { isPendingSaleRef } from "@/server/payments/providers/isracard-map";
 import type { ProviderId } from "@/server/payments/types";
-import { verifyOrderAccessToken } from "@/server/security/tokens";
+import { hmacToken, verifyOrderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import { orderDetailsComplete } from "./link-details";
 import { insuredValueForDisplay } from "./pricing";
@@ -64,6 +66,11 @@ export interface BuyerOrderView {
   inFlight: boolean;
   /** An attempt started in the last 2 minutes is still waiting for the provider. */
   recentPending: boolean;
+  /**
+   * Locale-prefixed: the latest attempt's own pay page (Isracard hosted fields), when it was never
+   * submitted and the hold is live. "Pay now" opens it (a full page load) instead of a new attempt.
+   */
+  payPageUrl: string | null;
   canPay: boolean;
   canRelease: boolean;
   providers: ProviderId[];
@@ -155,10 +162,16 @@ export async function getBuyerOrder(
           Math.min(...items.map((i) => i.reservedUntil?.getTime() ?? now)),
         ).toISOString()
       : null;
+  // An Isracard pay page that was never submitted waits for the buyer, not for the provider.
   const recentPending = attempts.some(
     (a) =>
       (a.status === "PENDING" || a.status === "CREATED") &&
+      !isPendingSaleRef(a.providerRef) &&
       now - a.createdAt.getTime() < 2 * 60_000,
+  );
+  const latest = attempts.reduce<(typeof attempts)[number] | null>(
+    (last, a) => (!last || a.seq > last.seq ? a : last),
+    null,
   );
   const checkout = await getSetting("checkout", db);
   const providers =
@@ -221,6 +234,17 @@ export async function getBuyerOrder(
     })),
     inFlight,
     recentPending,
+    payPageUrl:
+      order.status === "AWAITING_PAYMENT" &&
+      holdUntil !== null &&
+      latest?.provider === "ISRACARD" &&
+      latest.status === "PENDING" &&
+      isPendingSaleRef(latest.providerRef)
+        ? localePath(
+            locale,
+            paths.payPage(latest.id, hmacToken("isracard-pay", latest.id)),
+          )
+        : null,
     canPay:
       awaiting &&
       !inFlight &&

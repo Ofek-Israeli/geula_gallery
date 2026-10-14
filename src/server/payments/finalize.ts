@@ -45,6 +45,7 @@ import {
   type TestCloseReason,
 } from "./apply";
 import { claimCapture } from "./capture";
+import { isPendingSaleRef } from "./providers/isracard-map";
 import { MOCK_WATCH_HOURS } from "./providers/mock";
 import { providerForAttempt, testAttemptRetired } from "./registry";
 import type { PaymentProvider, VerifiedPayment } from "./types";
@@ -110,6 +111,12 @@ export interface FinalizeOptions {
   env?: Env;
 }
 
+/**
+ * An Isracard charge (pay page) still unresolved this long after its claim: a 3-D Secure challenge
+ * the buyer left, or a lost answer with no charge at PayMe. It is closed and its hold ended.
+ */
+export const CHARGE_WATCH_MS = 60 * 60_000;
+
 /** Reconcile backoff (spec §5.11): 2m, 5m, 15m, 30m, 1h, 2h, then every 4h. */
 const BACKOFF_MINUTES = [2, 5, 15, 30, 60, 120] as const;
 export function nextCheckDelayMs(checkCount: number): number {
@@ -167,6 +174,15 @@ export async function finalizeAttempt(
     const handled = await closeTest(c, attempt.id, "TEST_RETIRED", null, []);
     return done(handled.outcome, handled.effects);
   }
+  // An Isracard pay page never submitted: no sale exists, so there is nobody to ask.
+  if (
+    attempt.provider === "ISRACARD" &&
+    attempt.status === "PENDING" &&
+    isPendingSaleRef(attempt.providerRef)
+  ) {
+    const handled = await handleUnsubmitted(c, attempt);
+    return done(handled.outcome, handled.effects);
+  }
 
   const pfa = await providerForAttempt(attempt, { env: c.env, db: c.db });
   if (pfa.kind === "config_drift") return done("config_drift");
@@ -191,8 +207,167 @@ export async function finalizeAttempt(
     return done("unknown");
   }
 
+  // A sale found by our reference while `provider_ref` is still a placeholder (its id was lost
+  // between `generate-sale` and our update): adopted, so later checks and refunds use it.
+  if (
+    isPendingSaleRef(attempt.providerRef) &&
+    vp.providerRef &&
+    vp.echoedReference === attempt.id &&
+    vp.merchantRef === attempt.merchantRef
+  ) {
+    await adoptProviderRef(c, attempt, vp.providerRef);
+  }
+
   const handled = await handleVerified(c, attempt, provider, vp);
   return done(handled.outcome, handled.effects);
+}
+
+async function adoptProviderRef(
+  c: Ctx,
+  attempt: PaymentAttempt,
+  providerRef: string,
+): Promise<void> {
+  try {
+    await c.db
+      .update(paymentAttempts)
+      .set({ providerRef, updatedAt: new Date() })
+      .where(
+        and(
+          eq(paymentAttempts.id, attempt.id),
+          eq(paymentAttempts.providerRef, attempt.providerRef ?? ""),
+        ),
+      );
+  } catch (error) {
+    if (!isUniqueViolation(error, "payment_attempts_provider_ref_idx")) {
+      throw error;
+    }
+    // Another attempt already owns that sale: never verified twice; a person looks.
+    await raiseAlert(
+      {
+        severity: "CRITICAL",
+        kind: "PROVIDER_REF_CONFLICT",
+        dedupeKey: `provider-ref-conflict:${attempt.id}`,
+        entity: "payment_attempt",
+        entityId: attempt.id,
+        params: { provider: attempt.provider },
+      },
+      c.db,
+    );
+  }
+}
+
+// ---------------------------------------------------------------- Isracard pay page
+
+/**
+ * PENDING with the `hf:` placeholder: the pay page was opened but never submitted. Once the order
+ * is no longer AWAITING_PAYMENT or its hold lapsed, the attempt is CANCELED (`NOT_SUBMITTED`);
+ * nothing can have been charged. Until then the next check is scheduled.
+ */
+async function handleUnsubmitted(
+  c: Ctx,
+  attempt: PaymentAttempt,
+): Promise<Handled> {
+  const closed = await withTx(
+    async (tx) => {
+      const ctx = await lockPaymentContext(tx, attempt.id);
+      const { order, locked } = ctx;
+      if (
+        ctx.attempt.status !== "PENDING" ||
+        !isPendingSaleRef(ctx.attempt.providerRef)
+      ) {
+        return null;
+      }
+      const now = Date.now();
+      const holdLive =
+        order.status === "AWAITING_PAYMENT" &&
+        order.expiresAt !== null &&
+        order.expiresAt.getTime() > now &&
+        locked.every(
+          (a) =>
+            a.reservedByOrderId === order.id &&
+            a.reservedUntil !== null &&
+            a.reservedUntil.getTime() > now,
+        );
+      if (holdLive) return false;
+      await transition(
+        tx,
+        "attempt",
+        attempt.id,
+        ["PENDING"],
+        "CANCELED",
+        {
+          failureReason: "NOT_SUBMITTED",
+          finalizedAt: new Date(now),
+          lastCheckedAt: new Date(now),
+          nextCheckAt: null,
+        },
+        c.actor,
+      );
+      return true;
+    },
+    { db: c.db, name: "payments.pay_page_unsubmitted" },
+  );
+  if (closed === null) return { outcome: "already_final" };
+  if (closed) return { outcome: "canceled", effects: { revalidate: true } };
+  await scheduleCheck(c, attempt);
+  return { outcome: "pending" };
+}
+
+/**
+ * CAPTURING past `CHARGE_WATCH_MS` with the provider still reporting no payment: CANCELED
+ * (`CHARGE_NOT_COMPLETED`), the hold ends now (the expiry job releases it) and a WARNING alert is
+ * raised. A charge that still completes later is caught by the daily sweep
+ * (`PAYMENT_ON_CLOSED_ATTEMPT`).
+ */
+async function closeStuckCharge(c: Ctx, attemptId: string): Promise<Handled> {
+  const closed = await withTx(
+    async (tx) => {
+      const ctx = await lockPaymentContext(tx, attemptId);
+      const { attempt, order } = ctx;
+      if (attempt.status !== "CAPTURING") return false;
+      const now = new Date();
+      await transition(
+        tx,
+        "attempt",
+        attemptId,
+        ["CAPTURING"],
+        "CANCELED",
+        {
+          failureReason: "CHARGE_NOT_COMPLETED",
+          finalizedAt: now,
+          lastCheckedAt: now,
+          nextCheckAt: null,
+        },
+        c.actor,
+      );
+      await tx
+        .update(artworks)
+        .set({ reservedUntil: now })
+        .where(eq(artworks.reservedByOrderId, order.id));
+      await tx
+        .update(orders)
+        .set({ expiresAt: now })
+        .where(
+          and(eq(orders.id, order.id), eq(orders.status, "AWAITING_PAYMENT")),
+        );
+      await raiseAlert(
+        {
+          severity: "WARNING",
+          kind: "CHARGE_NOT_COMPLETED",
+          dedupeKey: `charge-not-completed:${attemptId}`,
+          entity: "payment_attempt",
+          entityId: attemptId,
+          params: { orderNumber: order.number },
+        },
+        tx,
+      );
+      return true;
+    },
+    { db: c.db, name: "payments.charge_not_completed" },
+  );
+  return closed
+    ? { outcome: "canceled", effects: CHANGED }
+    : { outcome: "already_final" };
 }
 
 async function resultOf(
@@ -338,6 +513,14 @@ async function handlePending(
   c: Ctx,
   attempt: PaymentAttempt,
 ): Promise<Handled> {
+  if (
+    attempt.provider === "ISRACARD" &&
+    attempt.status === "CAPTURING" &&
+    attempt.capturingSince !== null &&
+    Date.now() - attempt.capturingSince.getTime() > CHARGE_WATCH_MS
+  ) {
+    return closeStuckCharge(c, attempt.id);
+  }
   const window = watchWindowMs(attempt.provider, c.env);
   const watched = ["CREATED", "PENDING", "AWAITING_CAPTURE"].includes(
     attempt.status,

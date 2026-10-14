@@ -2,7 +2,14 @@ import {
   PHASE_DEVELOPMENT_SERVER,
   PHASE_PRODUCTION_BUILD,
 } from "next/constants";
+import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  PAY_PAGE_PATH,
+  PAYME_HOSTS,
+  payPageCsp,
+  STATIC_CSP_SOURCE,
+} from "@/lib/csp";
 import nextConfig from "../../next.config";
 
 /** Static security headers (spec §7 "Headers", §10.1 `csp`). */
@@ -23,8 +30,14 @@ async function globalHeaders(
   const rules = (await config.headers?.()) ?? [];
   const all = rules.find((r) => r.source === "/:path*");
   if (!all) throw new Error("no global /:path* header rule");
+  // The static CSP has its own rule: every path except the pay page.
+  const csp = rules.find((r) => r.source === STATIC_CSP_SOURCE);
+  if (!csp) throw new Error("no static CSP rule");
   return new Map(
-    (all.headers as Header[]).map((h) => [h.key.toLowerCase(), h.value]),
+    [...(all.headers as Header[]), ...(csp.headers as Header[])].map((h) => [
+      h.key.toLowerCase(),
+      h.value,
+    ]),
   );
 }
 
@@ -86,6 +99,55 @@ describe("csp", () => {
     expect(h.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
+  it("the static CSP covers every path but the Isracard pay page", async () => {
+    const matches = getPathMatch(STATIC_CSP_SOURCE);
+    for (const path of [
+      "/he",
+      "/en/works/the-path",
+      "/he/checkout/the-path",
+      "/en/checkout",
+      "/he/orders/GG-ABC123",
+      "/api/payments/isracard/webhook",
+    ]) {
+      expect(matches(path), path).not.toBe(false);
+    }
+    for (const path of [
+      "/he/checkout/pay/0d4f7a52-6a1e-4c1e-9b8e-0f6f6e6b8a11",
+      "/en/checkout/pay/0d4f7a52-6a1e-4c1e-9b8e-0f6f6e6b8a11",
+    ]) {
+      expect(matches(path), path).toBe(false);
+      expect(PAY_PAGE_PATH.test(path), path).toBe(true);
+    }
+    expect(PAY_PAGE_PATH.test("/he/checkout/the-path")).toBe(false);
+    const rules = (await nextConfig(PHASE_PRODUCTION_BUILD).headers?.()) ?? [];
+    const global = rules.find((r) => r.source === "/:path*");
+    const globalHeaders = (global?.headers ?? []) as Header[];
+    expect(
+      globalHeaders.some(
+        (h) => h.key.toLowerCase() === "content-security-policy",
+      ),
+    ).toBe(false);
+  });
+
+  it("the pay page policy: nonce and strict-dynamic, PayMe's script and frames only", () => {
+    const d = directives(payPageCsp("abc123==", { dev: false }));
+    expect(d.get("script-src")).toBe(
+      `'self' 'nonce-abc123==' 'strict-dynamic' ${PAYME_HOSTS.script}`,
+    );
+    expect(d.get("script-src")).not.toContain("unsafe-inline");
+    expect(d.get("frame-src")).toBe("https://hf.payme.io");
+    expect(d.get("connect-src")).toBe(
+      "'self' https://hf.payme.io https://sandbox.payme.io https://live.payme.io",
+    );
+    expect(d.get("frame-ancestors")).toBe("'none'");
+    expect(d.get("object-src")).toBe("'none'");
+    expect(d.get("base-uri")).toBe("'none'");
+    expect(d.get("form-action")).toBe("'self'");
+    const dev = directives(payPageCsp("n", { dev: true }));
+    expect(dev.get("script-src")).toContain("'unsafe-eval'");
+    expect(dev.get("connect-src")).toContain("ws:");
+  });
+
   it("token pages send no Referer; admin is noindex and no-store", async () => {
     const rules = (await nextConfig(PHASE_PRODUCTION_BUILD).headers?.()) ?? [];
     const bySource = new Map(
@@ -101,6 +163,10 @@ describe("csp", () => {
     expect(bySource.get("/:locale/print/:path*")?.get("Referrer-Policy")).toBe(
       "no-referrer",
     );
+    // The pay page posts to a Server Action too.
+    expect(
+      bySource.get("/:locale/checkout/pay/:path*")?.get("Referrer-Policy"),
+    ).toBe("strict-origin");
     const admin = bySource.get("/:locale/admin/:path*");
     expect(admin?.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(admin?.get("Cache-Control")).toBe("no-store");

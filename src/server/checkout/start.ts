@@ -25,10 +25,12 @@ import { env as defaultEnv, type Env } from "@/server/env";
 import { log } from "@/server/log";
 import { buildProvider } from "@/server/payments/registry";
 import {
+  isHostedFieldsProvider,
   type PaymentProvider,
   PROVIDER_DB_VALUE,
   type ProviderId,
 } from "@/server/payments/types";
+import type { KeyPurpose } from "@/server/security/keys";
 import { hmacToken, orderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import type { CheckoutSettings } from "@/server/settings/schemas";
@@ -105,6 +107,53 @@ export function orderUrlFor(
 
 // ---------------------------------------------------------------- provider session
 
+/** Unsigned callbacks carry `a=<attemptId>&t=<HMAC>` with the provider's own key purpose. */
+const NOTIFY_KEY: Partial<Record<ProviderId, KeyPurpose>> = {
+  cardcom: "cardcom-notify",
+  isracard: "isracard-notify",
+};
+
+/**
+ * An attempt's provider URLs: the return route (`r` = HMAC of the attempt, `s` = the provider's
+ * claimed outcome, never trusted) and the webhook (with `a`/`t` for unsigned providers).
+ */
+export function attemptUrls(
+  attemptId: string,
+  providerId: ProviderId,
+  locale: Locale,
+  e: Env,
+): {
+  returnUrl: string;
+  cancelUrl: string;
+  failUrl: string;
+  notifyUrl: string;
+} {
+  const returnToken = hmacToken("return", attemptId);
+  const ret = (s: "success" | "failed" | "cancel") =>
+    absoluteUrl(
+      e.APP_URL,
+      apiPaths.paymentReturn(providerId, {
+        a: attemptId,
+        r: returnToken,
+        l: locale,
+        s,
+      }),
+    );
+  const key = NOTIFY_KEY[providerId];
+  return {
+    returnUrl: ret("success"),
+    cancelUrl: ret("cancel"),
+    failUrl: ret("failed"),
+    notifyUrl: absoluteUrl(
+      e.PUBLIC_WEBHOOK_BASE_URL,
+      apiPaths.paymentWebhook(
+        providerId,
+        key ? { a: attemptId, t: hmacToken(key, attemptId) } : {},
+      ),
+    ),
+  };
+}
+
 /**
  * Creates the provider session for a CREATED attempt, outside any transaction (spec §5.1 step 7):
  * error → attempt FAILED with the hold kept; success → PENDING with `provider_ref` and
@@ -128,26 +177,7 @@ export async function launchAttempt(
     .from(orderItems)
     .where(eq(orderItems.orderId, order.id));
   const checkout = await getSetting("checkout", db);
-  const returnToken = hmacToken("return", attempt.id);
-  const ret = (s: "success" | "failed" | "cancel") =>
-    absoluteUrl(
-      e.APP_URL,
-      apiPaths.paymentReturn(provider.id, {
-        a: attempt.id,
-        r: returnToken,
-        l: locale,
-        s,
-      }),
-    );
-  const notifyUrl = absoluteUrl(
-    e.PUBLIC_WEBHOOK_BASE_URL,
-    apiPaths.paymentWebhook(
-      provider.id,
-      provider.id === "cardcom"
-        ? { a: attempt.id, t: hmacToken("cardcom-notify", attempt.id) }
-        : {},
-    ),
-  );
+  const urls = attemptUrls(attempt.id, provider.id, locale, e);
   const shipTo =
     order.shipLine1 && order.shipCity && order.shipName
       ? {
@@ -185,10 +215,10 @@ export async function launchAttempt(
           : null,
       ...(shipTo ? { shipTo } : {}),
       locale,
-      returnUrl: ret("success"),
-      cancelUrl: ret("cancel"),
-      failUrl: ret("failed"),
-      notifyUrl,
+      returnUrl: urls.returnUrl,
+      cancelUrl: urls.cancelUrl,
+      failUrl: urls.failUrl,
+      notifyUrl: urls.notifyUrl,
       maxInstallments:
         order.shipCountry === "IL" && order.currency === "ILS"
           ? checkout.maxInstallments
@@ -266,16 +296,16 @@ async function resumeByClientRequestId(
     .where(eq(paymentAttempts.orderId, order.id))
     .orderBy(desc(paymentAttempts.seq))
     .limit(1);
-  const url =
-    latest?.status === "PENDING" && latest.redirectUrl
-      ? latest.redirectUrl
-      : orderUrlFor(order, locale, {}, e);
+  const resume =
+    latest?.status === "PENDING" && latest.redirectUrl ? latest : null;
   return {
     kind: "redirect",
     orderId: order.id,
     orderNumber: order.number,
     accessToken: orderAccessToken(order.id, order.accessVersion),
-    url,
+    url: resume?.redirectUrl ?? orderUrlFor(order, locale, {}, e),
+    // Our own pay page (Isracard hosted fields) needs a full page load.
+    fullPageLoad: resume?.provider === "ISRACARD",
     artworkIds: await orderArtworkIds(db, order.id),
   };
 }
@@ -480,6 +510,7 @@ async function launchResult(
       orderNumber: order.number,
       accessToken,
       url: launched.url,
+      fullPageLoad: isHostedFieldsProvider(provider),
       artworkIds,
     },
     effects,
