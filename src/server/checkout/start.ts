@@ -37,7 +37,8 @@ import { detectConversation } from "./conversation";
 import { orderItemValues } from "./items";
 import { orderDetailsComplete } from "./link-details";
 import { itemPriceMinor } from "./pricing";
-import { getCheckoutQuote, liveProvidersBlocked } from "./quote";
+import { orderPaymentProviders } from "./providers";
+import { getCheckoutQuote } from "./quote";
 import { releaseOrphanedHolds } from "./release";
 import {
   checkHoldCaps,
@@ -736,12 +737,22 @@ export async function startPaymentForOrder(
   if (e.salesAccess === "closed") {
     return withEffects({ kind: "refused", code: "SALES_CLOSED" });
   }
-  const provider = buildProvider(input.providerId, { env: e });
+  // Only a provider the order page offers (spec §5.1 step 3.4: live ones refused while go-live
+  // blockers exist or in the preview; none live for an order that already paid in test mode).
+  const [order] = await db
+    .select({
+      id: orders.id,
+      currency: orders.currency,
+      shipCountry: orders.shipCountry,
+      isDemo: orders.isDemo,
+    })
+    .from(orders)
+    .where(eq(orders.id, input.orderId));
+  if (!order) return withEffects({ kind: "refused", code: "not_found" });
+  const provider = (await orderPaymentProviders(order, { db, env: e })).find(
+    (p) => p.id === input.providerId,
+  );
   if (!provider) {
-    return withEffects({ kind: "refused", code: "provider_unavailable" });
-  }
-  // Live providers are refused while go-live blockers exist (spec §5.1 step 3.4), as on the page.
-  if (provider.mode === "LIVE" && (await liveProvidersBlocked(db, e))) {
     return withEffects({ kind: "refused", code: "provider_unavailable" });
   }
   const checkout = await getSetting("checkout", db);

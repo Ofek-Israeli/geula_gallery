@@ -1,0 +1,2 @@
+ALTER TABLE "orders" DROP CONSTRAINT "orders_status_reason_values";--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_status_reason_values" CHECK ("orders"."status_reason" IS NULL OR "orders"."status_reason" IN ('LOST_RESERVATION', 'BUYER_CANCELLATION', 'ADMIN', 'RELEASED', 'HOLD_TAKEN_OVER', 'LINK_EXPIRED', 'HOLD_EXPIRED', 'STALE_QUOTE', 'TEST_PAYMENT'));

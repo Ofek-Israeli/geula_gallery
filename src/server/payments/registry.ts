@@ -145,6 +145,29 @@ const ID_FROM_DB = {
 } as const satisfies Record<string, ProviderId>;
 
 /**
+ * A TEST attempt on a real work whose test terminal is gone: the provider is no longer configured,
+ * no longer in TEST mode (switched to live), or on another merchant account. Such an attempt can
+ * never be honoured, so finalize closes it (`TEST_RETIRED`) instead of raising CONFIG_DRIFT on
+ * every reconcile run.
+ */
+export function testAttemptRetired(
+  attempt: AttemptProviderRef & { isDemo: boolean },
+  deps: RegistryDeps = {},
+): boolean {
+  if (attempt.provider === "OFFLINE") return false;
+  if (attempt.providerMode !== "TEST" || attempt.isDemo) return false;
+  const provider = buildProvider(ID_FROM_DB[attempt.provider], deps);
+  if (!provider || provider.mode !== "TEST") return true;
+  let merchantRef: string | null;
+  try {
+    merchantRef = provider.merchantRef();
+  } catch {
+    merchantRef = null;
+  }
+  return merchantRef !== attempt.merchantRef;
+}
+
+/**
  * The adapter that can verify an existing attempt. Builds any provider whose credentials exist
  * (even if no longer offered at checkout). A mismatch of `provider_mode` or `merchant_ref` is
  * refused with a CRITICAL `CONFIG_DRIFT` alert: a payment must never be verified against a

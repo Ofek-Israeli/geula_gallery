@@ -17,13 +17,12 @@ import {
   type OrderStatus,
 } from "@/server/domain/state-machines";
 import { env as defaultEnv, type Env } from "@/server/env";
-import { checkoutProviders } from "@/server/payments/registry";
 import type { ProviderId } from "@/server/payments/types";
 import { verifyOrderAccessToken } from "@/server/security/tokens";
 import { getSetting } from "@/server/settings";
 import { orderDetailsComplete } from "./link-details";
 import { insuredValueForDisplay } from "./pricing";
-import { liveProvidersBlocked } from "./quote";
+import { orderPaymentProviders } from "./providers";
 import { shippingChoicesForOrder } from "./requote";
 
 /**
@@ -164,15 +163,11 @@ export async function getBuyerOrder(
   const checkout = await getSetting("checkout", db);
   const providers =
     order.status === "AWAITING_PAYMENT"
-      ? checkoutProviders(
-          {
-            currency: order.currency,
-            destinationCountry: order.shipCountry,
-            isDemo: order.isDemo,
-            paypalForIsraeliDestinations: checkout.paypalForIsraeliDestinations,
-            liveBlocked: await liveProvidersBlocked(db, deps.env ?? defaultEnv),
-          },
-          { env: deps.env ?? defaultEnv },
+      ? (
+          await orderPaymentProviders(order, {
+            db,
+            env: deps.env ?? defaultEnv,
+          })
         ).map((p) => p.id)
       : [];
   const awaiting = order.status === "AWAITING_PAYMENT";

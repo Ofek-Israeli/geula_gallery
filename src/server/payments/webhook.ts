@@ -22,6 +22,7 @@ import { env as defaultEnv, type Env } from "@/server/env";
 import { log } from "@/server/log";
 import { checkLimit } from "@/server/security/rate-limit";
 import { verifyHmacToken } from "@/server/security/tokens";
+import { isTestClosure } from "./apply";
 import { type FinalizeOutcome, finalizeAttempt } from "./finalize";
 import { type PostSuccessEvent, syncPostSuccessEvent } from "./post-success";
 import { buildProvider } from "./registry";
@@ -442,8 +443,10 @@ export function buyerOutcome(
     case "REFUNDED":
       return "refunded";
     case "FAILED":
-      return "failed";
+      return isTestClosure(failureReason) ? "test_payment" : "failed";
     case "CANCELED":
+      // A TEST payment on a real work (the checkout preview): nothing charged, nothing sold.
+      if (isTestClosure(failureReason)) return "test_payment";
       // A capture claim that found the work gone (spec §5.2): "you were not charged".
       return failureReason === "LOST_BEFORE_CAPTURE"
         ? "lost_before_capture"

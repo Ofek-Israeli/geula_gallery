@@ -142,6 +142,92 @@ export async function lockPaymentContext(
   return { attempt, order, artworkIds, locked };
 }
 
+/** Why a TEST attempt on a real work was closed (`payment_attempts.failure_reason` prefix). */
+export type TestCloseReason = "TEST_PAYMENT" | "TEST_RETIRED";
+
+/** A `failure_reason` written by `closeTestPayment`. */
+export function isTestClosure(failureReason: string | null | undefined) {
+  return (
+    !!failureReason &&
+    (failureReason.startsWith("TEST_PAYMENT") ||
+      failureReason.startsWith("TEST_RETIRED"))
+  );
+}
+
+/**
+ * A TEST-mode payment never sells a real (non-demo) work (the checkout preview, an acquirer's
+ * review): the attempt is closed (CANCELED, or FAILED where the state machine has no CANCELED edge)
+ * with the safe payment details, `failure_reason` `TEST_PAYMENT` (verified at a test terminal) or
+ * `TEST_RETIRED` (its test terminal is gone). When the order is still AWAITING_PAYMENT and no other
+ * open attempt is a real one, its holds are released and it ends EXPIRED (`TEST_PAYMENT`), so the
+ * 30-day purge anonymises the buyer. No sale, shipment, email, tax document, capture or refund.
+ * The caller holds the locks (`lockPaymentContext`).
+ */
+export async function closeTestPayment(
+  tx: Tx,
+  ctx: LockedPaymentContext,
+  input: {
+    reason: TestCloseReason;
+    verified: VerifiedPayment | null;
+    /** Verification problems of a test payment (logged; recorded in the reason). */
+    problems: readonly string[];
+    actor: string;
+  },
+): Promise<void> {
+  const { attempt, order } = ctx;
+  const now = new Date();
+  const target: AttemptStatus =
+    attempt.status === "CREATED" || attempt.status === "PAYMENT_REVIEW"
+      ? "FAILED"
+      : "CANCELED";
+  await transition(
+    tx,
+    "attempt",
+    attempt.id,
+    [attempt.status],
+    target,
+    {
+      ...(input.verified ? paymentDetails(input.verified) : {}),
+      failureReason:
+        input.problems.length > 0
+          ? `${input.reason}:${input.problems.join(",")}`.slice(0, 200)
+          : input.reason,
+      finalizedAt: now,
+      lastCheckedAt: now,
+      nextCheckAt: null,
+      tailUntil: null,
+    },
+    input.actor,
+    { action: "payment.test_closed" },
+  );
+  if (order.status !== "AWAITING_PAYMENT") return;
+  const realOpen = await tx
+    .select({ id: paymentAttempts.id })
+    .from(paymentAttempts)
+    .where(
+      and(
+        eq(paymentAttempts.orderId, order.id),
+        ne(paymentAttempts.id, attempt.id),
+        ne(paymentAttempts.providerMode, "TEST"),
+        inArray(paymentAttempts.status, [...NON_FINAL_ATTEMPT_STATUSES]),
+      ),
+    )
+    .limit(1);
+  if (realOpen.length > 0) return;
+  await releaseHoldsOf(tx, order.id);
+  await transition(
+    tx,
+    "order",
+    order.id,
+    ["AWAITING_PAYMENT"],
+    "EXPIRED",
+    { statusReason: "TEST_PAYMENT", expiresAt: now },
+    input.actor,
+    { action: "order.test_payment_closed" },
+  );
+  await settleLinkRequests(tx, [order.id], "EXPIRED", input.actor);
+}
+
 /** Another attempt of the same order is CAPTURING or PAYMENT_REVIEW. */
 export async function otherAttemptInFlight(
   tx: Tx,

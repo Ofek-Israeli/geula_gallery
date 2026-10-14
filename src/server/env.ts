@@ -282,6 +282,14 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
     if (e.SALES_OPEN) {
       if (e.PAYMENT_PROVIDERS.includes("mock"))
         issue("PAYMENT_PROVIDERS", "must not include mock in production");
+      // An open store takes real payments only: a TEST payment never sells a real work.
+      if (e.PAYMENT_PROVIDERS.includes("cardcom") && e.CARDCOM_MODE !== "live")
+        issue(
+          "CARDCOM_MODE",
+          "must be live while sales are open in production",
+        );
+      if (e.PAYMENT_PROVIDERS.includes("paypal") && e.PAYPAL_MODE !== "live")
+        issue("PAYPAL_MODE", "must be live while sales are open in production");
       if (
         e.TAX_DOCUMENTS_MODE !== "morning" &&
         e.TAX_DOCUMENTS_MODE !== "gateway"

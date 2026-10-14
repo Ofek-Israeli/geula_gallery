@@ -275,6 +275,8 @@ export const ORDER_STATUS_REASONS = [
   "LINK_EXPIRED",
   "HOLD_EXPIRED",
   "STALE_QUOTE",
+  /** A TEST-mode payment on a real work (checkout preview): nothing sold, holds released. */
+  "TEST_PAYMENT",
 ] as const;
 export type OrderStatusReason = (typeof ORDER_STATUS_REASONS)[number];
 

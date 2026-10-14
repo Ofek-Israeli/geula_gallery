@@ -296,7 +296,13 @@ export default async function OrderPage({
       ) : null}
       {view.status === "EXPIRED" ? (
         <section className="flex flex-col gap-2">
-          <p>{t("expired.body")}</p>
+          <p>
+            {t(
+              view.statusReason === "TEST_PAYMENT"
+                ? "expired.test"
+                : "expired.body",
+            )}
+          </p>
           <ul className="flex flex-col gap-1">
             {view.items.map((i) =>
               i.slug ? (

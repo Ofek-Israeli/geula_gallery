@@ -140,6 +140,10 @@ export default async function AdminOrderPage({
             </span>
           </Badge>
           {order.isDemo ? <Badge tone="hold">{t("detail.demo")}</Badge> : null}
+          {!order.isDemo &&
+          detail.attempts.some((a) => a.providerMode === "TEST") ? (
+            <Badge tone="hold">{t("detail.testOrder")}</Badge>
+          ) : null}
           <span className="text-sm text-ink-muted">
             {t("detail.source", { source: t(`source.${order.source}`) })}
           </span>
@@ -274,6 +278,9 @@ export default async function AdminOrderPage({
                     })}
                   </span>
                   <Badge>{t(`attemptStatus.${a.status}`)}</Badge>
+                  {a.providerMode === "TEST" ? (
+                    <Badge tone="hold">{t("detail.testMode")}</Badge>
+                  ) : null}
                   <code
                     className="text-xs text-ink-muted"
                     data-testid="attempt-status"

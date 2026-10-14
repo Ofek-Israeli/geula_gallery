@@ -32,6 +32,8 @@
     "title": "Order {number}",
     "created": "Created {date}",
     "demo": "Demo order – no real money",
+    "testOrder": "Test order",
+    "testMode": "Test mode – no charge",
     "blocked": "Fulfillment blocked: {reason}",
     "buyerView": "Open the buyer's order page",
     "disclosure": "Disclosure document",

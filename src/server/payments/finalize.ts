@@ -35,16 +35,18 @@ import { getSetting } from "@/server/settings";
 import {
   type ApplyOutcome,
   applySuccessfulPayment,
+  closeTestPayment,
   isNonFinalAttempt,
   lockPaymentContext,
   markNeedsRefund,
   otherAttemptInFlight,
   paymentDetails,
   quoteBound,
+  type TestCloseReason,
 } from "./apply";
 import { claimCapture } from "./capture";
 import { MOCK_WATCH_HOURS } from "./providers/mock";
-import { providerForAttempt } from "./registry";
+import { providerForAttempt, testAttemptRetired } from "./registry";
 import type { PaymentProvider, VerifiedPayment } from "./types";
 
 /**
@@ -86,6 +88,11 @@ export type FinalizeOutcome =
   /** The capture claim found the work gone: nothing captured. */
   | "lost_before_capture"
   | "config_drift"
+  /**
+   * A TEST payment on a real work (the checkout preview): verified at the test terminal, or its
+   * terminal is gone. Nothing was sold or charged; the order's holds were released.
+   */
+  | "test_payment"
   /** The provider could not be asked (error, not configured): a retry is scheduled. */
   | "unknown";
 
@@ -154,6 +161,12 @@ export async function finalizeAttempt(
 
   if (!isNonFinalAttempt(attempt.status)) return done("already_final");
   if (attempt.provider === "OFFLINE") return done("already_final");
+
+  // A TEST attempt on a real work whose test terminal is gone is closed without asking anyone.
+  if (testAttemptRetired(attempt, { env: c.env })) {
+    const handled = await closeTest(c, attempt.id, "TEST_RETIRED", null, []);
+    return done(handled.outcome, handled.effects);
+  }
 
   const pfa = await providerForAttempt(attempt, { env: c.env, db: c.db });
   if (pfa.kind === "config_drift") return done("config_drift");
@@ -235,6 +248,21 @@ async function handleVerified(
   provider: PaymentProvider,
   vp: VerifiedPayment,
 ): Promise<Handled> {
+  // A TEST payment never sells a real work, whatever its state at the provider (no capture call,
+  // no review hold, no refund): it is closed and the work stays available.
+  if (
+    MONEY_STATES.has(vp.state) &&
+    attempt.providerMode === "TEST" &&
+    !attempt.isDemo
+  ) {
+    return closeTest(
+      c,
+      attempt.id,
+      "TEST_PAYMENT",
+      vp,
+      verificationProblems(attempt, vp),
+    );
+  }
   if (MONEY_STATES.has(vp.state)) {
     const problems = verificationProblems(attempt, vp);
     if (problems.length > 0) return handleMismatch(c, attempt, vp, problems);
@@ -258,6 +286,38 @@ async function handleVerified(
     case "succeeded":
       return handleSuccess(c, attempt.id, vp);
   }
+}
+
+// ---------------------------------------------------------------- test payments
+
+async function closeTest(
+  c: Ctx,
+  attemptId: string,
+  reason: TestCloseReason,
+  vp: VerifiedPayment | null,
+  problems: string[],
+): Promise<Handled> {
+  if (problems.length > 0) {
+    log.warn("payments.test_payment_mismatch", { attemptId, problems });
+  }
+  const outcome = await withTx(
+    async (tx): Promise<FinalizeOutcome> => {
+      const ctx = await lockPaymentContext(tx, attemptId);
+      if (!isNonFinalAttempt(ctx.attempt.status)) return "already_final";
+      await closeTestPayment(tx, ctx, {
+        reason,
+        verified: vp,
+        problems,
+        actor: c.actor,
+      });
+      return "test_payment";
+    },
+    { db: c.db, name: "payments.test_payment" },
+  );
+  return {
+    outcome,
+    effects: outcome === "test_payment" ? { revalidate: true } : {},
+  };
 }
 
 // ---------------------------------------------------------------- pending

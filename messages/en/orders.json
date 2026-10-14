@@ -31,6 +31,7 @@
     "deferred": "Your payment is being confirmed.",
     "lost_before_capture": "Sorry – {count, plural, one {the work was} other {a work in this order was}} sold to another buyer before your payment was taken. You were not charged.",
     "config_drift": "We could not verify the payment yet. We are looking into it.",
+    "test_payment": "Test payment verified. This was a test: no money was charged, no order was placed, and the work is still available.",
     "unknown": "We could not reach the payment provider. We will keep checking."
   },
   "summary": {
@@ -53,6 +54,7 @@
   },
   "expired": {
     "body": "This reservation ended without a completed payment. You were not charged.",
+    "test": "This was a test order: no money was charged and the work is still available.",
     "again": "See the work",
     "againTitle": "See “{title}”",
     "toCart": "Add these works to my cart"

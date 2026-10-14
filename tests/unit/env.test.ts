@@ -278,6 +278,22 @@ describe("the showcase switches", () => {
     expect(parseEnv(testEnv()).CHECKOUT_PREVIEW).toBe(false);
   });
 
+  it("an open production store lists live providers only (test payments never sell)", () => {
+    expect(problems(productionEnv())).toEqual([]);
+    expectProblem({ ...productionEnv(), CARDCOM_MODE: "test" }, "CARDCOM_MODE");
+    // The preview may use a test terminal.
+    expect(
+      problems({
+        ...showcaseEnv(),
+        CHECKOUT_PREVIEW: "true",
+        PAYMENT_PROVIDERS: "cardcom",
+        CARDCOM_MODE: "test",
+        CARDCOM_TERMINAL_NUMBER: "1000",
+        CARDCOM_API_NAME: "test-api-name",
+      }),
+    ).toEqual([]);
+  });
+
   it("the preview is only for a store whose sales are closed", () => {
     expectProblem(
       { ...testEnv(), SALES_OPEN: "true", CHECKOUT_PREVIEW: "true" },

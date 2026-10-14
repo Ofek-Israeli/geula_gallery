@@ -32,6 +32,8 @@
     "title": "הזמנה {number}",
     "created": "נוצרה {date}",
     "demo": "הזמנת הדגמה – ללא כסף אמיתי",
+    "testOrder": "הזמנת בדיקה",
+    "testMode": "מצב בדיקה – ללא חיוב",
     "blocked": "המשלוח חסום: {reason}",
     "buyerView": "לעמוד ההזמנה של הקונה",
     "disclosure": "מסמך גילוי",

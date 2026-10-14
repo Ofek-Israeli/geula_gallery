@@ -29,6 +29,8 @@ import { type DbOrTx, db as defaultDb } from "@/server/db/client";
  * 10. `cancellation_void_has_item`: a sale voided by a cancellation belongs to a work that
  *    cancellation covers.
  * 11. `order_cancellation_state`: an order CANCELLED by the buyer has every work cancelled.
+ * 12. `test_payment_never_sells_real_work`: no unvoided sale of a real (non-demo) order comes from
+ *    a TEST-mode payment (the checkout preview closes those payments without selling).
  */
 export const INVARIANT_CHECKS = [
   "sold_has_one_sale",
@@ -42,6 +44,7 @@ export const INVARIANT_CHECKS = [
   "active_item_has_sale",
   "cancellation_void_has_item",
   "order_cancellation_state",
+  "test_payment_never_sells_real_work",
 ] as const;
 export type InvariantCheck = (typeof INVARIANT_CHECKS)[number];
 
@@ -238,6 +241,18 @@ export async function checkInvariants(
                           WHERE oi.order_id = o.id
                             AND NOT EXISTS (SELECT 1 FROM cancellation_items ci
                                              WHERE ci.order_item_id = oi.id))`,
+    ),
+  );
+
+  push(
+    "test_payment_never_sells_real_work",
+    "sale",
+    await ids(
+      db,
+      sql`SELECT s.id FROM sales s
+            JOIN orders o ON o.id = s.order_id
+            JOIN payment_attempts pa ON pa.id = o.paid_attempt_id
+           WHERE s.voided_at IS NULL AND NOT o.is_demo AND pa.provider_mode = 'TEST'`,
     ),
   );
 
