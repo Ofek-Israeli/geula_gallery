@@ -45,6 +45,15 @@ export const CARDCOM_ENV = {
   PAYMENT_PROVIDERS: "mock,cardcom",
 };
 
+/** Isracard (PayMe): placeholders; the redirect is our own pay page, so APP_URL is https. */
+export const ISRACARD_ENV = {
+  ISRACARD_MODE: "test",
+  ISRACARD_SELLER_ID: "MPL-placeholder-seller",
+  ISRACARD_JSAPI_KEY: "placeholder-jsapi-key",
+  PAYMENT_PROVIDERS: "mock,isracard",
+  APP_URL: "https://gallery.example.com",
+};
+
 export const PAYPAL_ENV = {
   PAYPAL_MODE: "sandbox",
   PAYPAL_CLIENT_ID: "placeholder-client-id",

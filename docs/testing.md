@@ -57,6 +57,7 @@ git log -p --all --format= | npm run check:secrets -- --stdin
 | Check | Command | State |
 |---|---|---|
 | Cardcom | `CARDCOM_CONTRACT=1 npm run test:contract`, `npm run check:cardcom [-- --record --wait]` | **Blocked.** The public test terminal answers HTTP 401 / ResponseCode 603 on both the v11 and the legacy endpoint. The refusal is recorded in `tests/fixtures/cardcom/create-rejected.json`. Needs a real test terminal from Cardcom. |
+| Isracard (PayMe) | `npm run check:isracard [-- --record]` | Skips cleanly; no sandbox keys yet. `tests/contract/isracard.test.ts` runs on synthetic fixtures (`tests/fixtures/isracard`, from docs.payme.io); `--record` replaces `generate-sale-ok`, `generate-sale-rejected` and `get-transactions-unpaid` with sandbox answers. |
 | PayPal | `PAYPAL_CONTRACT=1 npm run test:contract`, `npm run check:paypal` | Skips cleanly; no sandbox credentials yet. |
 | Morning | `MORNING_CONTRACT=1 npm run test:contract`, `npm run check:morning` | Skips cleanly; no sandbox keys yet. |
 | DHL | `DHL_CONTRACT=1 npm run test:contract`, `npm run check:dhl` | A read-only call to the public `api-mock.dhl.com` with DHL's published demo pair; the test environment needs an account. |

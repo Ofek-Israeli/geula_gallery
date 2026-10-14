@@ -2705,7 +2705,9 @@ service (on PayMe) over a separate gateway, with the card form on our site. Runb
   `next.config.ts`, `src/proxy.ts`, `payments/types.ts`, `checkout/types.ts`, `http.ts`,
   `security/keys.ts`, `package.json` (`check:isracard`), `vitest.config.ts`, `AGENTS.md`.
 - **Tests:** unit `isracard-map`, `csp` (path matching with Next's matcher), `proxy`, `env`,
-  `security`; integration `checkout-preview`, `test-payments`, `isracard-charge` (a fake adapter:
+  `security`; contract `isracard` (the shared provider suite plus generate-sale / pay-sale,
+  lookups, refunds and the sweep listing, on synthetic fixtures from docs.payme.io; a pay-sale
+  5xx or timeout is an unknown outcome, never a decline); integration `checkout-preview`, `test-payments`, `isracard-charge` (a fake adapter:
   one charge under concurrency, decline, timeout, adoption, stuck charge, unsubmitted page, sweep).
   Unit `checkout-form` renders the payment step with and without a provider ("activation
   pending": no provider posted, submit disabled, no hold promised). E2E project `preview`

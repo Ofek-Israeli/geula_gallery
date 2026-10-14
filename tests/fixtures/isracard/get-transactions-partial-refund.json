@@ -1,0 +1,83 @@
+{
+  "provider": "isracard",
+  "scenario": "get-transactions-partial-refund",
+  "recordedAt": "synthetic",
+  "note": "A partially refunded sale: the charge and a refund of ILS 500.00. Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/get-transactions",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "transaction_id": "11111111-1111-4111-8111-111111111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 0,
+          "items_count": 2,
+          "items": [
+            {
+              "seller_payme_id": "MPL-placeholder-seller",
+              "sale_payme_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+              "sale_payme_code": 1,
+              "transaction_id": "11111111-1111-4111-8111-111111111111",
+              "payme_transaction_id": "TRAN1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+              "sale_status": "partial-refund",
+              "transaction_status": "success",
+              "transaction_type": 1,
+              "transaction_action": "Debit",
+              "transaction_price": 125050,
+              "sale_price": 125050,
+              "sale_currency": "ILS",
+              "sale_installments": 1,
+              "sale_auth_number": "1172408",
+              "transaction_error_code": 20000,
+              "transaction_created_at": "2026-10-14 12:00:00",
+              "sale_is_3ds": true,
+              "sale_buyer_details": {
+                "buyer_name": "Test Buyer",
+                "buyer_email": "buyer@example.com",
+                "buyer_phone": "03-000-0000",
+                "buyer_social_id": "000000018",
+                "buyer_card_mask": "532610******5846",
+                "buyer_card_brand": "Mastercard",
+                "buyer_card_is_foreign": false
+              }
+            },
+            {
+              "seller_payme_id": "MPL-placeholder-seller",
+              "sale_payme_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+              "sale_payme_code": 1,
+              "transaction_id": "11111111-1111-4111-8111-111111111111",
+              "payme_transaction_id": "TRAN-REFUND-2",
+              "sale_status": "partial-refund",
+              "transaction_status": "success",
+              "transaction_type": 1,
+              "transaction_action": "PartialRefund",
+              "transaction_price": 50000,
+              "sale_price": 125050,
+              "sale_currency": "ILS",
+              "sale_installments": 1,
+              "sale_auth_number": "1172408",
+              "transaction_error_code": 20000,
+              "transaction_created_at": "2026-10-14 12:00:00",
+              "sale_is_3ds": true,
+              "sale_buyer_details": {
+                "buyer_name": "Test Buyer",
+                "buyer_email": "buyer@example.com",
+                "buyer_phone": "03-000-0000",
+                "buyer_social_id": "000000018",
+                "buyer_card_mask": "532610******5846",
+                "buyer_card_brand": "Mastercard",
+                "buyer_card_is_foreign": false
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

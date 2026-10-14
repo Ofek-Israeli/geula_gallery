@@ -1,0 +1,26 @@
+{
+  "provider": "isracard",
+  "scenario": "get-transactions-error",
+  "recordedAt": "synthetic",
+  "note": "get-transactions failed (status_code 1). Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/get-transactions",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "transaction_id": "11111111-1111-4111-8111-111111111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 1,
+          "status_error_code": 500,
+          "status_error_details": "Internal error"
+        }
+      }
+    }
+  ]
+}

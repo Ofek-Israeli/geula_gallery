@@ -1,0 +1,28 @@
+{
+  "provider": "isracard",
+  "scenario": "generate-sale-rejected",
+  "recordedAt": "synthetic",
+  "note": "generate-sale refused: a business error in the body with HTTP 500. Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/generate-sale",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "sale_price": 125050,
+          "currency": "ILS",
+          "transaction_id": "11111111-1111-4111-8111-111111111111"
+        }
+      },
+      "response": {
+        "status": 500,
+        "body": {
+          "status_code": 1,
+          "status_error_code": 302,
+          "status_error_details": "Seller not found"
+        }
+      }
+    }
+  ]
+}

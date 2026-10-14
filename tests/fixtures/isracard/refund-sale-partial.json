@@ -1,0 +1,29 @@
+{
+  "provider": "isracard",
+  "scenario": "refund-sale-partial",
+  "recordedAt": "synthetic",
+  "note": "A partial refund of ILS 500.00. Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/refund-sale",
+        "body": {
+          "payme_client_key": "REDACTED",
+          "seller_payme_id": "MPL-placeholder-seller",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "language": "en",
+          "sale_refund_amount": 50000
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 0,
+          "sale_status": "partial-refund",
+          "payme_transaction_id": "TRAN-REFUND-2"
+        }
+      }
+    }
+  ]
+}

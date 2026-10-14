@@ -1,0 +1,35 @@
+{
+  "provider": "isracard",
+  "scenario": "pay-sale-declined",
+  "recordedAt": "synthetic",
+  "note": "pay-sale declined by the issuer (status_code 1, sale failed). Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/pay-sale",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "sale_price": "125050",
+          "currency": "ILS",
+          "installments": "1",
+          "language": "he",
+          "capture_buyer": 0,
+          "buyer_key": "REDACTED",
+          "meta_data_jwt": "REDACTED"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 1,
+          "sale_status": "failed",
+          "status_error_code": 301,
+          "status_error_details": "Transaction declined",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE"
+        }
+      }
+    }
+  ]
+}

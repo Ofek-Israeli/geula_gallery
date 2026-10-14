@@ -1,0 +1,29 @@
+{
+  "provider": "isracard",
+  "scenario": "refund-sale-ok",
+  "recordedAt": "synthetic",
+  "note": "A full refund. Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/refund-sale",
+        "body": {
+          "payme_client_key": "REDACTED",
+          "seller_payme_id": "MPL-placeholder-seller",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "language": "en"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 0,
+          "sale_status": "refunded",
+          "payme_transaction_id": "TRAN-REFUND-1",
+          "sale_refund_buffer": 0
+        }
+      }
+    }
+  ]
+}

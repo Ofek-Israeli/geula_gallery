@@ -61,7 +61,7 @@ export function paymentProviderContract(h: PaymentProviderHarness): void {
   describe(`payment provider contract: ${h.name}`, () => {
     it("has a valid identity and capabilities", async () => {
       const { provider } = await h.build([]);
-      expect(["mock", "cardcom", "paypal"]).toContain(provider.id);
+      expect(["mock", "cardcom", "paypal", "isracard"]).toContain(provider.id);
       expect(["MOCK", "TEST", "LIVE"]).toContain(provider.mode);
       expect(provider.capabilities.currencies.length).toBeGreaterThan(0);
       for (const c of provider.capabilities.currencies) {

@@ -1,0 +1,47 @@
+{
+  "provider": "isracard",
+  "scenario": "get-transactions-unpaid",
+  "recordedAt": "synthetic",
+  "note": "An unpaid sale (status initial, no charge row). Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/get-transactions",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "transaction_id": "11111111-1111-4111-8111-111111111111"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 0,
+          "items_count": 1,
+          "items": [
+            {
+              "seller_payme_id": "MPL-placeholder-seller",
+              "sale_payme_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+              "sale_payme_code": 1,
+              "transaction_id": "11111111-1111-4111-8111-111111111111",
+              "payme_transaction_id": null,
+              "sale_status": "initial",
+              "transaction_status": null,
+              "transaction_type": null,
+              "transaction_action": null,
+              "transaction_price": null,
+              "sale_price": 125050,
+              "sale_currency": "ILS",
+              "sale_installments": 1,
+              "sale_auth_number": null,
+              "transaction_error_code": null,
+              "transaction_created_at": "2026-10-14 12:00:00",
+              "sale_is_3ds": true,
+              "sale_buyer_details": null
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

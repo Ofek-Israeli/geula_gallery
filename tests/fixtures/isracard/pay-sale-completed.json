@@ -1,0 +1,39 @@
+{
+  "provider": "isracard",
+  "scenario": "pay-sale-completed",
+  "recordedAt": "synthetic",
+  "note": "pay-sale with a one-time token: completed without a challenge. Synthetic, written from docs.payme.io (read 2026-10-14) until `npm run check:isracard -- --record` records the sandbox.",
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/pay-sale",
+        "body": {
+          "seller_payme_id": "MPL-placeholder-seller",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "sale_price": "125050",
+          "currency": "ILS",
+          "installments": "1",
+          "language": "he",
+          "capture_buyer": 0,
+          "buyer_key": "REDACTED",
+          "meta_data_jwt": "REDACTED"
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "status_code": 0,
+          "payme_status": "success",
+          "sale_status": "completed",
+          "payme_sale_id": "SALE1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "payme_transaction_id": "TRAN1655-0000AAAA-BBBBCCCC-DDDDEEEE",
+          "transaction_id": "11111111-1111-4111-8111-111111111111",
+          "price": 125050,
+          "currency": "ILS",
+          "sale_auth_number": "1172408"
+        }
+      }
+    }
+  ]
+}
