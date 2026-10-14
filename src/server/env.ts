@@ -78,6 +78,13 @@ const rawSchema = z.object({
    */
   SALES_OPEN: bool(true),
   /**
+   * With SALES_OPEN=false: the whole purchase flow is public (Buy now, cart, checkout) while online
+   * payment is not active yet, e.g. for an acquirer's website review. Only TEST-mode providers are
+   * offered; with none configured the payment step says "activation pending" and no order is
+   * created. Every page shows a preview banner, and a TEST payment never sells a real work.
+   */
+  CHECKOUT_PREVIEW: bool(false),
+  /**
    * False: emails go only to the painter (notifications and alerts); emails to visitors and buyers
    * are skipped. For a Resend account without a verified domain, which can only email its owner.
    */
@@ -282,6 +289,12 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
       issue("STORAGE_DRIVER", "must be blob on Vercel");
   }
 
+  if (e.CHECKOUT_PREVIEW && e.SALES_OPEN)
+    issue(
+      "CHECKOUT_PREVIEW",
+      "must be false when SALES_OPEN=true (the preview is for a store whose sales are closed)",
+    );
+
   if (e.PAYMENT_PROVIDERS.length === 0)
     issue("PAYMENT_PROVIDERS", "must list at least one provider");
   if (e.PAYMENT_PROVIDERS.includes("cardcom") && e.CARDCOM_MODE === "disabled")
@@ -368,6 +381,20 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
   }
 }
 
+/**
+ * Who may buy online: `open` (SALES_OPEN), `preview` (CHECKOUT_PREVIEW: the purchase flow is public
+ * but takes no real payment) or `closed` (a showcase: "Ask about this work" only).
+ */
+export type SalesAccess = "open" | "preview" | "closed";
+
+function salesAccessOf(e: {
+  SALES_OPEN: boolean;
+  CHECKOUT_PREVIEW: boolean;
+}): SalesAccess {
+  if (e.SALES_OPEN) return "open";
+  return e.CHECKOUT_PREVIEW ? "preview" : "closed";
+}
+
 const envSchema = rawSchema.superRefine(addCrossFieldIssues).transform((e) => {
   const appUrl = e.APP_URL.replace(/\/+$/, "");
   const httpsApp = appUrl.startsWith("https://");
@@ -386,6 +413,7 @@ const envSchema = rawSchema.superRefine(addCrossFieldIssues).transform((e) => {
     PII_ENCRYPTION_KEY_BYTES:
       decodeKey(e.PII_ENCRYPTION_KEY) ?? Buffer.alloc(0),
     isProduction: e.APP_ENV === "production",
+    salesAccess: salesAccessOf(e),
   };
 });
 

@@ -126,6 +126,11 @@
     "legend": "Payment method",
     "mock": "Test payment – no real money",
     "cardcom": "Card – Cardcom secure page",
+    "isracard": "Credit card – Isracard secure payment",
+    "testSuffix": " (test mode – no charge)",
+    "pendingDescription": "Activation pending – not active yet",
+    "pendingNote": "Card payment will be switched on once Isracard approves our merchant account. Until then you can't pay on the site, and no order is created.",
+    "pendingContact": "To buy a work now, contact us.",
     "paypal": "PayPal (account, or card where PayPal offers it)",
     "wallets": "also {list}",
     "wallet": {
@@ -133,7 +138,7 @@
       "apple_pay": "Apple Pay",
       "google_pay": "Google Pay"
     },
-    "redirectNote": "You will be taken to the payment provider's secure page."
+    "redirectNote": "On the next page you pay securely: card details go only to the payment provider."
   },
   "privacy": "We use your details only to fulfil this order: payment, delivery and the receipt. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
   "holdNotice": "When you continue, {count, plural, one {the work is} other {the # works are}} reserved for you for {minutes} minutes.",

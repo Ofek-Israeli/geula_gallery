@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PreviewBanner } from "@/components/site/PreviewBanner";
 import { SaleBanner } from "@/components/site/SaleBanner";
 import { SiteAnalytics } from "@/components/site/SiteAnalytics";
 import { SiteFooter } from "@/components/site/SiteFooter";
@@ -21,7 +22,8 @@ export const metadata: Metadata = env.GOOGLE_SITE_VERIFICATION
   : {};
 
 /**
- * Public site chrome: skip link, the sale strip while a site-wide sale runs, header (with the cart
+ * Public site chrome: skip link, the preview strip while the checkout is a preview
+ * (`CHECKOUT_PREVIEW`), the sale strip while a site-wide sale runs, header (with the cart
  * count; no cart while online sales are closed) and footer (with the cancellation link, spec §1.2, over "By the Lake" like the home
  * page's quote band).
  */
@@ -32,7 +34,9 @@ export default async function SiteLayout({
   const { locale } = await params;
   const lang = isLocale(locale) ? locale : "he";
   const [count, hero, checkout] = await Promise.all([
-    env.SALES_OPEN ? readCartIds().then((ids) => cartCount(ids)) : 0,
+    env.salesAccess !== "closed"
+      ? readCartIds().then((ids) => cartCount(ids))
+      : 0,
     getHeroArtwork(lang),
     getSettingOrNull("checkout"),
   ]);
@@ -40,6 +44,7 @@ export default async function SiteLayout({
   return (
     <>
       <SkipLink />
+      {env.salesAccess === "preview" ? <PreviewBanner /> : null}
       {sale ? <SaleBanner sale={sale} locale={lang} /> : null}
       <SiteHeader cartCount={count} />
       <main

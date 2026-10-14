@@ -41,7 +41,7 @@ export default async function CartPage({
   const noticeParam = Array.isArray(sp.cart) ? sp.cart[0] : sp.cart;
   const notice = noticeParam && NOTICES.has(noticeParam) ? noticeParam : null;
   const t = await getTranslations({ locale, namespace: "checkout.cart" });
-  if (!env.SALES_OPEN) {
+  if (env.salesAccess === "closed") {
     return (
       <div className="flex max-w-3xl flex-col gap-8">
         <h1 className="text-4xl">{t("title")}</h1>

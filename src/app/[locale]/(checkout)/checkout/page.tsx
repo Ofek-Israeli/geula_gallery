@@ -346,6 +346,7 @@ export default async function CartCheckoutPage({
         disclosure={<PreContractDisclosure doc={doc} />}
         reloadHref={localePath(locale, links.details)}
         changeDestinationHref={localePath(locale, links.destination)}
+        contactHref={localePath(locale, paths.contact())}
       />
     </div>
   );

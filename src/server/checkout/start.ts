@@ -731,8 +731,9 @@ export async function startPaymentForOrder(
 ): Promise<ServiceResult<StartCheckoutResult>> {
   const db = deps.db ?? defaultDb;
   const e = deps.env ?? defaultEnv;
-  // A showcase site takes no payments, not even for a link order made while sales were open.
-  if (!e.SALES_OPEN) {
+  // A showcase site takes no payments, not even for a link order made while sales were open. The
+  // preview (CHECKOUT_PREVIEW) may pay with a TEST provider: live ones are refused below.
+  if (e.salesAccess === "closed") {
     return withEffects({ kind: "refused", code: "SALES_CLOSED" });
   }
   const provider = buildProvider(input.providerId, { env: e });

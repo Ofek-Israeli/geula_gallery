@@ -303,6 +303,7 @@ export default async function CheckoutPage({
         disclosure={<PreContractDisclosure doc={doc} />}
         reloadHref={localePath(locale, links.details)}
         changeDestinationHref={localePath(locale, links.destination)}
+        contactHref={localePath(locale, paths.contact())}
       />
     </div>
   );

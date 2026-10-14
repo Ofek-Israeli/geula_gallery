@@ -38,6 +38,9 @@ export interface CheckoutOptions {
   currency?: "ILS" | "USD";
   clientRequestId?: string;
   locale?: "he" | "en";
+  /** The env the quote is priced under (default: the test env). */
+  env?: import("@/server/env").Env;
+  providerId?: StartInput["providerId"];
 }
 
 /** A complete, valid `StartCheckoutInput` priced by the server quote (IL pickup by default). */
@@ -53,7 +56,7 @@ export async function checkoutInput(
   const locale = opts.locale ?? "he";
   const quote = await getCheckoutQuote(
     { slug, locale, country, method, currency: opts.currency },
-    { db: opts.db },
+    { db: opts.db, ...(opts.env ? { env: opts.env } : {}) },
   );
   if (quote.kind !== "ok") {
     throw new Error(`checkoutInput: quote blocked (${quote.reason})`);
@@ -65,7 +68,7 @@ export async function checkoutInput(
     country,
     method: quote.shipping.method as StartInput["method"],
     currency: quote.currency,
-    providerId: "mock",
+    providerId: opts.providerId ?? "mock",
     buyer: { name: buyer.name, email: buyer.email, phone: "+97230000000" },
     shipTo:
       method === "LOCAL_PICKUP"

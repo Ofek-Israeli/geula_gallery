@@ -57,6 +57,9 @@ export async function liveProvidersBlocked(
   db: DbOrTx,
   e: Env = defaultEnv,
 ): Promise<boolean> {
+  // Only an open store takes real payments: the preview (CHECKOUT_PREVIEW) never offers a live
+  // provider, whatever is configured.
+  if (e.salesAccess !== "open") return true;
   const anyLive = e.PAYMENT_PROVIDERS.some(
     (id) => buildProvider(id, { env: e })?.mode === "LIVE",
   );
@@ -131,7 +134,8 @@ async function quoteArtworks(
   const e = deps.env ?? defaultEnv;
   const now = deps.now ?? new Date();
   // A showcase site sells nothing online; the page keeps the work (and its "Ask").
-  if (!e.SALES_OPEN) return blocked("SALES_CLOSED", [], items[0]?.id ?? null);
+  if (e.salesAccess === "closed")
+    return blocked("SALES_CLOSED", [], items[0]?.id ?? null);
 
   // Sequential reads: `db` may be a single dedicated connection (race tests).
   const checkout = await getSetting("checkout", db);
@@ -210,7 +214,9 @@ async function quoteArtworks(
     },
     { env: e },
   );
-  if (providers.length === 0)
+  // The preview without a configured provider still shows the whole checkout; its payment step
+  // says "activation pending" and `startCheckout` refuses before creating anything.
+  if (providers.length === 0 && e.salesAccess !== "preview")
     return blocked("NO_PROVIDER", [], (items[0] as ArtworkRow).id);
 
   const carrier = carrierFor(country, { env: e });

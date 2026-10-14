@@ -95,5 +95,10 @@
   },
   "sale": {
     "until": "until {date}"
+  },
+  "preview": {
+    "label": "Online payment is not active yet",
+    "banner": "Online payment is not active yet: you can try the checkout, but no order is placed and no money is charged.",
+    "buyNow": "To buy a work now, contact us."
   }
 }

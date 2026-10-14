@@ -122,7 +122,8 @@ function cardDto(
     orientation: r.orientation,
     sizeBucket: r.sizeBucket,
     saleStatus: r.saleStatus,
-    state: commerceStateOf(r, now, env.SALES_OPEN),
+    // The preview (CHECKOUT_PREVIEW) shows Buy now and the cart too; no real payment is taken.
+    state: commerceStateOf(r, now, env.salesAccess !== "closed"),
     price: {
       ilsMinor: r.priceOnRequest
         ? null

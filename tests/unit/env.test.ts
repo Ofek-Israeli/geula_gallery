@@ -267,4 +267,21 @@ describe("the showcase switches", () => {
     expectProblem(open, "TAX_DOCUMENTS_MODE");
     expectProblem({ ...open, EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
   });
+
+  it("the checkout preview is a showcase production with the purchase flow public", () => {
+    const preview = { ...showcaseEnv(), CHECKOUT_PREVIEW: "true" };
+    // Like the showcase: no payment, tax-document, carrier or email setup is needed.
+    expect(problems(preview)).toEqual([]);
+    expect(parseEnv(preview).salesAccess).toBe("preview");
+    expect(parseEnv(showcaseEnv()).salesAccess).toBe("closed");
+    expect(parseEnv(testEnv()).salesAccess).toBe("open");
+    expect(parseEnv(testEnv()).CHECKOUT_PREVIEW).toBe(false);
+  });
+
+  it("the preview is only for a store whose sales are closed", () => {
+    expectProblem(
+      { ...testEnv(), SALES_OPEN: "true", CHECKOUT_PREVIEW: "true" },
+      "CHECKOUT_PREVIEW",
+    );
+  });
 });

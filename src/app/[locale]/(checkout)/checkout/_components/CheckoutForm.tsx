@@ -45,7 +45,13 @@ export interface CheckoutFormProps {
   itemCount: number;
   /** Titles by artwork id, so an error can name the works another buyer took. */
   itemTitles?: Record<string, string>;
+  /**
+   * The payment methods the quote offers. Empty only in the preview (`CHECKOUT_PREVIEW`) before a
+   * provider is configured: the payment step then says "activation pending" and cannot submit.
+   */
   providers: { id: string; label: string; description?: string }[];
+  /** Locale-prefixed contact page, for "buy a work now" while payments are pending. */
+  contactHref: string;
   /** The rendered pre-contract disclosure (server component output). */
   disclosure: ReactNode;
   /** Locale-prefixed: the same choices, as far as they go ("show the updated total"). */
@@ -94,6 +100,7 @@ export function CheckoutForm(props: CheckoutFormProps) {
     null,
   );
   const v = values.current;
+  const paymentsPending = props.providers.length === 0;
   /** Optional fields say so. */
   const optional = (label: string): ReactNode => (
     <>
@@ -379,19 +386,44 @@ export function CheckoutForm(props: CheckoutFormProps) {
         />
       </fieldset>
 
-      <RadioGroup
-        id={FIELD_IDS.providerId ?? "co-provider"}
-        name="providerId"
-        legend={t("provider.legend")}
-        required
-        defaultValue={v.providerId ?? props.providers[0]?.id}
-        options={props.providers.map((p) => ({
-          value: p.id,
-          label: p.label,
-          description: p.description,
-        }))}
-        error={fieldErrors.providerId ? tf("invalid") : undefined}
-      />
+      {paymentsPending ? (
+        <div className="flex flex-col gap-2" data-testid="payments-pending">
+          {/* Not a form field: nothing is posted, and the submit stays disabled. */}
+          <RadioGroup
+            id="co-provider-pending"
+            name="providerPending"
+            legend={t("provider.legend")}
+            options={[
+              {
+                value: "isracard",
+                label: t("provider.isracard"),
+                description: t("provider.pendingDescription"),
+                disabled: true,
+              },
+            ]}
+          />
+          <p className="max-w-prose text-sm">
+            {t("provider.pendingNote")}{" "}
+            <a href={props.contactHref} className="underline">
+              {t("provider.pendingContact")}
+            </a>
+          </p>
+        </div>
+      ) : (
+        <RadioGroup
+          id={FIELD_IDS.providerId ?? "co-provider"}
+          name="providerId"
+          legend={t("provider.legend")}
+          required
+          defaultValue={v.providerId ?? props.providers[0]?.id}
+          options={props.providers.map((p) => ({
+            value: p.id,
+            label: p.label,
+            description: p.description,
+          }))}
+          error={fieldErrors.providerId ? tf("invalid") : undefined}
+        />
+      )}
 
       <p className="text-sm text-ink-muted">{t("privacy")}</p>
       <p className="font-medium">
@@ -403,12 +435,15 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <div>
         <SubmitButton
           pendingLabel={t("submitting")}
+          disabled={paymentsPending}
           data-testid="checkout-submit"
         >
           {t("submit")}
         </SubmitButton>
       </div>
-      <p className="text-sm text-ink-muted">{t("provider.redirectNote")}</p>
+      {paymentsPending ? null : (
+        <p className="text-sm text-ink-muted">{t("provider.redirectNote")}</p>
+      )}
     </form>
   );
 }
