@@ -25,6 +25,7 @@
     "review": "Your payment is under review by the provider. We will email you when it is confirmed.",
     "needs_refund": "Your payment could not be applied to this order. It is being refunded in full; we have emailed you.",
     "failed": "The payment did not go through. You were not charged.",
+    "not_completed": "The payment was not completed and you were not charged. You can try again.",
     "canceled": "The payment was cancelled. You were not charged.",
     "expired": "The payment page expired. You were not charged.",
     "refunded": "This payment was refunded.",

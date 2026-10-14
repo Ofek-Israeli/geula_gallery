@@ -340,7 +340,9 @@ export interface ReturnInput {
 /**
  * `GET /api/payments/[provider]/return?a&r&l&s` (spec §5.2): 60/min/IP; a bad `r` → 303 to
  * `/[l]/checkout/returned`; `s=cancel` → the order page with `&payment=canceled`; otherwise
- * finalize within an 8 s budget and 303 with `&payment=<outcome>`. The `s` hint is never trusted.
+ * finalize within an 8 s budget and 303 with `&payment=<outcome>` (`not_completed` when the
+ * buyer came back from the failed URL and nothing was verified). The `s` hint is never trusted
+ * for a success.
  */
 export async function handlePaymentReturn(
   i: ReturnInput,
@@ -388,7 +390,14 @@ export async function handlePaymentReturn(
       effects: NO_EFFECTS,
     };
   }
-  const { outcome, effects } = await finalizeForBuyer(a, { db, env: e });
+  const finalized = await finalizeForBuyer(a, { db, env: e });
+  // Back from the provider's "failed" URL and still not paid: say so (the attempt keeps being
+  // reconciled). The `s` hint never turns into a success.
+  const outcome =
+    i.query.get("s") === "failed" && finalized.outcome === "pending"
+      ? "not_completed"
+      : finalized.outcome;
+  const effects = finalized.effects;
   return {
     status: 303,
     location: orderUrlFor(row, locale, { payment: outcome }, e),

@@ -476,3 +476,27 @@ describe("the Isracard daily sweep", () => {
     expect(kinds).toContain("PAYMENT_ON_CLOSED_ATTEMPT");
   });
 });
+
+describe("the return route", () => {
+  it("back from the failed URL with nothing verified: not completed (never a success)", async () => {
+    fakePayme();
+    const h = await payPageAttempt();
+    const back = (s: string) =>
+      handlePaymentReturn(
+        {
+          provider: "isracard",
+          query: new URLSearchParams({
+            a: h.attemptId,
+            r: hmacToken("return", h.attemptId),
+            l: "en",
+            s,
+          }),
+          ip: "203.0.113.5",
+        },
+        { env },
+      );
+    expect((await back("failed")).location).toContain("payment=not_completed");
+    // `s=success` without a verified payment is only "pending".
+    expect((await back("success")).location).toContain("payment=pending");
+  });
+});
