@@ -185,7 +185,7 @@ const PRE_TEXT = {
     notInsured: "המשלוח עם מעקב.",
     payment: "תנאי תשלום",
     paymentText:
-      "תשלום מלא מראש, בשדות או בעמוד התשלום המאובטחים של ספק הסליקה. פרטי הכרטיס אינם עוברים דרך שרתי האתר.",
+      "תשלום מלא מראש בכרטיס אשראי, בעמוד התשלום המאובטח של האתר; העסקה נסלקת על ידי ישראכרט. פרטי הכרטיס לעולם אינם נשמרים באתר.",
     installments: "עד {n} תשלומים, ללא ריבית.",
     cancellation: "ביטול העסקה",
     cancel14:
@@ -264,7 +264,7 @@ const PRE_TEXT = {
     notInsured: "The shipment is tracked.",
     payment: "Payment terms",
     paymentText:
-      "Full payment in advance, in the payment provider's secure fields or page. Card details never pass through this site's servers.",
+      "Full payment in advance by credit card, on the site's secure payment page; card payments are processed by Isracard. Card details are never saved on this site.",
     installments: "Up to {n} interest-free instalments.",
     cancellation: "Cancellation",
     cancel14:

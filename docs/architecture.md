@@ -2671,8 +2671,20 @@ service (on PayMe) over a separate gateway, with the card form on our site. Runb
   after any answer that stays on the page (or a "Bad session") `CardFields` is remounted with a
   new key, which tears the iframes down and starts a new session.
 - **Checkout step 3** lists what the card page asks for (`checkout-card-page`) while Isracard is
-  offered or activation is pending; while pending, the disabled "Continue to payment" button is
-  described by a note saying it opens once Isracard activates card payment.
+  offered or activation is pending.
+- **Our own card page** (`/[locale]/checkout/pay/card?work=&to=…`; the owner's decision on
+  2026-10-14: a payment page built by us, not PayMe, for Isracard's review). While no provider is
+  offered (the preview), step 3 posts `providerId=isracard`; the server validates every field and
+  refuses the provider before writing anything (`refused` / `provider_unavailable`), and the form
+  then opens the card page with a full page load. The page re-quotes (anything but "details, no
+  provider" goes back to step 3), shows the order summary and `CardForm`: card number (Luhn;
+  Isracard's local 8–9 digit cards by a community-documented mod-11 rule, `src/lib/card.ts`),
+  expiry, CVV, name on the card, ID number, installments, with the site's error summary. A valid
+  entry clears the card fields and says nothing was sent or charged. The card inputs have no
+  `name`, nothing is sent or stored, and the page has a nonce CSP with no third-party origin
+  (`cardPageCsp`). Terms §5, privacy and the pre-contract disclosure describe the site's own
+  payment page with Isracard processing (no PayMe). Taking real payments through it needs
+  Isracard's processing interface and a PCI DSS review (card data on our pages and servers).
 - **The charge** (`payments/charge.ts`): claim (PENDING → CAPTURING under the locks: hold live,
   quote bound, no other attempt in flight; holds extended ≥ 10 min; the one-winner index refuses a
   second charging attempt), `generate-sale` (sale id stored), one `pay-sale` (`buyer_key`,

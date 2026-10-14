@@ -57,12 +57,11 @@ export const terms: LegalDocModule = {
 
       <H2>5. Payment</H2>
       <P>
-        Card payments are made on the site&apos;s secure payment page: card
-        details are typed into Isracard&apos;s secure fields (through its PayMe
-        platform) and go directly to Isracard; they never pass through or stay
-        on this site&apos;s servers. Buyers abroad may also pay with PayPal, on
-        PayPal&apos;s own page. A receipt is emailed if you ask for it, and is
-        always included with the work.
+        Card payments are made on the site&apos;s own secure payment page, over
+        an encrypted connection (HTTPS), and are processed by Isracard. Card
+        details are never saved on this site. Buyers abroad may also pay with
+        PayPal, on PayPal&apos;s own page. A receipt is emailed if you ask for
+        it, and is always included with the work.
       </P>
 
       <H2>6. Delivery</H2>

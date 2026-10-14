@@ -109,6 +109,16 @@ export const paths = {
    */
   payPage: (attemptId: string, token: string) =>
     withQuery(`/checkout/pay/${seg(attemptId)}`, { t: token }),
+  /**
+   * Our own card payment page while card payment is not active (`CHECKOUT_PREVIEW` without a
+   * provider): the checkout query plus `work` ("Buy now") or none (the cart). Reached by a full
+   * page load (its own nonce CSP, `src/proxy.ts`); it never sends card details.
+   */
+  cardPage: (query: CheckoutQuery & { work?: string } = {}) =>
+    withQuery("/checkout/pay/card", {
+      work: query.work,
+      ...checkoutQueryValues({ ...query, step: undefined }),
+    }),
   /** Buyer order page; `k` is the order access token. */
   order: (orderNumber: string, token: string) =>
     withQuery(`/orders/${seg(orderNumber)}`, { k: token }),

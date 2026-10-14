@@ -362,6 +362,17 @@ export default async function CartCheckoutPage({
         providers={await providerOptions(quote, locale)}
         disclosure={<PreContractDisclosure doc={doc} />}
         reloadHref={localePath(locale, links.details)}
+        cardPageHref={localePath(
+          locale,
+          paths.cardPage({
+            to: quote.country,
+            city: p.city || undefined,
+            zip: p.zip || undefined,
+            ship: s.method,
+            pack: quote.packing === "ROLLED" ? "rolled" : undefined,
+            cur: quote.currency === "USD" ? "USD" : undefined,
+          }),
+        )}
         changeDestinationHref={localePath(locale, links.destination)}
         contactHref={localePath(locale, paths.contact())}
         cardBrands={env.PAYMENT_CARD_BRANDS}

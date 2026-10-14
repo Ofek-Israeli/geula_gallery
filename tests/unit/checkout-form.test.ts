@@ -47,6 +47,7 @@ function render(
     disclosure: null,
     reloadHref: `/${locale}/checkout/the-path`,
     changeDestinationHref: `/${locale}/checkout/the-path?step=destination`,
+    cardPageHref: `/${locale}/checkout/pay/card?work=the-path`,
   };
   return renderToStaticMarkup(
     createElement(
@@ -70,6 +71,15 @@ function holdNotice(locale: Locale): string {
   return t("holdNotice", { minutes: 35, count: 1 });
 }
 
+/** Text as React writes it into HTML (apostrophes become `&#x27;`). */
+const asHtml = (text: string) =>
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+
 /** The opening tag of the first element with `attr` (attribute order varies). */
 const tagWith = (html: string, attr: string) =>
   html.match(/<[a-z]+\b[^>]*>/g)?.find((tag) => tag.includes(attr)) ?? "";
@@ -78,16 +88,23 @@ const submitTag = (html: string) =>
 
 describe("checkout form: payment methods", () => {
   for (const locale of LOCALE_VALUES) {
-    it(`${locale}: no provider yet → activation pending, nothing to post, no hold promised`, () => {
+    it(`${locale}: no provider yet → activation pending, our own card page next, no hold promised`, () => {
       const html = render(locale, []);
+      const m = getMessagesFor(locale).checkout;
       expect(html).toContain('data-testid="payments-pending"');
       expect(html).toContain(`href="/${locale}/contact"`);
       expect(tagWith(html, 'name="providerPending"')).toContain('disabled=""');
-      expect(html).not.toContain('name="providerId"');
-      expect(submitTag(html)).toContain('disabled=""');
+      // The server checks the details against Isracard, refuses only the provider, and the card
+      // page opens: the submit works.
+      expect(tagWith(html, 'name="providerId"')).toMatch(
+        /type="hidden".*value="isracard"|value="isracard".*type="hidden"/,
+      );
+      expect(submitTag(html)).not.toContain('disabled=""');
       expect(html).not.toContain(holdNotice(locale));
-      // What the card page will ask for, and why the button is off (read with the button).
+      // What our card page asks for, and what the button does (read with the button).
       expect(html).toContain('data-testid="checkout-card-page"');
+      expect(html).toContain(asHtml(m.cardPage.ownHolder));
+      expect(html).not.toContain(asHtml(m.cardPage.contact));
       expect(submitTag(html)).toContain('aria-describedby="co-submit-pending"');
       expect(tagWith(html, 'id="co-submit-pending"')).toMatch(/^<p\b/);
     });
@@ -102,6 +119,9 @@ describe("checkout form: payment methods", () => {
       expect(submitTag(html)).not.toContain("aria-describedby");
       expect(html).toContain(holdNotice(locale));
       expect(html).toContain('data-testid="checkout-card-page"');
+      expect(html).toContain(
+        asHtml(getMessagesFor(locale).checkout.cardPage.contact),
+      );
     });
 
     it(`${locale}: another provider's page is not described as Isracard's`, () => {

@@ -55,8 +55,8 @@ export const privacy: LegalDocModule = {
         </li>
         <li>Cloudflare (delivers and protects the site&apos;s traffic);</li>
         <li>
-          Isracard (card payments, through its PayMe platform) – card details
-          are typed into Isracard&apos;s secure fields and go directly to it;
+          Isracard (card payments) – card details are sent to it to process the
+          payment and are never saved on this site;
         </li>
         <li>PayPal – only if you choose to pay with it;</li>
         <li>

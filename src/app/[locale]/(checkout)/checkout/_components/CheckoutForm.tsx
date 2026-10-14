@@ -58,6 +58,11 @@ export interface CheckoutFormProps {
   disclosure: ReactNode;
   /** Locale-prefixed: the same choices, as far as they go ("show the updated total"). */
   reloadHref: string;
+  /**
+   * Locale-prefixed: our own card page with these choices (`paths.cardPage`), opened while card
+   * payment is not active once the server has accepted the details.
+   */
+  cardPageHref: string;
   /** Locale-prefixed: step 1, prefilled. */
   changeDestinationHref: string;
 }
@@ -97,7 +102,20 @@ export function CheckoutForm(props: CheckoutFormProps) {
         [...formData.entries()].map(([k, v]) => [k, String(v)]),
       );
       submits.current += 1;
-      const next = await props.action(prev, formData);
+      let next = await props.action(prev, formData);
+      // Card payment not active: the server checked the details and refused only the provider
+      // (before writing anything), so our own card page opens.
+      if (
+        props.providers.length === 0 &&
+        next?.ok &&
+        next.data.kind === "refused" &&
+        next.data.code === "provider_unavailable"
+      ) {
+        next = {
+          ok: true,
+          data: { kind: "navigate", url: props.cardPageHref },
+        };
+      }
       // Our own pay page opens with a full page load (its own CSP), started here: the page under
       // the form may re-render before an effect would run.
       if (next?.ok && next.data.kind === "navigate") {
@@ -408,7 +426,9 @@ export function CheckoutForm(props: CheckoutFormProps) {
 
       {paymentsPending ? (
         <div className="flex flex-col gap-2" data-testid="payments-pending">
-          {/* Not a form field: nothing is posted, and the submit stays disabled. */}
+          {/* The radio is only shown; the posted provider lets the server check the details
+              (it then refuses the provider, before writing anything) and our card page opens. */}
+          <input type="hidden" name="providerId" value="isracard" />
           <RadioGroup
             id="co-provider-pending"
             name="providerPending"
@@ -451,11 +471,18 @@ export function CheckoutForm(props: CheckoutFormProps) {
           data-testid="checkout-card-page"
         >
           <p className="font-medium">{t("cardPage.title")}</p>
-          <ul className="list-disc ps-5">
-            <li>{t("cardPage.secureFields")}</li>
-            <li>{t("cardPage.holder")}</li>
-            <li>{t("cardPage.contact")}</li>
-          </ul>
+          {paymentsPending ? (
+            <ul className="list-disc ps-5">
+              <li>{t("cardPage.ownNumber")}</li>
+              <li>{t("cardPage.ownHolder")}</li>
+            </ul>
+          ) : (
+            <ul className="list-disc ps-5">
+              <li>{t("cardPage.secureFields")}</li>
+              <li>{t("cardPage.holder")}</li>
+              <li>{t("cardPage.contact")}</li>
+            </ul>
+          )}
         </div>
       ) : null}
 
@@ -467,7 +494,9 @@ export function CheckoutForm(props: CheckoutFormProps) {
         <h2 id="co-secure-title" className="text-lg font-medium">
           {t("secure.title")}
         </h2>
-        <p className="max-w-prose text-sm">{t("secure.body")}</p>
+        <p className="max-w-prose text-sm">
+          {paymentsPending ? t("secure.bodyOwn") : t("secure.body")}
+        </p>
         {props.cardBrands.length > 0 ? (
           <p className="text-sm" data-testid="checkout-cards">
             {t("secure.cards")}{" "}
@@ -493,7 +522,6 @@ export function CheckoutForm(props: CheckoutFormProps) {
       <div>
         <SubmitButton
           pendingLabel={t("submitting")}
-          disabled={paymentsPending}
           aria-describedby={paymentsPending ? "co-submit-pending" : undefined}
           data-testid="checkout-submit"
         >

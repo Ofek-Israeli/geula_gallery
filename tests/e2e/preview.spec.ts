@@ -278,3 +278,101 @@ test("pay page: a full page load under its nonce CSP; a declined card, then a te
   expect(sent).not.toContain(TEST_CARD);
   expect(sent).not.toContain(DECLINED_CARD);
 });
+
+test("our own card page while card payment is not active: reached through the checkout, checks the card, sends nothing", async ({
+  page,
+}) => {
+  const slug = "e2e-preview-card";
+  await cloneWork("blue-and-yellow-notes", slug, { real: true });
+  const buyer = uniqueBuyer("card-page");
+  // In dollars Isracard (shekels only) is not offered: card payment is "not active yet" here.
+  await page.goto(
+    checkoutUrl(slug, {
+      to: "US",
+      city: "Springfield",
+      zip: "62701",
+      ship: "CARRIER_TABLE",
+      cur: "USD",
+      step: "details",
+    }),
+  );
+  await expect(page.getByTestId("payments-pending")).toBeVisible();
+  await holderBox(page, checkout.details.name).fill("Jane Doe");
+  await holderBox(page, checkout.details.email).fill(buyer.email);
+  await holderBox(page, checkout.details.phone).fill("+12025550123");
+  await holderBox(page, checkout.details.line1).fill("1 Main Street");
+  await page.getByLabel(checkout.consent.terms).check();
+  await page.getByLabel(checkout.consent.dap).check();
+  const policies: string[] = [];
+  page.on("response", (r) => {
+    if (
+      r.request().resourceType() === "document" &&
+      r.url().includes("/checkout/pay/card")
+    ) {
+      policies.push(r.headers()["content-security-policy"] ?? "");
+    }
+  });
+  await page.getByTestId("checkout-submit").click();
+
+  // The server accepted the details and refused only the provider: our page, a full page load
+  // under its own policy, with nothing allowed from outside the site.
+  await expect(page).toHaveURL(
+    new RegExp(`/en/checkout/pay/card\\?work=${slug}&to=US`),
+  );
+  expect(policies.at(-1)).toMatch(
+    /script-src 'self' 'nonce-[^']+' 'strict-dynamic'/,
+  );
+  expect(policies.at(-1)).toContain("frame-src 'none'");
+  expect(policies.at(-1)).not.toMatch(/payme/i);
+  const card = checkout.card;
+  await expect(page.getByTestId("card-notice")).toHaveText(card.notice);
+  await expect(page.getByTestId("summary-line")).toHaveCount(1);
+  await expect(page.getByTestId("checkout-total")).toContainText("$");
+  expect(await seriousAxeViolations(page)).toEqual([]);
+
+  // From here on nothing may leave the browser.
+  const sent: string[] = [];
+  page.on("request", (r) => sent.push(`${r.url()} ${r.postData() ?? ""}`));
+  const field = (label: string) => holderBox(page, label);
+
+  await page.getByTestId("card-submit").click();
+  expect(await summaryItems(page)).toEqual([
+    card.errors.number,
+    card.errors.expiry,
+    card.errors.cvc,
+    card.errors.name,
+  ]);
+  await field(card.number).fill("4111 1111 1111 1112");
+  await field(card.expiry).fill("01/20");
+  await field(card.cvc).fill("12");
+  await field(card.name).fill("Jane Doe");
+  await page.getByTestId("card-submit").click();
+  expect(await summaryItems(page)).toEqual([
+    card.errors.number,
+    card.errors.expired,
+    card.errors.cvc,
+  ]);
+
+  await field(card.number).fill("4111111111111111");
+  await field(card.expiry).fill("1230");
+  await field(card.cvc).fill("123");
+  await field(card.name).focus();
+  await expect(field(card.number)).toHaveValue("4111 1111 1111 1111");
+  await expect(field(card.expiry)).toHaveValue("12/30");
+  await expect(page.getByTestId("card-brand")).toHaveText(
+    card.brand.replace("{brand}", checkout.cards.visa),
+  );
+  await page.getByTestId("card-submit").click();
+  await expect(page.getByTestId("card-done")).toBeFocused();
+  await expect(page.getByTestId("card-done")).toContainText(card.doneBody);
+  for (const label of [card.number, card.expiry, card.cvc]) {
+    await expect(field(label)).toHaveValue("");
+  }
+
+  expect(sent.join("\n")).not.toMatch(/4111|1111 1111/);
+  expect(
+    await e2eQuery("SELECT 1 FROM orders WHERE buyer_email = $1", [
+      buyer.email,
+    ]),
+  ).toHaveLength(0);
+});

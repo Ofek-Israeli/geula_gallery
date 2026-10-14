@@ -171,7 +171,6 @@ describe("legal pages", () => {
       for (const p of [
         "Cloudflare",
         locale === "he" ? "ישראכרט" : "Isracard",
-        "PayMe",
         "Resend",
         "PayPal",
         "Morning",
@@ -180,7 +179,7 @@ describe("legal pages", () => {
         expect(text).toContain(p);
       }
       // The site moved off Vercel/Neon (self-hosted in Israel, 2026-10-10).
-      for (const gone of ["Vercel", "Neon", "Cardcom"]) {
+      for (const gone of ["Vercel", "Neon", "Cardcom", "PayMe"]) {
         expect(text).not.toContain(gone);
       }
       expect(text).toContain("privacy@example.com");
@@ -203,10 +202,18 @@ describe("legal pages", () => {
       expect(text).toContain("studio@example.com");
     });
 
-    it(`${locale}: the terms say card details go to Isracard's secure fields, never through the site`, () => {
+    it(`${locale}: the terms: the site's own secure payment page, Isracard processes, nothing saved`, () => {
       const text = renderDoc(locale, "terms");
       expect(text).toMatch(locale === "he" ? /ישראכרט/ : /Isracard/);
-      expect(text).not.toContain("Cardcom");
+      expect(text).toMatch(
+        locale === "he"
+          ? /עמוד התשלום המאובטח של האתר/
+          : /own secure payment page, over an encrypted connection/,
+      );
+      expect(text).toMatch(
+        locale === "he" ? /לעולם אינם נשמרים/ : /never saved on this site/,
+      );
+      for (const gone of ["Cardcom", "PayMe"]) expect(text).not.toContain(gone);
     });
 
     it(`${locale}: the accessibility statement names the standard, the PDF limitation and a contact`, () => {

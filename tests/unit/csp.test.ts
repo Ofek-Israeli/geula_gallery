@@ -5,6 +5,8 @@ import {
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  CARD_PAGE_PATH,
+  cardPageCsp,
   PAY_PAGE_PATH,
   PAYME_HOSTS,
   payPageCsp,
@@ -114,11 +116,21 @@ describe("csp", () => {
     for (const path of [
       "/he/checkout/pay/0d4f7a52-6a1e-4c1e-9b8e-0f6f6e6b8a11",
       "/en/checkout/pay/0d4f7a52-6a1e-4c1e-9b8e-0f6f6e6b8a11",
+      "/he/checkout/pay/card",
+      "/en/checkout/pay/card",
     ]) {
       expect(matches(path), path).toBe(false);
       expect(PAY_PAGE_PATH.test(path), path).toBe(true);
     }
     expect(PAY_PAGE_PATH.test("/he/checkout/the-path")).toBe(false);
+    expect(CARD_PAGE_PATH.test("/he/checkout/pay/card")).toBe(true);
+    expect(CARD_PAGE_PATH.test("/en/checkout/pay/card/")).toBe(true);
+    expect(
+      CARD_PAGE_PATH.test(
+        "/he/checkout/pay/0d4f7a52-6a1e-4c1e-9b8e-0f6f6e6b8a11",
+      ),
+    ).toBe(false);
+    expect(CARD_PAGE_PATH.test("/he/checkout/pay/cards")).toBe(false);
     const rules = (await nextConfig(PHASE_PRODUCTION_BUILD).headers?.()) ?? [];
     const global = rules.find((r) => r.source === "/:path*");
     const globalHeaders = (global?.headers ?? []) as Header[];
@@ -146,6 +158,23 @@ describe("csp", () => {
     const dev = directives(payPageCsp("n", { dev: true }));
     expect(dev.get("script-src")).toContain("'unsafe-eval'");
     expect(dev.get("connect-src")).toContain("ws:");
+  });
+
+  it("our own card page: nonce and strict-dynamic, and nothing from outside the site", () => {
+    const policy = cardPageCsp("abc123==", { dev: false });
+    const d = directives(policy);
+    expect(d.get("script-src")).toBe(
+      "'self' 'nonce-abc123==' 'strict-dynamic'",
+    );
+    expect(d.get("connect-src")).toBe("'self'");
+    expect(d.get("frame-src")).toBe("'none'");
+    expect(d.get("frame-ancestors")).toBe("'none'");
+    expect(d.get("form-action")).toBe("'self'");
+    expect(d.get("base-uri")).toBe("'none'");
+    expect(policy).not.toMatch(/payme|cardcom|paypal/i);
+    expect(d.get("script-src")).not.toContain("unsafe-inline");
+    const dev = directives(cardPageCsp("n", { dev: true }));
+    expect(dev.get("script-src")).toContain("'unsafe-eval'");
   });
 
   it("production with an https APP_URL moves plain HTTP (CF-Visitor) to https", async () => {

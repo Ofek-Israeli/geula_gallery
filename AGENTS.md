@@ -46,10 +46,13 @@ are in `docs/architecture.md` ("Implementation notes"). Read both before changin
   40P01/40001) and always `tx` inside it. Never call a provider inside a DB transaction.
 - One idempotent `finalizeAttempt()`; a claim row before every provider call; timeouts become
   UNKNOWN and are reconciled (query first) before any retry.
-- Card data never reaches our servers (PCI SAQ A): providers' hosted pages (redirect) or hosted
-  fields (Isracard/PayMe iframes on our pay page). The hosted-fields script is the only
-  third-party script, only on `/[locale]/checkout/pay/*`, under the nonce CSP of `src/proxy.ts`;
-  every other page keeps the static CSP with no third-party scripts.
+- Card data never reaches our servers. Our own card page (`/[locale]/checkout/pay/card`, used
+  while card payment is not active) checks the card in the browser only: its card inputs have
+  no `name`, nothing is sent or stored, and it runs under a nonce CSP with no third-party
+  origin. Connecting it to a processor needs a PCI DSS review first (card data through our pages
+  and servers). Providers' hosted pages (redirect) and hosted fields (Isracard/PayMe iframes on
+  `/checkout/pay/<attempt>`, the only third-party script, under its own nonce CSP) stay
+  possible; every other page keeps the static CSP with no third-party scripts.
 - Fully dynamic rendering; data functions take `locale` explicitly.
 - Money is integer minor units + currency; lengths mm, weights g; never trust client totals
   (amounts come from the DB and the quote version).

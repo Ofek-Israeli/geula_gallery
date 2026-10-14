@@ -47,8 +47,10 @@ git log -p --all --format= | npm run check:secrets -- --stdin
   - `auth-limits`: `admin-auth`, which runs last because it trips the sign-in limits;
   - `preview`: `preview.spec.ts` on the preview server (banner, Buy now with sales closed,
     Isracard in test mode, the pay page's full page load and nonce CSP, a declined card, then a
-    test payment that sells nothing). It buys its own real (`is_demo = false`) `e2e-preview-*`
-    clone, which stays available, so it also passes on a reused server.
+    test payment that sells nothing; then our own card page, reached in dollars where Isracard
+    is not offered: its checks, its CSP, and no request carrying the card). It buys its own real
+    (`is_demo = false`) `e2e-preview-*` clones, which stay available, so it also passes on a
+    reused server.
 - `global-setup.ts` signs in once and saves `tests/e2e/.auth/admin.json`. Cron jobs are
   triggered through Playwright's `request` fixture.
 

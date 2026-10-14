@@ -35,6 +35,17 @@ describe("proxy", () => {
     ).not.toBe(nonce);
   });
 
+  it("gives our own card page a nonce CSP with no third-party origin", () => {
+    const res = proxy(
+      new NextRequest("http://localhost/en/checkout/pay/card?work=the-path"),
+    );
+    const csp = res.headers.get("content-security-policy");
+    expect(nonceOf(csp)).toBeTruthy();
+    expect(csp).toContain("frame-src 'none'");
+    expect(csp).not.toContain("payme");
+    expect(res.headers.get("x-middleware-request-x-nonce")).toBe(nonceOf(csp));
+  });
+
   it("adds no CSP to other pages (the static policy comes from next.config.ts)", () => {
     for (const url of [
       "http://localhost/he/works",

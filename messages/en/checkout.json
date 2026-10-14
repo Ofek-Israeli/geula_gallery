@@ -133,7 +133,7 @@
     "isracard": "Credit card – Isracard secure payment",
     "testSuffix": " (test mode – no charge)",
     "pendingDescription": "Activation pending – not active yet",
-    "pendingNote": "Card payment will be switched on once Isracard approves our merchant account. Until then you can't pay on the site, and no order is created.",
+    "pendingNote": "Card payment will be switched on once Isracard approves our merchant account. Until then you can fill in the payment page, but nothing is charged and no order is created.",
     "pendingContact": "To buy a work now, contact us.",
     "paypal": "PayPal (account, or card where PayPal offers it)",
     "wallets": "also {list}",
@@ -147,14 +147,17 @@
   "secure": {
     "title": "Secure payment",
     "body": "Card details are entered only in the payment provider's secure fields or page (PCI DSS) and never reach this site's servers. Where required, the payment is verified with 3-D Secure by your card issuer.",
-    "cards": "Accepted cards:"
+    "cards": "Accepted cards:",
+    "bodyOwn": "Card details are typed on this site's own secure payment page, over an encrypted connection (HTTPS). They are never saved on the site, and while card payment isn't active they aren't sent anywhere."
   },
   "cardPage": {
     "title": "The secure payment page asks for:",
     "secureFields": "Card number, expiry and CVV, in Isracard's secure fields",
     "holder": "The card holder's name and, for an Israeli card, ID number",
     "contact": "The card holder's email and phone",
-    "pendingButton": "The button opens the payment page once Isracard activates card payment."
+    "pendingButton": "Opens the secure payment page. Card payment isn't active yet: nothing is charged and no order is created.",
+    "ownNumber": "Card number, expiry and CVV",
+    "ownHolder": "The name on the card and, for an Israeli card, the holder's ID number"
   },
   "cards": {
     "visa": "Visa",
@@ -300,6 +303,41 @@
       "card": "Please check the card details.",
       "invalid": "Something in the payment details was wrong. Please try again.",
       "not_configured": "Card payment is not available right now."
+    }
+  },
+  "card": {
+    "title": "Payment",
+    "back": "Back to your details",
+    "notice": "Online card payment isn't active yet. You can fill in this page: the card details are checked in your browser only. Nothing is sent, charged or saved, and no order is placed.",
+    "cardTitle": "Card details",
+    "number": "Card number",
+    "brand": "Card: {brand}",
+    "expiry": "Expiry (MM/YY)",
+    "cvc": "CVV",
+    "cvcHint": "3 digits on the back of the card (4 on the front of an American Express card).",
+    "holderTitle": "Card holder",
+    "name": "Name on the card",
+    "socialId": "ID number",
+    "socialIdHint": "For an Israeli card: the card holder's ID number.",
+    "installments": "Payments",
+    "installmentsOption": "{count, plural, one {Single payment} other {# payments}}",
+    "submit": "Pay {amount}",
+    "errors": {
+      "number": "Check the card number.",
+      "expiry": "Check the expiry date (MM/YY).",
+      "expired": "The card has expired.",
+      "cvc": "Check the CVV.",
+      "name": "Enter the name on the card.",
+      "socialId": "Check the card holder's ID number (up to 9 digits, with the check digit)."
+    },
+    "doneTitle": "The card details are valid",
+    "doneBody": "Online card payment isn't active yet, so nothing was sent or charged, and no order was placed.",
+    "doneContact": "To buy the work now, contact us.",
+    "secureTitle": "Secure payment",
+    "secure": {
+      "https": "This page is served over an encrypted connection (HTTPS) and runs no scripts from other websites.",
+      "notStored": "Card details are never saved on this site.",
+      "notSent": "While card payment isn't active, nothing typed here leaves your browser."
     }
   }
 }

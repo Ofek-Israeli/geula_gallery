@@ -2,7 +2,13 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
-import { newNonce, PAY_PAGE_PATH, payPageCsp } from "./lib/csp";
+import {
+  CARD_PAGE_PATH,
+  cardPageCsp,
+  newNonce,
+  PAY_PAGE_PATH,
+  payPageCsp,
+} from "./lib/csp";
 import { publicEnv } from "./lib/public-env";
 
 /**
@@ -13,10 +19,11 @@ import { publicEnv } from "./lib/public-env";
  *    `/(he|en)/print/admin/**` without a Better Auth session cookie go to the login page.
  *    The cookie is not validated here (a forged cookie gets through and is rejected by
  *    `requireAdmin`).
- * 2. The Isracard pay page (`/(he|en)/checkout/pay/*`): a per-request nonce CSP (`src/lib/csp.ts`),
- *    set on the response and passed to the render as `content-security-policy` + `x-nonce` request
- *    headers (Next adds the nonce to its own scripts; the page gives it to PayMe's script). The
- *    static CSP of `next.config.ts` skips this path.
+ * 2. The pay pages (`/(he|en)/checkout/pay/*`): a per-request nonce CSP (`src/lib/csp.ts`), set
+ *    on the response and passed to the render as `content-security-policy` + `x-nonce` request
+ *    headers (Next adds the nonce to its own scripts; the Isracard pay page gives it to PayMe's
+ *    script). Our own card page (`/checkout/pay/card`) gets the policy with no third-party origin.
+ *    The static CSP of `next.config.ts` skips these paths.
  * 3. Everything else: next-intl routing (`/` → `/he` or `/en` by Accept-Language, 307).
  */
 const intl = createMiddleware(routing);
@@ -36,7 +43,10 @@ export default function proxy(request: NextRequest): NextResponse {
   }
   if (PAY_PAGE_PATH.test(pathname)) {
     const nonce = newNonce();
-    const csp = payPageCsp(nonce, { dev: publicEnv.devServer });
+    const dev = publicEnv.devServer;
+    const csp = CARD_PAGE_PATH.test(pathname)
+      ? cardPageCsp(nonce, { dev })
+      : payPageCsp(nonce, { dev });
     const forwarded = new Headers(request.headers);
     forwarded.set("x-nonce", nonce);
     forwarded.set("content-security-policy", csp);

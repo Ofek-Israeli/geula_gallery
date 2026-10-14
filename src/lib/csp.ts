@@ -3,10 +3,12 @@
  *
  * - Every page except the pay page: the static policy (no nonces, no third-party scripts or
  *   frames; form posts may go to the redirect providers' hosted pages).
- * - The Isracard pay page (`/[locale]/checkout/pay/*`): a per-request nonce policy from the
- *   proxy. Only our own nonce'd scripts and PayMe's hosted-fields script run (`'strict-dynamic'`),
- *   frames only from PayMe's hosted-fields origin, no inline scripts. This keeps the card page
- *   protected against script attacks (PCI DSS SAQ A for iframe pages, PCI SSC FAQ 1588).
+ * - The Isracard pay page (`/[locale]/checkout/pay/<attempt>`): a per-request nonce policy from
+ *   the proxy. Only our own nonce'd scripts and PayMe's hosted-fields script run
+ *   (`'strict-dynamic'`), frames only from PayMe's hosted-fields origin, no inline scripts. This
+ *   keeps the card page protected against script attacks (PCI SSC FAQ 1588).
+ * - Our own card page (`/[locale]/checkout/pay/card`): the same nonce policy with no third-party
+ *   origin at all (no scripts, frames or connections outside the site).
  */
 
 /** PayMe (Isracard's e-commerce service): hosted-fields script, its frames, and its API. */
@@ -23,8 +25,11 @@ export const REDIRECT_PROVIDER_ORIGINS = [
   "https://www.sandbox.paypal.com",
 ] as const;
 
-/** `/he/checkout/pay/<id>` and `/en/checkout/pay/<id>`. */
+/** `/he/checkout/pay/<id>` and `/en/checkout/pay/<id>` (and our own card page below). */
 export const PAY_PAGE_PATH = /^\/(?:he|en)\/checkout\/pay\//;
+
+/** Our own card page, `/he/checkout/pay/card` and `/en/checkout/pay/card`. */
+export const CARD_PAGE_PATH = /^\/(?:he|en)\/checkout\/pay\/card\/?$/;
 
 /** `next.config.ts` header source: every path except the pay page (no capturing groups). */
 export const STATIC_CSP_SOURCE = "/:path((?!(?:he|en)/checkout/pay/).*)";
@@ -58,6 +63,23 @@ export function payPageCsp(nonce: string, o: { dev: boolean }): string {
     "font-src 'self'",
     `connect-src 'self' ${PAYME_HOSTS.frames} ${PAYME_HOSTS.api.join(" ")}${o.dev ? " ws:" : ""}`,
     `frame-src ${PAYME_HOSTS.frames}`,
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+/** Our own card page: nothing from outside the site may run, frame, load or be contacted. */
+export function cardPageCsp(nonce: string, o: { dev: boolean }): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${o.dev ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    IMG_SRC,
+    "font-src 'self'",
+    `connect-src 'self'${o.dev ? " ws:" : ""}`,
+    "frame-src 'none'",
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'none'",
