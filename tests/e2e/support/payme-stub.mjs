@@ -6,8 +6,10 @@
  * It answers the calls the adapter makes (`providers/isracard.ts`, docs.payme.io read 2026-10-14):
  * generate-sale, pay-sale and get-transactions. Its hosted-fields script stands in for PayMe's
  * card iframes with plain inputs: the card number stays in the browser and only a one-time token
- * reaches the shop's server, as with PayMe. A card ending 0002 is declined. `GET /__log` lists the
- * API requests received, so a spec can check what the server sent.
+ * reaches the shop's server, as with PayMe. Like PayMe's, a field instance tokenizes once ("Bad
+ * session" after that), empty card fields come back as `validationError` with per-field errors,
+ * and teardown removes the field. A card ending 0002 is declined. `GET /__log` lists the API
+ * requests received, so a spec can check what the server sent.
  *
  *   node tests/e2e/support/payme-stub.mjs <port>
  */
@@ -24,6 +26,8 @@ const HOSTED_FIELDS = `
   const LABELS = { cardNumber: "Card number", cardExpiration: "Expiry", cvc: "CVV" };
   window.PayMe = {
     create(key, opts) {
+      const inputs = {};
+      let used = false;
       return Promise.resolve({
         hostedFields() {
           return {
@@ -36,16 +40,36 @@ const HOSTED_FIELDS = `
                   input.style.width = "100%";
                   input.style.border = "0";
                   document.querySelector(selector).appendChild(input);
+                  inputs[field] = input;
                 },
                 on() {},
-                teardown() {},
+                // Like PayMe's: removes the field.
+                teardown() {
+                  if (inputs[field]) inputs[field].remove();
+                },
               };
             },
           };
         },
         tokenize() {
-          const number = document.querySelector("[data-stub-field=cardNumber]").value.trim();
-          if (!number) return Promise.reject({ type: "tokenize-error" });
+          // Like PayMe's: one tokenization per instance.
+          if (used) {
+            return Promise.reject({
+              error: "Bad session",
+              message: "Session expired or deleted",
+              statusCode: 400,
+              type: "tokenize-error",
+            });
+          }
+          const errors = {};
+          for (const field of ["cardNumber", "cardExpiration", "cvc"]) {
+            if (!inputs[field] || !inputs[field].value.trim()) errors[field] = "Mandatory field";
+          }
+          if (Object.keys(errors).length > 0) {
+            return Promise.reject({ validationError: true, errors, type: "tokenize-error" });
+          }
+          used = true;
+          const number = inputs.cardNumber.value.trim();
           return Promise.resolve({
             type: "tokenize-success",
             token: "BUYER-STUB-" + number.slice(-4),

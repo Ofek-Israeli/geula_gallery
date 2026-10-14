@@ -149,6 +149,13 @@
     "body": "Card details are entered only in the payment provider's secure fields or page (PCI DSS) and never reach this site's servers. Where required, the payment is verified with 3-D Secure by your card issuer.",
     "cards": "Accepted cards:"
   },
+  "cardPage": {
+    "title": "The secure payment page asks for:",
+    "secureFields": "Card number, expiry and CVV, in Isracard's secure fields",
+    "holder": "The card holder's name and, for an Israeli card, ID number",
+    "contact": "The card holder's email and phone",
+    "pendingButton": "The button opens the payment page once Isracard activates card payment."
+  },
   "cards": {
     "visa": "Visa",
     "mastercard": "Mastercard",
@@ -265,6 +272,17 @@
     "phone": "Phone",
     "installments": "Payments",
     "installmentsOption": "{count, plural, one {Single payment} other {# payments}}",
+    "fieldErrors": {
+      "cardNumber": "Check the card number.",
+      "cardExpiration": "Check the expiry date (MM/YY).",
+      "cvc": "Check the CVV (3 or 4 digits).",
+      "firstName": "Enter the card holder's first name.",
+      "lastName": "Enter the card holder's last name.",
+      "socialId": "Check the card holder's ID number (up to 9 digits, with the check digit).",
+      "email": "Enter a valid email address, like name@example.com.",
+      "phone": "Enter a valid phone number, like 0501234567 (from abroad: +44…)."
+    },
+    "sessionExpired": "The secure card fields expired. Please enter the card details again.",
     "submit": "Pay {amount}",
     "submitting": "Processing the payment…",
     "loading": "Loading the secure card fields…",

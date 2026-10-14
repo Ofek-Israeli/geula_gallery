@@ -86,6 +86,10 @@ describe("checkout form: payment methods", () => {
       expect(html).not.toContain('name="providerId"');
       expect(submitTag(html)).toContain('disabled=""');
       expect(html).not.toContain(holdNotice(locale));
+      // What the card page will ask for, and why the button is off (read with the button).
+      expect(html).toContain('data-testid="checkout-card-page"');
+      expect(submitTag(html)).toContain('aria-describedby="co-submit-pending"');
+      expect(tagWith(html, 'id="co-submit-pending"')).toMatch(/^<p\b/);
     });
 
     it(`${locale}: a provider → its radio, an enabled submit and the hold notice`, () => {
@@ -95,7 +99,14 @@ describe("checkout form: payment methods", () => {
       expect(html).not.toContain('data-testid="payments-pending"');
       expect(tagWith(html, 'name="providerId"')).toContain('value="isracard"');
       expect(submitTag(html)).not.toContain('disabled=""');
+      expect(submitTag(html)).not.toContain("aria-describedby");
       expect(html).toContain(holdNotice(locale));
+      expect(html).toContain('data-testid="checkout-card-page"');
+    });
+
+    it(`${locale}: another provider's page is not described as Isracard's`, () => {
+      const html = render(locale, [{ id: "mock", label: "Test payment" }]);
+      expect(html).not.toContain('data-testid="checkout-card-page"');
     });
   }
 });

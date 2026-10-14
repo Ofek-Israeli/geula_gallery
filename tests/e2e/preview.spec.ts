@@ -40,24 +40,47 @@ interface StubRequest {
   saleId?: string;
 }
 
-/** Types a card into the stand-in card fields and the holder's details, then pays. */
+const holderBox = (page: Page, label: string) =>
+  page.getByRole("textbox", { name: new RegExp(`^${escapeRe(label)}`) });
+
+/** The card holder's details on the pay page. */
+async function fillHolder(
+  page: Page,
+  buyer: { name: string; email: string },
+): Promise<void> {
+  const [first, last] = buyer.name.split(" ", 2) as [string, string];
+  await holderBox(page, checkout.pay.firstName).fill(first);
+  await holderBox(page, checkout.pay.lastName).fill(last);
+  await holderBox(page, checkout.pay.email).fill(buyer.email);
+  await holderBox(page, checkout.pay.phone).fill("0500000000");
+}
+
+/** Types a card into the stand-in card fields. */
+async function fillCard(page: Page, card: string): Promise<void> {
+  await page.locator("[data-stub-field=cardNumber]").fill(card);
+  await page.locator("[data-stub-field=cardExpiration]").fill("12/30");
+  await page.locator("[data-stub-field=cvc]").fill("658");
+}
+
+/** Card and holder details, then Pay. */
 async function payWith(
   page: Page,
   card: string,
   buyer: { name: string; email: string },
 ): Promise<void> {
-  const box = (label: string) =>
-    page.getByRole("textbox", { name: new RegExp(`^${escapeRe(label)}`) });
   await expect(page.getByTestId("pay-submit")).toBeEnabled();
-  await page.locator("[data-stub-field=cardNumber]").fill(card);
-  await page.locator("[data-stub-field=cardExpiration]").fill("12/30");
-  await page.locator("[data-stub-field=cvc]").fill("658");
-  const [first, last] = buyer.name.split(" ", 2) as [string, string];
-  await box(checkout.pay.firstName).fill(first);
-  await box(checkout.pay.lastName).fill(last);
-  await box(checkout.pay.email).fill(buyer.email);
-  await box(checkout.pay.phone).fill("0500000000");
+  await fillCard(page, card);
+  await fillHolder(page, buyer);
   await page.getByTestId("pay-submit").click();
+}
+
+/** The error summary's items (its links), in order. */
+async function summaryItems(page: Page): Promise<string[]> {
+  const summary = page.getByRole("alert").filter({
+    has: page.getByRole("heading"),
+  });
+  await expect(summary).toBeFocused();
+  return summary.getByRole("link").allTextContents();
 }
 
 test("the banner, Buy now with sales closed, and Isracard in test mode at checkout", async ({
@@ -81,6 +104,9 @@ test("the banner, Buy now with sales closed, and Isracard in test mode at checko
     }),
   ).toBeChecked();
   await expect(page.getByTestId("payments-pending")).toHaveCount(0);
+  await expect(page.getByTestId("checkout-card-page")).toContainText(
+    checkout.cardPage.secureFields,
+  );
   await expect(page.getByTestId("checkout-secure")).toBeVisible();
   await expect(page.getByTestId("checkout-submit")).toBeEnabled();
   expect(await seriousAxeViolations(page)).toEqual([]);
@@ -123,6 +149,57 @@ test("pay page: a full page load under its nonce CSP; a declined card, then a te
   );
   await expect(page.getByTestId("summary-line")).toHaveCount(1);
   expect(await seriousAxeViolations(page)).toEqual([]);
+
+  // Nothing filled in: the holder's details are checked here, before Isracard is asked.
+  const fieldErrors = checkout.pay.fieldErrors;
+  await expect(page.getByTestId("pay-submit")).toBeEnabled();
+  await page.getByTestId("pay-submit").click();
+  expect(await summaryItems(page)).toEqual([
+    fieldErrors.firstName,
+    fieldErrors.lastName,
+    fieldErrors.email,
+    fieldErrors.phone,
+  ]);
+  await expect(holderBox(page, checkout.pay.firstName)).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  // The holder is fine but the card is empty: Isracard's fields name what to fix.
+  await fillHolder(page, buyer);
+  await holderBox(page, checkout.pay.socialId).fill("123456789");
+  await page.getByTestId("pay-submit").click();
+  expect(await summaryItems(page)).toEqual([fieldErrors.socialId]);
+  await holderBox(page, checkout.pay.socialId).fill("008336174");
+  await page.getByTestId("pay-submit").click();
+  expect(await summaryItems(page)).toEqual([
+    fieldErrors.cardNumber,
+    fieldErrors.cardExpiration,
+    fieldErrors.cvc,
+  ]);
+  expect(
+    (await (
+      await page.request.get(`${test.info().config.metadata.paymeStub}/__log`)
+    ).json()) as StubRequest[],
+  ).not.toContainEqual(expect.objectContaining({ path: "/api/generate-sale" }));
+
+  // A refused try spends the one-time token: the card fields come back empty, in a new session.
+  await page
+    .locator('input[name="installments"]')
+    .evaluate((el: HTMLInputElement) => {
+      el.value = "2"; // more payments than this order allows
+    });
+  await fillCard(page, TEST_CARD);
+  await page.getByTestId("pay-submit").click();
+  await expect(page.getByTestId("pay-error")).toHaveText(
+    checkout.pay.errors.invalid,
+  );
+  await expect(page.locator("[data-stub-field=cardNumber]")).toHaveCount(1);
+  await expect(page.locator("[data-stub-field=cardNumber]")).toHaveValue("");
+  await page
+    .locator('input[name="installments"]')
+    .evaluate((el: HTMLInputElement) => {
+      el.value = "1";
+    });
 
   // A declined card: nothing charged, a new pay page says so.
   await payWith(page, DECLINED_CARD, buyer);

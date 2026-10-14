@@ -2664,7 +2664,15 @@ service (on PayMe) over a separate gateway, with the card form on our site. Runb
   `payWithCardAction`. The page needs a full page load (own CSP): checkout returns
   `{ kind: "navigate" }` (navigated from the action callback, without revalidation, which would
   re-render the checkout as reserved first), the order page links to an unsubmitted pay page,
-  and the page reloads itself after a client-router navigation.
+  and the page reloads itself after a client-router navigation. The card holder's details are
+  checked in the browser first (`pay/[attemptId]/holder.ts`: names, email, phone, the ID number's
+  Israeli check digit; the ID is sent as 9 digits) with the site's error summary; PayMe's own field
+  errors (`validationError`) map to the same messages. A PayMe field instance tokenizes once, so
+  after any answer that stays on the page (or a "Bad session") `CardFields` is remounted with a
+  new key, which tears the iframes down and starts a new session.
+- **Checkout step 3** lists what the card page asks for (`checkout-card-page`) while Isracard is
+  offered or activation is pending; while pending, the disabled "Continue to payment" button is
+  described by a note saying it opens once Isracard activates card payment.
 - **The charge** (`payments/charge.ts`): claim (PENDING → CAPTURING under the locks: hold live,
   quote bound, no other attempt in flight; holds extended ≥ 10 min; the one-winner index refuses a
   second charging attempt), `generate-sale` (sale id stored), one `pay-sale` (`buyer_key`,

@@ -2,8 +2,9 @@
 
 import Script from "next/script";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buttonClasses } from "@/components/ui/Button";
+import { ErrorSummary, type FormErrorItem } from "@/components/ui/ErrorSummary";
 import { Field } from "@/components/ui/Field";
 import { controlClasses, Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -11,14 +12,23 @@ import { LOCALE_FIELD } from "@/lib/forms";
 import type { Locale } from "@/lib/locale";
 import type { ActionState } from "@/server/next/actions";
 import type { ChargeOutcome } from "@/server/payments/charge";
+import {
+  CARD_FIELDS,
+  type CardField,
+  checkHolder,
+  HOLDER_FIELDS,
+  type HolderField,
+  tokenizeFailure,
+} from "./holder";
 
 /**
  * The card form of the Isracard pay page. Card number, expiry and CVV are PayMe's hosted fields
  * (iframes from hf.payme.io): what the buyer types there goes from the browser to Isracard and
- * never reaches our servers. Name, ID number, email and phone are our own inputs, passed to the
- * tokenization. The one-time token, the 3-D Secure client data, the ID number and the installments
- * go to `payWithCardAction`; its answer is opened with a full page load (the order page, a 3-D
- * Secure challenge or a new pay page after a decline).
+ * never reaches our servers. Name, ID number, email and phone are our own inputs, checked here
+ * (`holder.ts`) and passed to the tokenization. The one-time token, the 3-D Secure client data,
+ * the ID number and the installments go to `payWithCardAction`; its answer is opened with a full
+ * page load (the order page, a 3-D Secure challenge or a new pay page after a decline). A token
+ * is good for one try: after any other answer the card fields are created again.
  */
 
 interface PaymeField {
@@ -49,6 +59,7 @@ declare global {
 }
 
 type State = ActionState<ChargeOutcome>;
+type Problem = HolderField | CardField;
 
 export interface PayFormProps {
   action: (prev: State, payload: FormData) => Promise<State>;
@@ -63,11 +74,24 @@ export interface PayFormProps {
   prefill: { name: string; email: string; phone: string } | null;
 }
 
-const CARD_FIELDS = [
-  { field: "cardNumber", id: "pm-card-number", label: "cardNumber" },
-  { field: "cardExpiration", id: "pm-card-expiry", label: "expiry" },
-  { field: "cvc", id: "pm-card-cvc", label: "cvc" },
-] as const;
+/** Our ids for each field: the card fields' containers and our own inputs. */
+const FIELD_IDS: Record<Problem, string> = {
+  cardNumber: "pm-card-number",
+  cardExpiration: "pm-card-expiry",
+  cvc: "pm-card-cvc",
+  firstName: "pm-first",
+  lastName: "pm-last",
+  socialId: "pm-social",
+  email: "pm-email",
+  phone: "pm-phone",
+};
+const CARD_LABELS: Record<CardField, "cardNumber" | "expiry" | "cvc"> = {
+  cardNumber: "cardNumber",
+  cardExpiration: "expiry",
+  cvc: "cvc",
+};
+/** Page order, for the error summary. */
+const PAGE_ORDER: readonly Problem[] = [...CARD_FIELDS, ...HOLDER_FIELDS];
 
 /** Only PayMe's whitelisted properties (color, font-size, text-align, letter-spacing…). */
 const FIELD_STYLES = {
@@ -86,6 +110,98 @@ function splitName(full: string): [string, string] {
   return [parts.slice(0, -1).join(" "), parts.at(-1) ?? ""];
 }
 
+/**
+ * The three hosted card fields of one PayMe session. Remounted (a new `key`) to start a new
+ * session: its cleanup tears the iframes down.
+ */
+function CardFields({
+  scriptReady,
+  client,
+  locale,
+  instance,
+  onReady,
+  onLoadFailed,
+  errors,
+}: {
+  scriptReady: boolean;
+  client: PayFormProps["client"];
+  locale: Locale;
+  instance: React.RefObject<PaymeInstance | null>;
+  onReady: (ready: boolean) => void;
+  onLoadFailed: () => void;
+  errors: Partial<Record<CardField, string>>;
+}) {
+  const t = useTranslations("checkout.pay");
+  const [live, setLive] = useState<Partial<Record<CardField, string>>>({});
+
+  useEffect(() => {
+    if (!scriptReady || !window.PayMe) return;
+    let cancelled = false;
+    const fields: PaymeField[] = [];
+    window.PayMe.create(client.apiKey, {
+      testMode: client.testMode,
+      language: locale,
+      tokenIsPermanent: false,
+    })
+      .then((created) => {
+        if (cancelled) return;
+        instance.current = created;
+        const manager = created.hostedFields();
+        for (const f of CARD_FIELDS) {
+          const field = manager.create(f, { styles: FIELD_STYLES });
+          field.mount(`#${FIELD_IDS[f]}`);
+          field.on("validity-changed", (e) =>
+            setLive((prev) => {
+              const next = { ...prev };
+              if (e.isValid === false && e.message) next[f] = e.message;
+              else delete next[f];
+              return next;
+            }),
+          );
+          fields.push(field);
+        }
+        onReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) onLoadFailed();
+      });
+    return () => {
+      cancelled = true;
+      for (const f of fields) f.teardown?.();
+      instance.current = null;
+      onReady(false);
+    };
+  }, [
+    scriptReady,
+    client.apiKey,
+    client.testMode,
+    locale,
+    instance,
+    onReady,
+    onLoadFailed,
+  ]);
+
+  return CARD_FIELDS.map((f) => {
+    const message = live[f] ?? errors[f];
+    return (
+      <fieldset key={f} className="flex flex-col gap-1">
+        <legend className="mbe-1 font-medium">{t(CARD_LABELS[f])}</legend>
+        {/* PayMe mounts its iframe here; what is typed goes to Isracard only. */}
+        <div
+          id={FIELD_IDS[f]}
+          tabIndex={-1}
+          className={`${controlClasses} flex items-center [&>iframe]:h-7 [&>iframe]:w-full ${message ? "border-reddot" : ""}`}
+          dir="ltr"
+          data-testid={FIELD_IDS[f]}
+        />
+        {message ? (
+          <p className="text-sm font-medium text-reddot">{message}</p>
+        ) : null}
+      </fieldset>
+    );
+  });
+}
+
 export function PayForm(props: PayFormProps) {
   const t = useTranslations("checkout.pay");
   const instance = useRef<PaymeInstance | null>(null);
@@ -94,7 +210,9 @@ export function PayForm(props: PayFormProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState<Record<string, string>>({});
+  const [problems, setProblems] = useState<Problem[]>([]);
+  /** Bumped to create the card fields again (a new one-time session). */
+  const [session, setSession] = useState(0);
   const [first, last] = props.prefill
     ? splitName(props.prefill.name)
     : ["", ""];
@@ -110,106 +228,108 @@ export function PayForm(props: PayFormProps) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!scriptReady || !window.PayMe) return;
-    let cancelled = false;
-    const fields: PaymeField[] = [];
-    window.PayMe.create(props.client.apiKey, {
-      testMode: props.client.testMode,
-      language: props.locale,
-      tokenIsPermanent: false,
-    })
-      .then((created) => {
-        if (cancelled) return;
-        instance.current = created;
-        const manager = created.hostedFields();
-        for (const f of CARD_FIELDS) {
-          const field = manager.create(f.field, { styles: FIELD_STYLES });
-          field.mount(`#${f.id}`);
-          field.on("validity-changed", (e) =>
-            setInvalid((prev) => {
-              const next = { ...prev };
-              if (e.isValid === false && e.message) next[f.field] = e.message;
-              else delete next[f.field];
-              return next;
-            }),
-          );
-          fields.push(field);
-        }
-        setReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadFailed(true);
-      });
-    return () => {
-      cancelled = true;
-      for (const f of fields) f.teardown?.();
-      instance.current = null;
-      setReady(false);
-    };
-  }, [scriptReady, props.client.apiKey, props.client.testMode, props.locale]);
-
-  const onSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      const created = instance.current;
-      if (!created || busy) return;
-      setBusy(true);
-      setError(null);
-      const form = new FormData(event.currentTarget);
-      const value = (name: string) => String(form.get(name) ?? "").trim();
-      try {
-        const result = await created.tokenize({
-          payerFirstName: value("firstName"),
-          payerLastName: value("lastName"),
-          payerEmail: value("email"),
-          payerPhone: value("phone"),
-          payerSocialId: value("socialId"),
-          total: {
-            label: props.amount.label,
-            amount: {
-              currency: props.amount.currency,
-              value: props.amount.value,
-            },
-          },
-        });
-        if (!result.token) throw new Error("no token");
-        let clientData = "";
-        try {
-          clientData =
-            (await window.PayMe?.clientData?.(props.client.testMode))?.hash ??
-            "";
-        } catch {
-          clientData = "";
-        }
-        const payload = new FormData();
-        payload.set(LOCALE_FIELD, props.locale);
-        payload.set("attemptId", props.attemptId);
-        payload.set("t", props.token);
-        payload.set("token", result.token);
-        if (clientData) payload.set("clientData", clientData);
-        if (value("socialId")) payload.set("socialId", value("socialId"));
-        payload.set("installments", value("installments") || "1");
-        const state = await props.action(null, payload);
-        if (state?.ok && state.data.kind === "navigate") {
-          window.location.assign(state.data.url);
-          return;
-        }
-        setError(
-          state && !state.ok && state.error.code === "RATE_LIMITED"
-            ? t("errors.rateLimited")
-            : state?.ok && state.data.kind === "error"
-              ? t(`errors.${state.data.code}`)
-              : t("errors.generic"),
-        );
-      } catch {
-        // A tokenization error: PayMe's field messages say which detail is wrong.
-        setError(t("errors.card"));
-      }
-      setBusy(false);
-    },
-    [busy, props, t],
+  const onLoadFailed = useCallback(() => setLoadFailed(true), []);
+  const has = (p: Problem) => problems.includes(p);
+  const message = (p: Problem) => t(`fieldErrors.${p}`);
+  const report = (list: Problem[]) =>
+    setProblems(PAGE_ORDER.filter((p) => list.includes(p)));
+  // A new list only when a submit reports problems: the summary takes focus when it changes.
+  const summary = useMemo<FormErrorItem[]>(
+    () =>
+      problems.map((p) => ({
+        fieldId: FIELD_IDS[p],
+        message: t(`fieldErrors.${p}`),
+      })),
+    [problems, t],
   );
+  const cardErrors = Object.fromEntries(
+    CARD_FIELDS.filter(has).map((f) => [f, message(f)]),
+  ) as Partial<Record<CardField, string>>;
+  /** The token was used (or the session ended): new card fields for the next try. */
+  const newSession = () => setSession((n) => n + 1);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const created = instance.current;
+    if (!created || busy) return;
+    const form = new FormData(event.currentTarget);
+    const value = (name: string) => String(form.get(name) ?? "").trim();
+    setError(null);
+    const holder = checkHolder({
+      firstName: value("firstName"),
+      lastName: value("lastName"),
+      socialId: value("socialId"),
+      email: value("email"),
+      phone: value("phone"),
+    });
+    report(holder.problems);
+    if (holder.problems.length > 0) return;
+
+    setBusy(true);
+    let token: string;
+    try {
+      const result = await created.tokenize({
+        payerFirstName: value("firstName"),
+        payerLastName: value("lastName"),
+        payerEmail: value("email"),
+        payerPhone: value("phone"),
+        ...(holder.socialId ? { payerSocialId: holder.socialId } : {}),
+        total: {
+          label: props.amount.label,
+          amount: {
+            currency: props.amount.currency,
+            value: props.amount.value,
+          },
+        },
+      });
+      if (!result.token) throw new Error("no token");
+      token = result.token;
+    } catch (e) {
+      const failure = tokenizeFailure(e);
+      if (failure.kind === "fields") report(failure.fields);
+      else if (failure.kind === "session") {
+        setError(t("sessionExpired"));
+        newSession();
+      } else setError(t("errors.card"));
+      setBusy(false);
+      return;
+    }
+
+    let clientData = "";
+    try {
+      clientData =
+        (await window.PayMe?.clientData?.(props.client.testMode))?.hash ?? "";
+    } catch {
+      clientData = "";
+    }
+    const payload = new FormData();
+    payload.set(LOCALE_FIELD, props.locale);
+    payload.set("attemptId", props.attemptId);
+    payload.set("t", props.token);
+    payload.set("token", token);
+    if (clientData) payload.set("clientData", clientData);
+    if (holder.socialId) payload.set("socialId", holder.socialId);
+    payload.set("installments", value("installments") || "1");
+    let state: State = null;
+    try {
+      state = await props.action(null, payload);
+    } catch {
+      state = null;
+    }
+    if (state?.ok && state.data.kind === "navigate") {
+      window.location.assign(state.data.url);
+      return;
+    }
+    setError(
+      state && !state.ok && state.error.code === "RATE_LIMITED"
+        ? t("errors.rateLimited")
+        : state?.ok && state.data.kind === "error"
+          ? t(`errors.${state.data.code}`)
+          : t("errors.generic"),
+    );
+    newSession();
+    setBusy(false);
+  }
 
   return (
     <form
@@ -223,8 +343,9 @@ export function PayForm(props: PayFormProps) {
         strategy="afterInteractive"
         nonce={props.nonce}
         onReady={() => setScriptReady(true)}
-        onError={() => setLoadFailed(true)}
+        onError={onLoadFailed}
       />
+      <ErrorSummary errors={summary} />
       {error ? (
         <div
           role="alert"
@@ -246,29 +367,27 @@ export function PayForm(props: PayFormProps) {
             {t("loading")}
           </p>
         ) : null}
-        {CARD_FIELDS.map((f) => (
-          <fieldset key={f.id} className="flex flex-col gap-1">
-            <legend className="mbe-1 font-medium">{t(f.label)}</legend>
-            {/* PayMe mounts its iframe here; what is typed goes to Isracard only. */}
-            <div
-              id={f.id}
-              className={`${controlClasses} flex items-center [&>iframe]:h-7 [&>iframe]:w-full`}
-              dir="ltr"
-              data-testid={f.id}
-            />
-            {invalid[f.field] ? (
-              <p className="text-sm font-medium text-reddot">
-                {invalid[f.field]}
-              </p>
-            ) : null}
-          </fieldset>
-        ))}
+        <CardFields
+          key={session}
+          scriptReady={scriptReady}
+          client={props.client}
+          locale={props.locale}
+          instance={instance}
+          onReady={setReady}
+          onLoadFailed={onLoadFailed}
+          errors={cardErrors}
+        />
       </fieldset>
 
       <fieldset className="flex flex-col gap-4">
         <legend className="mbe-2 text-xl">{t("holderTitle")}</legend>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="pm-first" label={t("firstName")} required>
+          <Field
+            id={FIELD_IDS.firstName}
+            label={t("firstName")}
+            required
+            error={has("firstName") ? message("firstName") : undefined}
+          >
             {(c) => (
               <Input
                 {...c}
@@ -278,7 +397,12 @@ export function PayForm(props: PayFormProps) {
               />
             )}
           </Field>
-          <Field id="pm-last" label={t("lastName")} required>
+          <Field
+            id={FIELD_IDS.lastName}
+            label={t("lastName")}
+            required
+            error={has("lastName") ? message("lastName") : undefined}
+          >
             {(c) => (
               <Input
                 {...c}
@@ -289,20 +413,30 @@ export function PayForm(props: PayFormProps) {
             )}
           </Field>
         </div>
-        <Field id="pm-social" label={t("socialId")} hint={t("socialIdHint")}>
+        <Field
+          id={FIELD_IDS.socialId}
+          label={t("socialId")}
+          hint={t("socialIdHint")}
+          error={has("socialId") ? message("socialId") : undefined}
+        >
           {(c) => (
             <Input
               {...c}
               name="socialId"
               inputMode="numeric"
               dir="ltr"
-              maxLength={9}
+              maxLength={11}
               autoComplete="off"
             />
           )}
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="pm-email" label={t("email")} required>
+          <Field
+            id={FIELD_IDS.email}
+            label={t("email")}
+            required
+            error={has("email") ? message("email") : undefined}
+          >
             {(c) => (
               <Input
                 {...c}
@@ -313,7 +447,12 @@ export function PayForm(props: PayFormProps) {
               />
             )}
           </Field>
-          <Field id="pm-phone" label={t("phone")} required>
+          <Field
+            id={FIELD_IDS.phone}
+            label={t("phone")}
+            required
+            error={has("phone") ? message("phone") : undefined}
+          >
             {(c) => (
               <Input
                 {...c}

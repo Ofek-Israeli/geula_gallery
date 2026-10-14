@@ -109,6 +109,9 @@ export function CheckoutForm(props: CheckoutFormProps) {
   );
   const v = values.current;
   const paymentsPending = props.providers.length === 0;
+  /** Isracard's card page comes next (or will, once activated): say what it asks for. */
+  const isracardNext =
+    paymentsPending || props.providers.some((p) => p.id === "isracard");
   const navigateTo =
     state?.ok && state.data.kind === "navigate" ? state.data.url : null;
   /** Optional fields say so. */
@@ -442,6 +445,20 @@ export function CheckoutForm(props: CheckoutFormProps) {
         />
       )}
 
+      {isracardNext ? (
+        <div
+          className="flex max-w-prose flex-col gap-1 rounded-sm border border-line p-4 text-sm"
+          data-testid="checkout-card-page"
+        >
+          <p className="font-medium">{t("cardPage.title")}</p>
+          <ul className="list-disc ps-5">
+            <li>{t("cardPage.secureFields")}</li>
+            <li>{t("cardPage.holder")}</li>
+            <li>{t("cardPage.contact")}</li>
+          </ul>
+        </div>
+      ) : null}
+
       <section
         aria-labelledby="co-secure-title"
         className="flex flex-col gap-2 border-s-2 border-line ps-4"
@@ -477,12 +494,17 @@ export function CheckoutForm(props: CheckoutFormProps) {
         <SubmitButton
           pendingLabel={t("submitting")}
           disabled={paymentsPending}
+          aria-describedby={paymentsPending ? "co-submit-pending" : undefined}
           data-testid="checkout-submit"
         >
           {t("submit")}
         </SubmitButton>
       </div>
-      {paymentsPending ? null : (
+      {paymentsPending ? (
+        <p id="co-submit-pending" className="text-sm text-ink-muted">
+          {t("cardPage.pendingButton")}
+        </p>
+      ) : (
         <p className="text-sm text-ink-muted">{t("provider.redirectNote")}</p>
       )}
     </form>
