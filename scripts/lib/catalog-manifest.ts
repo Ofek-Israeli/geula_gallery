@@ -38,7 +38,10 @@ export const catalogWorkSchema = z.object({
   mediumDetail: localized,
   heightMm: z.number().int().positive(),
   widthMm: z.number().int().positive(),
-  /** The size is a placeholder (the photo's filename had none); the description says TODO. */
+  /**
+   * The size is a placeholder (the photo's filename had none). Only this flag says so: the
+   * description is public text and stays empty until the painter writes one.
+   */
   sizeTodo: z.boolean(),
   framed: z.boolean(),
   signed: z.boolean(),

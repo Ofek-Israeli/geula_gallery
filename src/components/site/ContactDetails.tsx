@@ -7,21 +7,24 @@ export function phoneDigits(phone: string): string {
 }
 
 /**
- * Email and phone for the contact page (spec §6.2): values in `<bdi dir="ltr">`, never mirrored
- * (spec §6.4). The email link carries a subject in the page language; Hebrew pages show the local
- * phone format, English pages the international one. No email row when the business has no public
- * email (visitors use the contact form).
+ * Email, phone and address for the contact page (spec §6.2): email and phone in `<bdi dir="ltr">`,
+ * never mirrored (spec §6.4). The email link carries a subject in the page language; Hebrew pages
+ * show the local phone format, English pages the international one. No email row when the business
+ * has no public email (visitors use the contact form). The address row ends with the country
+ * (Isracard's form: "full address, country and phone"); no row when the address is empty.
  */
 export function ContactDetails({
   email,
   phoneIntl,
   phoneLocal,
+  address,
   subject,
   locale,
 }: {
   email: string;
   phoneIntl: string;
   phoneLocal: string;
+  address: string;
   subject: string;
   locale: Locale;
 }) {
@@ -76,6 +79,14 @@ export function ContactDetails({
           </a>
         </dd>
       </div>
+      {address.trim() ? (
+        <div className="contents">
+          <dt className="text-ink-muted">{t("address")}</dt>
+          <dd data-testid="contact-address">
+            {t("addressWithCountry", { address: address.trim() })}
+          </dd>
+        </div>
+      ) : null}
     </dl>
   );
 }

@@ -10,11 +10,13 @@ import { privacy as enPrivacy } from "./en/privacy";
 import { returns as enReturns } from "./en/returns";
 import { shipping as enShipping } from "./en/shipping";
 import { terms as enTerms } from "./en/terms";
+import { warranty as enWarranty } from "./en/warranty";
 import { accessibility as heAccessibility } from "./he/accessibility";
 import { privacy as hePrivacy } from "./he/privacy";
 import { returns as heReturns } from "./he/returns";
 import { shipping as heShipping } from "./he/shipping";
 import { terms as heTerms } from "./he/terms";
+import { warranty as heWarranty } from "./he/warranty";
 import type { LegalDocModule, LegalProfile } from "./types";
 
 export type { LegalDocModule, LegalDocProps, LegalProfile } from "./types";
@@ -27,6 +29,7 @@ export const LEGAL_DOCUMENTS: Record<
     terms: heTerms,
     returns: heReturns,
     shipping: heShipping,
+    warranty: heWarranty,
     privacy: hePrivacy,
     accessibility: heAccessibility,
   },
@@ -34,6 +37,7 @@ export const LEGAL_DOCUMENTS: Record<
     terms: enTerms,
     returns: enReturns,
     shipping: enShipping,
+    warranty: enWarranty,
     privacy: enPrivacy,
     accessibility: enAccessibility,
   },

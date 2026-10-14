@@ -100,6 +100,8 @@
     "phone": "Phone",
     "whatsapp": "WhatsApp",
     "phoneWhatsapp": "Phone / WhatsApp",
+    "address": "Address",
+    "addressWithCountry": "{address}, Israel",
     "subjectGeneral": "Question from the website",
     "formTitle": "Send a message",
     "formIntro": "Write here and we will reply by email.",

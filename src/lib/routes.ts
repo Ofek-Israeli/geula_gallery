@@ -15,6 +15,7 @@ export const LEGAL_DOCS = [
   "terms",
   "returns",
   "shipping",
+  "warranty",
   "privacy",
   "accessibility",
 ] as const;

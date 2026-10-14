@@ -86,6 +86,7 @@ export default async function ContactPage({
             email={profile.email}
             phoneIntl={profile.phoneIntl}
             phoneLocal={profile.phoneLocal}
+            address={profile.address}
             subject={s.subject}
             locale={locale}
           />

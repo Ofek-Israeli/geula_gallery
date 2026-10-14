@@ -168,17 +168,44 @@ describe("legal pages", () => {
     it(`${locale}: privacy lists the processors and the retention`, () => {
       const text = renderDoc(locale, "privacy");
       for (const p of [
-        "Vercel",
-        "Neon",
+        "Cloudflare",
+        locale === "he" ? "ישראכרט" : "Isracard",
+        "PayMe",
         "Resend",
-        "Cardcom",
         "PayPal",
         "Morning",
         "DHL",
       ]) {
         expect(text).toContain(p);
       }
+      // The site moved off Vercel/Neon (self-hosted in Israel, 2026-10-10).
+      for (const gone of ["Vercel", "Neon", "Cardcom"]) {
+        expect(text).not.toContain(gone);
+      }
       expect(text).toContain("privacy@example.com");
+    });
+
+    it(`${locale}: the warranty covers authenticity, transit damage, workmanship, exclusions, contact and statutory rights`, () => {
+      const text = renderDoc(locale, "warranty");
+      expect(text).toMatch(
+        locale === "he" ? /תעודת מקוריות/ : /certificate of authenticity/,
+      );
+      expect(text).toMatch(locale === "he" ? /14 יום/ : /14 days/);
+      expect(text).toMatch(locale === "he" ? /12 חודשים/ : /12 months/);
+      expect(text).toMatch(locale === "he" ? /אינו מכוסה/ : /not covered/);
+      expect(text).toMatch(
+        locale === "he" ? /חוק הגנת הצרכן/ : /Consumer Protection Law/,
+      );
+      expect(text).toContain(
+        locale === "he" ? "03-000-0000" : "+972-3-000-0000",
+      );
+      expect(text).toContain("studio@example.com");
+    });
+
+    it(`${locale}: the terms say card details go to Isracard's secure fields, never through the site`, () => {
+      const text = renderDoc(locale, "terms");
+      expect(text).toMatch(locale === "he" ? /ישראכרט/ : /Isracard/);
+      expect(text).not.toContain("Cardcom");
     });
 
     it(`${locale}: the accessibility statement names the standard, the PDF limitation and a contact`, () => {

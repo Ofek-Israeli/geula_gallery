@@ -36,12 +36,6 @@ export const privacy: LegalDocModule = {
           abuse. We use no advertising and no non-essential cookies.
         </li>
         <li>
-          For visit statistics we use Vercel Web Analytics: it counts the pages
-          viewed, the site a visitor came from and the country, without cookies
-          and without identifying the visitor. Page addresses are recorded
-          without order or address details.
-        </li>
-        <li>
           When you add a work to your cart, one strictly necessary cookie
           remembers which works are in it (the works&apos; identifiers only, for
           30 days). It holds no personal details.
@@ -55,11 +49,20 @@ export const privacy: LegalDocModule = {
       <H2>Who receives it</H2>
       <P>Only the service providers needed for each action, as needed:</P>
       <UL>
-        <li>Vercel (hosting) and Neon (database), in the European Union;</li>
         <li>
-          Resend (email delivery) – data may be stored in the United States;
+          the site and its database are hosted on the business&apos;s own server
+          in Israel;
         </li>
-        <li>Cardcom and PayPal (payments);</li>
+        <li>Cloudflare (delivers and protects the site&apos;s traffic);</li>
+        <li>
+          Isracard (card payments, through its PayMe platform) – card details
+          are typed into Isracard&apos;s secure fields and go directly to it;
+        </li>
+        <li>PayPal – only if you choose to pay with it;</li>
+        <li>
+          Resend (email delivery, when we send email) – data may be stored in
+          the United States;
+        </li>
         <li>Morning (receipts);</li>
         <li>DHL and other carriers (shipping and tracking).</li>
       </UL>
@@ -90,8 +93,9 @@ export const privacy: LegalDocModule = {
       <H2>Security</H2>
       <P>
         Connections are encrypted, the admin area requires a password and
-        two-factor authentication, and card details never pass through this
-        site.
+        two-factor authentication, and card details are typed into
+        Isracard&apos;s secure fields: they never pass through or stay on this
+        site&apos;s servers.
       </P>
     </>
   ),

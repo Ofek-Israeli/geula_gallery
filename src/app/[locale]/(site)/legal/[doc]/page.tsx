@@ -11,17 +11,19 @@ import { isLegalDoc, LEGAL_DOCS, localePath, paths } from "@/lib/routes";
 import { getSetting } from "@/server/settings";
 
 /**
- * `/[locale]/legal/[doc]` (spec §6.2): terms, returns, shipping, privacy, accessibility. TSX drafts
- * filled from the business profile through `toLegalProfile` (never the ID number), with a DRAFT
- * banner until `LEGAL_TEXTS_APPROVED`.
+ * `/[locale]/legal/[doc]` (spec §6.2): terms, returns, shipping, warranty, privacy, accessibility.
+ * TSX drafts filled from the business profile through `toLegalProfile` (never the ID number), with a
+ * DRAFT banner until `LEGAL_TEXTS_APPROVED`. The "updated" date is the document's version date.
  */
-const VERSION_DATE = new Date("2026-10-01T09:00:00Z");
-
 function versionOf(doc: string): string {
   if (doc === "terms") return LEGAL_VERSIONS.terms;
   if (doc === "returns") return LEGAL_VERSIONS.returns;
   if (doc === "privacy") return LEGAL_VERSIONS.privacy;
   return LEGAL_VERSIONS.terms;
+}
+
+function versionDate(doc: string): Date {
+  return new Date(`${versionOf(doc)}T09:00:00Z`);
 }
 
 export async function generateMetadata({
@@ -72,7 +74,7 @@ export default async function LegalPage({
         <p className="text-sm text-ink-muted">
           {t("version", {
             version: versionOf(doc),
-            date: formatDate(VERSION_DATE, locale),
+            date: formatDate(versionDate(doc), locale),
           })}
         </p>
       </header>
@@ -87,7 +89,7 @@ export default async function LegalPage({
           cancel: l(paths.cancel()),
           contact: l(paths.contact()),
         }}
-        versionDate={formatDate(VERSION_DATE, locale)}
+        versionDate={formatDate(versionDate(doc), locale)}
       />
       <p className="mbs-6 font-medium">
         <CancelPurchaseLink />

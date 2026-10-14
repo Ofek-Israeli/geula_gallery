@@ -774,7 +774,9 @@ export async function listSitemapArtworks(
 
 /**
  * The public face of the business profile (about, contact, JSON-LD). Never includes the ID
- * number, the legal name or addresses (spec §1.2 "Seller identity", §4.7).
+ * number or the legal name (spec §1.2 "Seller identity", §4.7). The business address is public:
+ * it is on the terms page, and Isracard's online-acceptance form requires a contact area with the
+ * full address, country and phone.
  */
 export interface PublicProfile {
   tradeName: string;
@@ -782,6 +784,8 @@ export interface PublicProfile {
   email: string;
   phoneIntl: string;
   phoneLocal: string;
+  /** The business address in the page's locale (the country is added by the page). */
+  address: string;
 }
 
 export async function getPublicProfile(
@@ -795,5 +799,6 @@ export async function getPublicProfile(
     email: p.email,
     phoneIntl: p.phoneIntl,
     phoneLocal: p.phoneLocal,
+    address: p.address[locale],
   };
 }

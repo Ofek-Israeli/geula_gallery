@@ -216,6 +216,7 @@ describe("series, sitemap and SEO reads", () => {
     });
     const profile = await getPublicProfile("en");
     expect(Object.keys(profile).sort()).toEqual([
+      "address",
       "artistName",
       "email",
       "phoneIntl",
