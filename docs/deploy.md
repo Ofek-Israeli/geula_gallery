@@ -120,11 +120,11 @@ What Isracard's online-acceptance form checks, and where the site answers it:
 | Cancellation and returns policy | `/legal/returns`, the `/cancel` form |
 | Warranty policy | `/legal/warranty` |
 | Contact area with full address, country and phone | `/contact` |
-| Working secure payment page from a certified SP | `/checkout/pay/<attempt>` (PayMe hosted fields); implementation "Iframe" |
-| SP confirmation | from Isracard / PayMe |
-| PCI DSS commitment | SAQ A: card data only in the hosted fields; the pay page has a nonce CSP (`src/proxy.ts`) |
+| Working secure payment page | the site's own card page, `/checkout/pay/card` (the owner's choice, 2026-10-14): checks the card in the browser, sends and keeps nothing while card payment is not active; nonce CSP with no third-party origin (`src/proxy.ts`). The PayMe hosted-fields page (`/checkout/pay/<attempt>`) stays in the code, switched off |
+| SP confirmation | the form asks for a certified service provider's page; Isracard decides whether the site's own page is accepted |
+| PCI DSS commitment | while nothing is sent, no card data reaches the server; taking payments through the site's own page needs Isracard's processing interface and a PCI DSS assessment (card data on the site's pages and server: SAQ D, or what Isracard requires) |
 
-### Phase A — no credentials yet ("activation pending")
+### Phase A — no credentials yet (our own card page, nothing charged)
 
 In `/etc/geula/env` on the server, then `sudo systemctl restart geula-web`:
 
@@ -136,8 +136,9 @@ PAYMENT_CARD_BRANDS=isracard,mastercard,visa   # what the merchant agreement cov
 ```
 
 The purchase flow is public with a banner ("online payment is not active yet: no order is placed
-and no money is charged"); the payment step shows the card option as "activation pending" with
-its submit disabled, and nothing is created. In Cloudflare (dashboard → geulalevy.com):
+and no money is charged"); the payment step offers "Credit card – secure payment", which opens
+the site's own card page (`/checkout/pay/card`): the card is checked in the browser, nothing is
+sent or charged, and nothing is created. In Cloudflare (dashboard → geulalevy.com):
 
 - SSL/TLS → Edge Certificates → **Always Use HTTPS** on (the app also redirects on `CF-Visitor`);
 - Security → WAF: no challenge on `POST /api/payments/*/webhook` (a Skip rule if a rule matches);

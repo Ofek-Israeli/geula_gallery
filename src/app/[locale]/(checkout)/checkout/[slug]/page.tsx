@@ -332,7 +332,6 @@ export default async function CheckoutPage({
           }),
         )}
         changeDestinationHref={localePath(locale, links.destination)}
-        contactHref={localePath(locale, paths.contact())}
         cardBrands={env.PAYMENT_CARD_BRANDS}
       />
     </div>

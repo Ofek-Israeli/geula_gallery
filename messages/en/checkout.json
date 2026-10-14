@@ -130,11 +130,8 @@
     "legend": "Payment method",
     "mock": "Test payment – no real money",
     "cardcom": "Card – Cardcom secure page",
-    "isracard": "Credit card – Isracard secure payment",
+    "isracard": "Credit card – secure payment",
     "testSuffix": " (test mode – no charge)",
-    "pendingDescription": "Activation pending – not active yet",
-    "pendingNote": "Card payment will be switched on once Isracard approves our merchant account. Until then you can fill in the payment page, but nothing is charged and no order is created.",
-    "pendingContact": "To buy a work now, contact us.",
     "paypal": "PayPal (account, or card where PayPal offers it)",
     "wallets": "also {list}",
     "wallet": {
@@ -148,14 +145,14 @@
     "title": "Secure payment",
     "body": "Card details are entered only in the payment provider's secure fields or page (PCI DSS) and never reach this site's servers. Where required, the payment is verified with 3-D Secure by your card issuer.",
     "cards": "Accepted cards:",
-    "bodyOwn": "Card details are typed on this site's own secure payment page, over an encrypted connection (HTTPS). They are never saved on the site, and while card payment isn't active they aren't sent anywhere."
+    "bodyOwn": "Card details are typed on this site's own secure payment page, over an encrypted connection (HTTPS), and are never saved on the site."
   },
   "cardPage": {
     "title": "The secure payment page asks for:",
-    "secureFields": "Card number, expiry and CVV, in Isracard's secure fields",
+    "secureFields": "Card number, expiry and CVV, in the payment provider's secure fields",
     "holder": "The card holder's name and, for an Israeli card, ID number",
     "contact": "The card holder's email and phone",
-    "pendingButton": "Opens the secure payment page. Card payment isn't active yet: nothing is charged and no order is created.",
+    "pendingButton": "On the next page you enter the card details on the site's secure payment page.",
     "ownNumber": "Card number, expiry and CVV",
     "ownHolder": "The name on the card and, for an Israeli card, the holder's ID number"
   },
@@ -261,7 +258,7 @@
   "pay": {
     "title": "Payment",
     "orderLine": "Order {number}",
-    "testBanner": "Test mode: use one of Isracard's test cards. No money is charged and no order is placed.",
+    "testBanner": "Test mode: use a test card. No money is charged and no order is placed.",
     "cardTitle": "Card details",
     "cardNumber": "Card number",
     "expiry": "Expiry (MM/YY)",
@@ -290,7 +287,7 @@
     "submitting": "Processing the payment…",
     "loading": "Loading the secure card fields…",
     "loadFailed": "The secure card fields did not load. Please refresh the page; if it happens again, please contact us.",
-    "secure": "Card number, expiry and CVV are typed into Isracard's secure fields (PCI DSS) and go directly to Isracard; they never reach this site's servers.",
+    "secure": "Card number, expiry and CVV are typed into the payment provider's secure fields (PCI DSS) and go directly to it; they never reach this site's servers.",
     "declined": "The card was declined and you were not charged. You can try another card.",
     "holdUntil": "Reserved for you until {time}",
     "expiredTitle": "This payment page is no longer active",

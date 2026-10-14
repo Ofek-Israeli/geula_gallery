@@ -55,8 +55,8 @@ export const privacy: LegalDocModule = {
         </li>
         <li>Cloudflare (delivers and protects the site&apos;s traffic);</li>
         <li>
-          Isracard (card payments) – card details are sent to it to process the
-          payment and are never saved on this site;
+          a licensed credit card acquirer (card payments) – card details are
+          sent to it to process the payment and are never saved on this site;
         </li>
         <li>PayPal – only if you choose to pay with it;</li>
         <li>
@@ -93,9 +93,8 @@ export const privacy: LegalDocModule = {
       <H2>Security</H2>
       <P>
         Connections are encrypted, the admin area requires a password and
-        two-factor authentication, and card details are typed into
-        Isracard&apos;s secure fields: they never pass through or stay on this
-        site&apos;s servers.
+        two-factor authentication, and card details are typed on the site&apos;s
+        own secure payment page and are never saved on the site.
       </P>
     </>
   ),

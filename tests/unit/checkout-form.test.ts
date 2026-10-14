@@ -42,7 +42,6 @@ function render(
     holdMinutes: 35,
     itemCount: 1,
     providers,
-    contactHref: `/${locale}/contact`,
     cardBrands: [],
     disclosure: null,
     reloadHref: `/${locale}/checkout/the-path`,
@@ -92,13 +91,14 @@ describe("checkout form: payment methods", () => {
       const html = render(locale, []);
       const m = getMessagesFor(locale).checkout;
       expect(html).toContain('data-testid="payments-pending"');
-      expect(html).toContain(`href="/${locale}/contact"`);
-      expect(tagWith(html, 'name="providerPending"')).toContain('disabled=""');
-      // The server checks the details against Isracard, refuses only the provider, and the card
-      // page opens: the submit works.
-      expect(tagWith(html, 'name="providerId"')).toMatch(
-        /type="hidden".*value="isracard"|value="isracard".*type="hidden"/,
-      );
+      // One ordinary card option, chosen: the server checks the details, refuses only the
+      // provider, and our card page opens. No "pending" wording, no acquirer's name.
+      const radio = tagWith(html, 'name="providerId"');
+      expect(radio).toContain('value="isracard"');
+      expect(radio).toContain('checked=""');
+      expect(radio).not.toContain("disabled");
+      expect(html).toContain(asHtml(m.provider.isracard));
+      expect(html).not.toMatch(/Isracard|ישראכרט|providerPending/);
       expect(submitTag(html)).not.toContain('disabled=""');
       expect(html).not.toContain(holdNotice(locale));
       // What our card page asks for, and what the button does (read with the button).

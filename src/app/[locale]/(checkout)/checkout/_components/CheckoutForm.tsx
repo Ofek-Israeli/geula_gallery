@@ -46,12 +46,10 @@ export interface CheckoutFormProps {
   /** Titles by artwork id, so an error can name the works another buyer took. */
   itemTitles?: Record<string, string>;
   /**
-   * The payment methods the quote offers. Empty only in the preview (`CHECKOUT_PREVIEW`) before a
-   * provider is configured: the payment step then says "activation pending" and cannot submit.
+   * The payment methods the quote offers. Empty in the preview (`CHECKOUT_PREVIEW`) before a
+   * provider is configured: the card option then opens our own card page (`cardPageHref`).
    */
   providers: { id: string; label: string; description?: string }[];
-  /** Locale-prefixed contact page, for "buy a work now" while payments are pending. */
-  contactHref: string;
   /** `PAYMENT_CARD_BRANDS`: the card brands named under the payment methods (none when empty). */
   cardBrands: readonly string[];
   /** The rendered pre-contract disclosure (server component output). */
@@ -127,6 +125,10 @@ export function CheckoutForm(props: CheckoutFormProps) {
   );
   const v = values.current;
   const paymentsPending = props.providers.length === 0;
+  /** The payment methods offered; while card payment is not active, the card (our own page). */
+  const choices: CheckoutFormProps["providers"] = paymentsPending
+    ? [{ id: "isracard", label: t("provider.isracard") }]
+    : props.providers;
   /** Isracard's card page comes next (or will, once activated): say what it asks for. */
   const isracardNext =
     paymentsPending || props.providers.some((p) => p.id === "isracard");
@@ -424,46 +426,24 @@ export function CheckoutForm(props: CheckoutFormProps) {
         />
       </fieldset>
 
-      {paymentsPending ? (
-        <div className="flex flex-col gap-2" data-testid="payments-pending">
-          {/* The radio is only shown; the posted provider lets the server check the details
-              (it then refuses the provider, before writing anything) and our card page opens. */}
-          <input type="hidden" name="providerId" value="isracard" />
-          <RadioGroup
-            id="co-provider-pending"
-            name="providerPending"
-            legend={t("provider.legend")}
-            options={[
-              {
-                value: "isracard",
-                label: t("provider.isracard"),
-                description: t("provider.pendingDescription"),
-                disabled: true,
-              },
-            ]}
-          />
-          <p className="max-w-prose text-sm">
-            {t("provider.pendingNote")}{" "}
-            <a href={props.contactHref} className="underline">
-              {t("provider.pendingContact")}
-            </a>
-          </p>
-        </div>
-      ) : (
+      {/* While card payment is not active the card option leads to our own card page: the server
+          checks the details, refuses only the provider (before writing anything) and the page
+          opens. The site banner and that page say that nothing is charged. */}
+      <div data-testid={paymentsPending ? "payments-pending" : undefined}>
         <RadioGroup
           id={FIELD_IDS.providerId ?? "co-provider"}
           name="providerId"
           legend={t("provider.legend")}
           required
-          defaultValue={v.providerId ?? props.providers[0]?.id}
-          options={props.providers.map((p) => ({
+          defaultValue={v.providerId ?? choices[0]?.id}
+          options={choices.map((p) => ({
             value: p.id,
             label: p.label,
             description: p.description,
           }))}
           error={fieldErrors.providerId ? tf("invalid") : undefined}
         />
-      )}
+      </div>
 
       {isracardNext ? (
         <div

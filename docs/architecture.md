@@ -2644,8 +2644,9 @@ service (on PayMe) over a separate gateway, with the card form on our site. Runb
 
 - **Preview** (`CHECKOUT_PREVIEW=true` with `SALES_OPEN=false`; `env.salesAccess`: open | preview |
   closed): the purchase flow is public with `PreviewBanner`; `liveProvidersBlocked` refuses every
-  live provider outside `open`; without a usable provider the quote is ok with `providers: []` and
-  the form shows "activation pending" (disabled submit; `startCheckout` refuses before writing).
+  live provider outside `open`; without a usable provider the quote is ok with `providers: []`,
+  the form offers one card option ("Credit card – secure payment") and opens our own card page
+  (`startCheckout` refuses the provider before writing; see "Our own card page" below).
   Admin payment links, the inbox and the go-live digest stay on `SALES_OPEN`.
 - **A TEST payment never sells a real work.** `finalize.ts#handleVerified` sends any money state
   of a TEST attempt on a non-demo order to `closeTestPayment` (`apply.ts`): attempt CANCELED

@@ -170,7 +170,9 @@ describe("legal pages", () => {
       const text = renderDoc(locale, "privacy");
       for (const p of [
         "Cloudflare",
-        locale === "he" ? "ישראכרט" : "Isracard",
+        locale === "he"
+          ? "חברת סליקה בעלת רישיון"
+          : "licensed credit card acquirer",
         "Resend",
         "PayPal",
         "Morning",
@@ -179,7 +181,14 @@ describe("legal pages", () => {
         expect(text).toContain(p);
       }
       // The site moved off Vercel/Neon (self-hosted in Israel, 2026-10-10).
-      for (const gone of ["Vercel", "Neon", "Cardcom", "PayMe"]) {
+      for (const gone of [
+        "Vercel",
+        "Neon",
+        "Cardcom",
+        "PayMe",
+        "Isracard",
+        "ישראכרט",
+      ]) {
         expect(text).not.toContain(gone);
       }
       expect(text).toContain("privacy@example.com");
@@ -202,9 +211,13 @@ describe("legal pages", () => {
       expect(text).toContain("studio@example.com");
     });
 
-    it(`${locale}: the terms: the site's own secure payment page, Isracard processes, nothing saved`, () => {
+    it(`${locale}: the terms: the site's own secure payment page, a licensed acquirer, nothing saved`, () => {
       const text = renderDoc(locale, "terms");
-      expect(text).toMatch(locale === "he" ? /ישראכרט/ : /Isracard/);
+      expect(text).toMatch(
+        locale === "he"
+          ? /חברת סליקה בעלת רישיון/
+          : /licensed credit card acquirer/,
+      );
       expect(text).toMatch(
         locale === "he"
           ? /עמוד התשלום המאובטח של האתר/
@@ -213,7 +226,9 @@ describe("legal pages", () => {
       expect(text).toMatch(
         locale === "he" ? /לעולם אינם נשמרים/ : /never saved on this site/,
       );
-      for (const gone of ["Cardcom", "PayMe"]) expect(text).not.toContain(gone);
+      for (const gone of ["Cardcom", "PayMe", "Isracard", "ישראכרט"]) {
+        expect(text).not.toContain(gone);
+      }
     });
 
     it(`${locale}: the accessibility statement names the standard, the PDF limitation and a contact`, () => {
