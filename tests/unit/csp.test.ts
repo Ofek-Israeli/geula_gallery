@@ -209,6 +209,29 @@ describe("csp", () => {
     );
   });
 
+  it("old links of renamed works redirect permanently to the new ones", async () => {
+    const rules =
+      (await nextConfig(PHASE_PRODUCTION_BUILD).redirects?.()) ?? [];
+    const work = rules.find((r) =>
+      r.source.startsWith("/:locale(he|en)/works/twain"),
+    );
+    expect(work).toMatchObject({
+      destination: "/:locale/works/the-bridge/:rest*",
+      permanent: true,
+    });
+    const match = getPathMatch(work?.source ?? "");
+    expect(match("/he/works/twain")).toMatchObject({ locale: "he" });
+    expect(match("/en/works/twain/request")).toMatchObject({ locale: "en" });
+    expect(match("/he/works/twain-2")).toBe(false);
+    expect(
+      rules.some(
+        (r) =>
+          r.source === "/:locale(he|en)/checkout/expecting-women" &&
+          r.destination === "/:locale/checkout/rachel",
+      ),
+    ).toBe(true);
+  });
+
   it("token pages send no Referer; admin is noindex and no-store", async () => {
     const rules = (await nextConfig(PHASE_PRODUCTION_BUILD).headers?.()) ?? [];
     const bySource = new Map(

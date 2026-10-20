@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 import createNextIntlPlugin from "next-intl/plugin";
 import { STATIC_CSP_SOURCE, staticCsp } from "./src/lib/csp";
+import { renamedWorkRedirects } from "./src/lib/renamed-works";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -110,7 +111,9 @@ function buildConfig(phase: string): NextConfig {
     // A renamed domain (REDIRECT_HOSTS) keeps its links and search results: every path moves to
     // the same path on APP_URL (308, the query string kept).
     async redirects() {
-      if (!appUrl) return [];
+      // Old links of renamed works (relative, so they apply on any host).
+      const renamed = renamedWorkRedirects();
+      if (!appUrl) return renamed;
       const hosts = redirectHosts.map((host) => ({
         source: "/:path*",
         has: [{ type: "host" as const, value: host.replace(/\./g, "\\.") }],
@@ -137,7 +140,7 @@ function buildConfig(phase: string): NextConfig {
               },
             ]
           : [];
-      return [...hosts, ...https];
+      return [...hosts, ...https, ...renamed];
     },
   };
 }

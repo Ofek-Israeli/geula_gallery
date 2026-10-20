@@ -2452,7 +2452,7 @@
       ]
     },
     {
-      "slug": "expecting-women",
+      "slug": "rachel",
       "title": {
         "he": "רחל",
         "en": "Rachel"
@@ -2488,7 +2488,7 @@
       },
       "images": [
         {
-          "file": "data/catalog/images/expecting-women.jpg",
+          "file": "data/catalog/images/rachel.jpg",
           "role": "MAIN",
           "alt": {
             "he": "שתי דמויות נשיות זהובות וללא פנים מחובקות, בתוך דגם דמוי ויטראז׳ של מקטעים בחום, בחלודה, בלבן ובשחור.",
@@ -3886,7 +3886,7 @@
       ]
     },
     {
-      "slug": "twain",
+      "slug": "the-bridge",
       "title": {
         "he": "הגשר",
         "en": "The Bridge"
@@ -3922,7 +3922,7 @@
       },
       "images": [
         {
-          "file": "data/catalog/images/twain.jpg",
+          "file": "data/catalog/images/the-bridge.jpg",
           "role": "MAIN",
           "alt": {
             "he": "רצועות אנכיות בכחול, באפור ובצהוב החצויות בקשתות סוחפות בעלות שוליים שחורים, ספירלה שחורה ומשולש צהוב.",
@@ -4486,8 +4486,8 @@
     {
       "slug": "dancers",
       "title": {
-        "he": "רקדנית",
-        "en": "Dancer"
+        "he": "רקדנים",
+        "en": "Dancers"
       },
       "yearCreated": null,
       "medium": "ACRYLIC",
