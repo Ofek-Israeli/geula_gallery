@@ -55,8 +55,11 @@ export const privacy: LegalDocModule = {
         </li>
         <li>Cloudflare (delivers and protects the site&apos;s traffic);</li>
         <li>
-          a licensed credit card acquirer (card payments) – card details are
-          sent to it to process the payment and are never saved on this site;
+          Cardcom, the payment service provider (card payments) – card details
+          are typed on its secure payment page and passed from it to a licensed
+          credit card acquirer to process the payment; they never reach this
+          site and are never saved on it. Your name, email and phone are also
+          sent to Cardcom to pre-fill the payment page;
         </li>
         <li>PayPal – only if you choose to pay with it;</li>
         <li>
@@ -93,8 +96,9 @@ export const privacy: LegalDocModule = {
       <H2>Security</H2>
       <P>
         Connections are encrypted, the admin area requires a password and
-        two-factor authentication, and card details are typed on the site&apos;s
-        own secure payment page and are never saved on the site.
+        two-factor authentication, and card details are typed on Cardcom&apos;s
+        secure payment page: they never reach this site and are never saved on
+        it.
       </P>
     </>
   ),

@@ -58,7 +58,7 @@ git log -p --all --format= | npm run check:secrets -- --stdin
 
 | Check | Command | State |
 |---|---|---|
-| Cardcom | `CARDCOM_CONTRACT=1 npm run test:contract`, `npm run check:cardcom [-- --record --wait]` | **Blocked.** The public test terminal answers HTTP 401 / ResponseCode 603 on both the v11 and the legacy endpoint. The refusal is recorded in `tests/fixtures/cardcom/create-rejected.json`. Needs a real test terminal from Cardcom. |
+| Cardcom | `CARDCOM_CONTRACT=1 npm run test:contract`, `npm run check:cardcom [-- --record --wait]` | **Passed** on the painter's terminal (test mode), 2026-10-25: Create ₪1 (and USD), GetLpResult unpaid → `pending` (ResponseCode 5119), the hosted page in Hebrew (RTL), an invalid ApiName → 603. Cardcom's public test terminal still refuses its published API names (`tests/fixtures/cardcom/create-rejected.json`). A `--wait` page is paid by a person with Cardcom's test card (the page has reCAPTCHA v3). |
 | Isracard (PayMe) | `npm run check:isracard [-- --record]` | Skips cleanly; no sandbox keys yet. `tests/contract/isracard.test.ts` runs on synthetic fixtures (`tests/fixtures/isracard`, from docs.payme.io); `--record` replaces `generate-sale-ok`, `generate-sale-rejected` and `get-transactions-unpaid` with sandbox answers. |
 | PayPal | `PAYPAL_CONTRACT=1 npm run test:contract`, `npm run check:paypal` | Skips cleanly; no sandbox credentials yet. |
 | Morning | `MORNING_CONTRACT=1 npm run test:contract`, `npm run check:morning` | Skips cleanly; no sandbox keys yet. |

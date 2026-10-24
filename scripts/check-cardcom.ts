@@ -1,6 +1,8 @@
 /**
  * `npm run check:cardcom` — live check against the Cardcom terminal in `.env.local` (spec §10.5).
- * Opt-in, never part of `verify`. Intended for the PUBLIC TEST TERMINAL (`CARDCOM_MODE=test`).
+ * Opt-in, never part of `verify`. Intended for a terminal in test mode (`CARDCOM_MODE=test`): the
+ * merchant's own terminal before Cardcom connects it to the acquirer (Cardcom's public test
+ * terminal refuses the API names it publishes).
  *
  *   npm run check:cardcom                     Create ₪1 → GetLpResult (unpaid) → hosted page check
  *   npm run check:cardcom -- --record         … and write redacted fixtures to tests/fixtures/cardcom
@@ -10,7 +12,8 @@
  *   npm run check:cardcom -- --allow-live     permit CARDCOM_MODE=live (creates a page, charges nothing)
  *
  * No buyer data is ever sent (`buyer: null`, and the adapter sends none in TEST mode). Refunds and
- * ListTransactions need a real terminal's ApiPassword and are skipped without one.
+ * ListTransactions need the terminal's ApiPassword and are skipped without one. Pay a `--wait`
+ * page only with Cardcom's test card: a test terminal approves it, a live one declines it.
  */
 import { randomUUID } from "node:crypto";
 import type { RecordedExchange } from "@/server/integrations/http";
@@ -34,7 +37,7 @@ const env = await loadEnv(CHECK);
 if (env.CARDCOM_MODE === "disabled") {
   skip(
     CHECK,
-    "CARDCOM_MODE=disabled (set CARDCOM_MODE=test with the public test-terminal values in .env.local)",
+    "CARDCOM_MODE=disabled (set CARDCOM_MODE=test with the test terminal's values in .env.local)",
   );
 }
 if (!env.CARDCOM_TERMINAL_NUMBER || !env.CARDCOM_API_NAME) {

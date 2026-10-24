@@ -104,12 +104,13 @@ Cloudflare Tunnel (no open ports at home).
 ## 0c. Checkout preview and Isracard (online card payments)
 
 In October 2026 Isracard reviewed the site for online card acceptance and asked that "a secure
-payment page must be completed on the website". The owner chose Isracard's own e-commerce service
-(it runs on PayMe, an SP on Isracard's certified list) instead of a separate gateway, with the card
-form on our own pay page: card number, expiry and CVV are **PayMe hosted fields** (iframes from
-`hf.payme.io`), so card data never reaches our servers (PCI DSS SAQ A, iframe). The adapter is
-`src/server/payments/providers/isracard.ts`; the API facts and what is still assumed are in
-`isracard-map.ts`.
+payment page must be completed on the website". The site's own card page (`/checkout/pay/card`,
+2026-10-14) was then refused as "not secure", with the advice to ask the service provider for a
+test link. On 2026-10-25 the owner chose **Cardcom** (an SP; Isracard stays the acquirer): step 3
+sends the buyer to Cardcom's hosted LowProfile page (`secure.cardcom.solutions`), so card data
+never reaches our pages or servers (PCI DSS SAQ A, redirect). The adapter is
+`src/server/payments/providers/cardcom.ts` (§8). Isracard's own e-commerce service (PayMe hosted
+fields on `/checkout/pay/<attempt>`, `isracard.ts`) stays in the code, switched off.
 
 What Isracard's online-acceptance form checks, and where the site answers it:
 
@@ -120,9 +121,9 @@ What Isracard's online-acceptance form checks, and where the site answers it:
 | Cancellation and returns policy | `/legal/returns`, the `/cancel` form |
 | Warranty policy | `/legal/warranty` |
 | Contact area with full address, country and phone | `/contact` |
-| Working secure payment page | the site's own card page, `/checkout/pay/card` (the owner's choice, 2026-10-14): checks the card in the browser, sends and keeps nothing while card payment is not active; nonce CSP with no third-party origin (`src/proxy.ts`). The PayMe hosted-fields page (`/checkout/pay/<attempt>`) stays in the code, switched off |
-| SP confirmation | the form asks for a certified service provider's page; Isracard decides whether the site's own page is accepted |
-| PCI DSS commitment | while nothing is sent, no card data reaches the server; taking payments through the site's own page needs Isracard's processing interface and a PCI DSS assessment (card data on the site's pages and server: SAQ D, or what Isracard requires) |
+| Working secure payment page | a work → Buy now → step 3 "Card – Cardcom secure page" → Cardcom's hosted page for the painter's terminal (test mode while sales are closed). The site's own card page (`/checkout/pay/card`) is shown only when no provider is configured |
+| SP confirmation | Cardcom (service provider); its test link is any checkout on the site, or a page from `npm run check:cardcom` |
+| PCI DSS commitment | card number, expiry and CVV are typed only on Cardcom's page; the site receives the result through `GetLpResult` and never sees card data |
 
 ### Phase A — no credentials yet (our own card page, nothing charged)
 
@@ -149,7 +150,39 @@ sent or charged, and nothing is created. In Cloudflare (dashboard → geulalevy.
 Check: `curl -sI http://geulalevy.com/he` answers 301/308 to https; a work shows "Buy now"; the
 checkout reaches the payment step.
 
-### Phase B — Isracard sandbox keys (working card fields for the reviewer)
+### Phase B — Cardcom test terminal (the reviewer's test link; current since 2026-10-25)
+
+The terminal number, API name and API password come from the Cardcom dashboard. In
+`/etc/geula/env`, then `sudo systemctl restart geula-web`:
+
+```
+PAYMENT_PROVIDERS=cardcom
+CARDCOM_MODE=test
+CARDCOM_TERMINAL_NUMBER=…
+CARDCOM_API_NAME=…
+CARDCOM_API_PASSWORD=…       # needed for live (refunds, the sweep); unused in test mode
+CARDCOM_CURRENCIES=ILS,USD   # the terminal created USD pages in test mode
+```
+
+`CARDCOM_MODE=test` is only right while **the terminal itself is in test mode**: in the preview a
+TEST payment never sells the work and is never refunded, so a live terminal under `test` would
+keep a real charge. Confirm it first: a ₪1 page from `npm run check:cardcom -- --wait` paid with
+Cardcom's test card `4580280000000008`, 12/30, CVV 123, any ID, is approved only by a test
+terminal (a live one declines it, nothing is charged). Cardcom's test cards approve amounts under
+₪5,000 and decline larger ones; a real card is not charged on a test terminal, but its credit
+limit is held for three days.
+
+1. Locally, with the same values in `.env.local`: `npm run check:cardcom` (₪1 page, nothing paid).
+2. On the site: a work → Buy now → step 3 shows "Card – Cardcom secure page (test mode – no
+   charge)" → Cardcom's page with the painter's business name. Pay with the test card → back on
+   the order page: a verified test payment; the work stays available and the order ends EXPIRED
+   (`TEST_PAYMENT`); the admin shows "Test order".
+3. The webhook reaches `/api/payments/cardcom/webhook` (Cloudflare does not challenge it).
+
+Then tell Isracard the test link: `https://geulalevy.com` (any work → Buy now), with the test card.
+
+<details>
+<summary>Dormant alternative: Isracard's own service (PayMe hosted fields)</summary>
 
 Ask Isracard / PayMe for the **test** hosted-fields (JSAPI) key and test `seller_payme_id` ("MPL…"),
 and whether a partner key (`payme_client_key`) comes with the account (API refunds). Then:
@@ -172,14 +205,19 @@ ISRACARD_JSAPI_KEY=…
 4. The callback reaches `/api/payments/isracard/webhook` (Cloudflare does not challenge it).
 
 Then send Isracard the form: URL `https://geulalevy.com`, implementation "Iframe", the SP section
-as Isracard instructs, and the questionnaire.
+as Isracard instructs, and the questionnaire. Live: `ISRACARD_MODE=live` with the live
+`ISRACARD_SELLER_ID` and `ISRACARD_JSAPI_KEY`, then as in Phase C.
+
+</details>
 
 ### Phase C — live (after Isracard's approval)
 
+Once Cardcom connects the terminal to Isracard's merchant number:
+
 ```
-ISRACARD_MODE=live
-ISRACARD_SELLER_ID=<live MPL>
-ISRACARD_JSAPI_KEY=<live key>
+CARDCOM_MODE=live
+CARDCOM_API_PASSWORD=…       # required in live mode
+CARDCOM_CURRENCIES=ILS       # add USD only if the merchant agreement covers it
 SALES_OPEN=true
 CHECKOUT_PREVIEW=false
 EMAIL_TO_VISITORS=true
@@ -187,10 +225,10 @@ EMAIL_DRIVER=resend          # with RESEND_API_KEY and a verified domain
 TAX_DOCUMENTS_MODE=morning   # with MORNING_MODE=live and its keys
 ```
 
-Clear the go-live blockers (§13), then make a ₪5 live purchase (PayMe's minimum) and refund it
-(through `refund-sale`, or in the PayMe dashboard without a partner key). TEST attempts still open
-from the preview are retired automatically (`TEST_RETIRED`). The environment refuses test
-providers while sales are open in production, and the mode alone picks sandbox or live.
+Clear the go-live blockers (§13), then make a small live purchase and refund it (from the admin,
+through `RefundByTransactionId`). TEST attempts still open from the preview are retired
+automatically (`TEST_RETIRED`). The environment refuses test providers while sales are open in
+production, and the mode alone picks test or live.
 
 ## 1. Vercel project
 
@@ -304,7 +342,7 @@ Rules enforced when `APP_ENV=production`:
 | `ADMIN_EMAIL` | painter's email | painter's email |
 | `RATE_LIMIT_SCALE` | `1` | `1` (enforced) |
 | `FORM_MIN_AGE_MS` | `3000` | at least `3000` (enforced) |
-| `PAYMENT_PROVIDERS` | `cardcom,mock` | `isracard` (or `cardcom`), plus `paypal` once enabled; never `mock` when `DEMO_MODE=false` |
+| `PAYMENT_PROVIDERS` | `cardcom,mock` | `cardcom` (or `isracard`), plus `paypal` once enabled; never `mock` when `DEMO_MODE=false` |
 | `CHECKOUT_PREVIEW` | `false` | `true` only for the pre-activation review (§0c) |
 | `ISRACARD_MODE`, `ISRACARD_SELLER_ID`, `ISRACARD_JSAPI_KEY` | `test` + sandbox keys | `live` + live keys (§0c) |
 | `ISRACARD_CLIENT_KEY` | optional | optional: API refunds (otherwise manual) |
@@ -370,15 +408,20 @@ protected URL that has no session, and provider webhooks are such requests.
 
 ## 8. Cardcom
 
-Dormant since October 2026 (the shop uses Isracard, §0c); the adapter stays for a later switch.
+The card provider since 2026-10-25 (§0c): LowProfile v11, a redirect to Cardcom's hosted page.
 
 - The webhook and return URLs are built per payment
-  (`/api/payments/cardcom/{webhook,return}`), so nothing needs to be registered at Cardcom.
+  (`/api/payments/cardcom/{webhook,return}`), so nothing needs to be registered at Cardcom. The
+  webhook must be public (Cardcom does not call localhost); a local checkout still completes
+  through the return URL and `GetLpResult`.
 - `live` requires `CARDCOM_API_PASSWORD`. Without it, refunds become MANUAL_REQUIRED and the
-  daily ListTransactions sweep cannot run.
-- Before going live, run `npm run check:cardcom` locally against the **test** terminal you
-  received from Cardcom. The public test terminal is refused with ResponseCode 603. Then record
-  real fixtures with `-- --record`.
+  daily ListTransactions sweep cannot run. `ListTransactions` authenticates with the API name and
+  password only, so it also checks those two without a terminal number.
+- `npm run check:cardcom` runs against the terminal in `.env.local` (passed on the painter's
+  terminal, 2026-10-25). Cardcom's public test terminal (1000) refuses the v11 API names its help
+  center publishes (ResponseCode 603). Record real fixtures with `-- --record` only when they need
+  refreshing.
+- The hosted page uses reCAPTCHA v3, so a test payment is made by a person, never scripted.
 
 ## 9. Domain and HSTS
 

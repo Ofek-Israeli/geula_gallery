@@ -170,6 +170,7 @@ describe("legal pages", () => {
       const text = renderDoc(locale, "privacy");
       for (const p of [
         "Cloudflare",
+        "Cardcom",
         locale === "he"
           ? "חברת סליקה בעלת רישיון"
           : "licensed credit card acquirer",
@@ -180,14 +181,21 @@ describe("legal pages", () => {
       ]) {
         expect(text).toContain(p);
       }
-      // The site moved off Vercel/Neon (self-hosted in Israel, 2026-10-10).
+      expect(text).toMatch(
+        locale === "he"
+          ? /מוזנים בעמוד התשלום המאובטח של קארדקום/
+          : /typed on Cardcom(?:'|&#x27;)s secure payment page/,
+      );
+      // The site moved off Vercel/Neon (self-hosted in Israel, 2026-10-10); card payments go
+      // through Cardcom's page (2026-10-25), and the acquirer is not named.
       for (const gone of [
         "Vercel",
         "Neon",
-        "Cardcom",
         "PayMe",
         "Isracard",
         "ישראכרט",
+        "own secure payment page",
+        "של האתר עצמו",
       ]) {
         expect(text).not.toContain(gone);
       }
@@ -211,7 +219,7 @@ describe("legal pages", () => {
       expect(text).toContain("studio@example.com");
     });
 
-    it(`${locale}: the terms: the site's own secure payment page, a licensed acquirer, nothing saved`, () => {
+    it(`${locale}: the terms: Cardcom's secure payment page, a licensed acquirer, nothing saved`, () => {
       const text = renderDoc(locale, "terms");
       expect(text).toMatch(
         locale === "he"
@@ -220,13 +228,21 @@ describe("legal pages", () => {
       );
       expect(text).toMatch(
         locale === "he"
-          ? /עמוד התשלום המאובטח של האתר/
-          : /own secure payment page, over an encrypted connection/,
+          ? /בעמוד התשלום המאובטח של קארדקום \(Cardcom\)/
+          : /secure payment page of Cardcom, the site(?:'|&#x27;)s payment service provider, over an encrypted connection/,
       );
       expect(text).toMatch(
-        locale === "he" ? /לעולם אינם נשמרים/ : /never saved on this site/,
+        locale === "he"
+          ? /אינם מגיעים לאתר ולעולם אינם נשמרים בו/
+          : /never reach this site and are never saved on it/,
       );
-      for (const gone of ["Cardcom", "PayMe", "Isracard", "ישראכרט"]) {
+      for (const gone of [
+        "PayMe",
+        "Isracard",
+        "ישראכרט",
+        "own secure payment page",
+        "עמוד התשלום המאובטח של האתר",
+      ]) {
         expect(text).not.toContain(gone);
       }
     });

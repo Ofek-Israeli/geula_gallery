@@ -185,7 +185,7 @@ const PRE_TEXT = {
     notInsured: "המשלוח עם מעקב.",
     payment: "תנאי תשלום",
     paymentText:
-      "תשלום מלא מראש בכרטיס אשראי, בעמוד התשלום המאובטח של האתר. פרטי הכרטיס לעולם אינם נשמרים באתר.",
+      "תשלום מלא מראש בכרטיס אשראי, בעמוד התשלום המאובטח של קארדקום (Cardcom), ספק שירותי התשלום של האתר. פרטי הכרטיס אינם מגיעים לאתר ולעולם אינם נשמרים בו.",
     installments: "עד {n} תשלומים, ללא ריבית.",
     cancellation: "ביטול העסקה",
     cancel14:
@@ -264,7 +264,7 @@ const PRE_TEXT = {
     notInsured: "The shipment is tracked.",
     payment: "Payment terms",
     paymentText:
-      "Full payment in advance by credit card, on the site's secure payment page. Card details are never saved on this site.",
+      "Full payment in advance by credit card, on the secure payment page of Cardcom, the site's payment service provider. Card details never reach this site and are never saved on it.",
     installments: "Up to {n} interest-free instalments.",
     cancellation: "Cancellation",
     cancel14:
