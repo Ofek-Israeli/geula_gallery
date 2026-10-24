@@ -106,7 +106,7 @@ Cloudflare Tunnel (no open ports at home).
 In October 2026 Isracard reviewed the site for online card acceptance and asked that "a secure
 payment page must be completed on the website". The site's own card page (`/checkout/pay/card`,
 2026-10-14) was then refused as "not secure", with the advice to ask the service provider for a
-test link. On 2026-10-25 the owner chose **Cardcom** (an SP; Isracard stays the acquirer): step 3
+test link. On 2026-10-25 the owner chose **Cardcom** (an SP; its first live payment lists Cardcom itself as the acquirer): step 3
 sends the buyer to Cardcom's hosted LowProfile page (`secure.cardcom.solutions`), so card data
 never reaches our pages or servers (PCI DSS SAQ A, redirect). The adapter is
 `src/server/payments/providers/cardcom.ts` (§8). Isracard's own e-commerce service (PayMe hosted
@@ -121,8 +121,8 @@ What Isracard's online-acceptance form checks, and where the site answers it:
 | Cancellation and returns policy | `/legal/returns`, the `/cancel` form |
 | Warranty policy | `/legal/warranty` |
 | Contact area with full address, country and phone | `/contact` |
-| Working secure payment page | a work → Buy now → step 3 "Card – Cardcom secure page" → Cardcom's hosted page for the painter's terminal (test mode while sales are closed). The site's own card page (`/checkout/pay/card`) is shown only when no provider is configured |
-| SP confirmation | Cardcom (service provider); its test link is any checkout on the site, or a page from `npm run check:cardcom` |
+| Working secure payment page | a work → Buy now → step 3 "Card – Cardcom secure page" → Cardcom's hosted page: a Cardcom **test** terminal while sales are closed (Phase B), the painter's live terminal once they open (Phase C). The site's own card page (`/checkout/pay/card`) is shown only when no provider is configured |
+| SP confirmation | Cardcom (service provider); its test link is any checkout on the site once a test terminal is configured (Phase B) |
 | PCI DSS commitment | card number, expiry and CVV are typed only on Cardcom's page; the site receives the result through `GetLpResult` and never sees card data |
 
 ### Phase A — no credentials yet (our own card page, nothing charged)
@@ -150,7 +150,11 @@ sent or charged, and nothing is created. In Cloudflare (dashboard → geulalevy.
 Check: `curl -sI http://geulalevy.com/he` answers 301/308 to https; a work shows "Buy now"; the
 checkout reaches the payment step.
 
-### Phase B — Cardcom test terminal (the reviewer's test link; current since 2026-10-25)
+### Phase B — Cardcom test terminal (the reviewer's test link)
+
+The painter's own terminal is **live**, not a test terminal (2026-10-25: Cardcom's test card was
+sent to the issuer and declined, and a real ₪1 payment was approved and verified), so this phase
+needs a separate test terminal from Cardcom, or the terminal switched to test mode.
 
 The terminal number, API name and API password come from the Cardcom dashboard. In
 `/etc/geula/env`, then `sudo systemctl restart geula-web`:
