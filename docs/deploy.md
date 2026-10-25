@@ -166,6 +166,7 @@ CARDCOM_TERMINAL_NUMBER=…
 CARDCOM_API_NAME=…
 CARDCOM_API_PASSWORD=…       # needed for live (refunds, the sweep); unused in test mode
 CARDCOM_CURRENCIES=ILS,USD   # the terminal created USD pages in test mode
+CARDCOM_3DS=Auto             # the terminal's own setting (see §8)
 ```
 
 `CARDCOM_MODE=test` is only right while **the terminal itself is in test mode**: in the preview a
@@ -222,6 +223,7 @@ Once Cardcom connects the terminal to Isracard's merchant number:
 CARDCOM_MODE=live
 CARDCOM_API_PASSWORD=…       # required in live mode
 CARDCOM_CURRENCIES=ILS       # add USD only if the merchant agreement covers it
+CARDCOM_3DS=Auto             # until Cardcom confirms 3-D Secure on the terminal (§8)
 SALES_OPEN=true
 CHECKOUT_PREVIEW=false
 EMAIL_TO_VISITORS=true
@@ -426,6 +428,12 @@ The card provider since 2026-10-25 (§0c): LowProfile v11, a redirect to Cardcom
   center publishes (ResponseCode 603). Record real fixtures with `-- --record` only when they need
   refreshing.
 - The hosted page uses reCAPTCHA v3, so a test payment is made by a person, never scripted.
+- On the painter's terminal (2026-10-25), pages created with `ThreeDSecureState=Enabled` (the
+  `CARDCOM_3DS` default) hung after "pay" and no transaction reached Cardcom, for a test card and
+  for a Spanish card; with `Auto` (Cardcom's terminal setting) or `Disabled` they processed. Use
+  `CARDCOM_3DS=Auto` until Cardcom confirms 3-D Secure on the terminal. Without 3-D Secure a
+  Spanish Visa was declined with no issuer approval (60000004); ask Cardcom whether foreign
+  cards are enabled (European banks usually require 3-D Secure).
 
 ## 9. Domain and HSTS
 
