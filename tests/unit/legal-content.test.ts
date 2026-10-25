@@ -176,7 +176,6 @@ describe("legal pages", () => {
           : "licensed credit card acquirer",
         "Resend",
         "PayPal",
-        "Morning",
         "DHL",
       ]) {
         expect(text).toContain(p);
@@ -200,6 +199,15 @@ describe("legal pages", () => {
         expect(text).not.toContain(gone);
       }
       expect(text).toContain("privacy@example.com");
+    });
+
+    it(`${locale}: no legal text promises or mentions a receipt (the painter issues them by hand)`, () => {
+      for (const doc of LEGAL_DOCS) {
+        const text = renderDoc(locale, doc);
+        expect(text, doc).not.toMatch(
+          /receipt|tax document|Morning|קבלה|קבלות|חשבונית|מסמכים חשבונאיים/i,
+        );
+      }
     });
 
     it(`${locale}: the warranty covers authenticity, transit damage, workmanship, exclusions, contact and statutory rights`, () => {

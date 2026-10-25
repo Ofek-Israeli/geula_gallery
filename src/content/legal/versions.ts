@@ -6,8 +6,9 @@
  * the payment paragraph of the terms and of the disclosure (Isracard's secure fields) and the privacy
  * policy's hosting and processors changed, and the warranty policy was added. On 2026-10-25 the
  * same payment paragraphs and the privacy policy's processors and security paragraph changed again
- * (card details on Cardcom's secure payment page). The changes since 2026-10-10 await the
- * lawyer's review.
+ * (card details on Cardcom's secure payment page), and every mention of a receipt was removed
+ * (the painter issues receipts by hand; Morning is no longer a processor). The changes since
+ * 2026-10-10 await the lawyer's review.
  */
 export const LEGAL_VERSIONS = {
   terms: "2026-10-25",

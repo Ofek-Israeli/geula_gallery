@@ -179,7 +179,6 @@ export interface FillOptions {
   email: string;
   /** A delivery: fill the street address (city and postal code come from step 1). */
   address?: boolean;
-  receiptByEmail?: boolean;
 }
 
 /** Fills the checkout details form (labels from the message files) and ticks the consents. */
@@ -192,7 +191,6 @@ export async function fillCheckout(page: Page, o: FillOptions): Promise<void> {
   await box(m.details.phone).fill("+97230000000");
   if (o.address) await box(m.details.line1).fill("Herzl 1");
   await page.getByLabel(m.consent.terms).check();
-  if (o.receiptByEmail) await page.getByLabel(m.consent.receiptEmail).check();
 }
 
 export function escapeRe(text: string): string {

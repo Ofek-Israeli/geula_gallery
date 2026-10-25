@@ -79,7 +79,6 @@ test("IL cancellation: form → ack → duplicate → admin accept → refund �
     locale: "he",
     name: buyer.name,
     email: buyer.email,
-    receiptByEmail: true,
   });
   await continueToMockPay(page);
   await page.getByTestId("mock-pay").click();

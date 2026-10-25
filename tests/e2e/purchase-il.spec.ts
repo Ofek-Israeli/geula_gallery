@@ -16,9 +16,10 @@ import {
 /**
  * Spec §10.4 `purchase-il` (M2 acceptance): a full Israeli purchase in Hebrew with courier
  * delivery → mock payment → order page "Paid" → the work shows "Sold" → order confirmation (with
- * the inline disclosure summary), painter notification and receipt emails → the mock receipt
- * (stamped DEMO) and the disclosure document → the admin sees the order, its receipt, and records
- * manual tracking. The confirmation carries the disclosure PDF attachment (Tier B, WS6).
+ * the inline disclosure summary) and painter notification emails, and no receipt email (receipts
+ * are issued by hand; the server's mock mode still records a demo document) → the disclosure
+ * document → the admin sees the order, its document, and records manual tracking. The
+ * confirmation carries the disclosure PDF attachment (Tier B, WS6).
  */
 const SLUG = "blue-and-yellow-notes";
 const heOrders = messages("he", "orders");
@@ -27,14 +28,14 @@ const heAdminOrders = messages("he", "admin-orders");
 
 test.use({ extraHTTPHeaders: buyerIp(11) });
 
-test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin", async ({
+test("IL purchase in Hebrew: pay → Sold → emails, no receipt email → admin", async ({
   page,
   browser,
   request,
 }) => {
   const buyer = uniqueBuyer("purchase-il");
 
-  // Checkout (Hebrew, courier to an Israeli address, receipt by email): destination → courier →
+  // Checkout (Hebrew, courier to an Israeli address): destination → courier →
   // details with the street address only.
   const res = await page.goto(`/he/checkout/${SLUG}`);
   expect(res?.status()).toBe(200);
@@ -50,7 +51,6 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
     name: buyer.name,
     email: buyer.email,
     address: true,
-    receiptByEmail: true,
   });
   await continueToMockPay(page);
   await page.getByTestId("mock-pay").click();
@@ -118,25 +118,24 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
   });
   expect(painter.locale).toBe("he");
   expect(painter.subject).toContain(number);
-  const receiptMail = await waitForMail(request, {
-    template: "receipt",
-    orderId,
-  });
-  expect(receiptMail.text).toContain("הדגמה – אינו מסמך חשבונאי");
-
-  // The mock receipt, via the link in the email.
-  const receiptUrl = /href="([^"]*\/print\/receipt\/DEMO-[^"]+)"/.exec(
-    receiptMail.html ?? "",
-  )?.[1];
-  expect(receiptUrl).toBeTruthy();
-  await page.goto(receiptUrl ?? "");
-  await expect(page.getByTestId("demo-stamp")).toContainText(
-    "DEMO – not a tax document",
+  // Receipts are issued by hand, so the buyer is never emailed one, even once the server's mock
+  // mode has recorded its demo document.
+  let docNumber = "";
+  for (let i = 0; i < 20 && !docNumber; i++) {
+    await runCron(request, "outbox");
+    const [doc] = await e2eQuery<{ doc_number: string | null }>(
+      "SELECT doc_number FROM tax_documents WHERE order_id = $1 AND kind = 'RECEIPT' AND status = 'ISSUED'",
+      [orderId],
+    );
+    docNumber = doc?.doc_number ?? "";
+    if (!docNumber) await new Promise((r) => setTimeout(r, 300));
+  }
+  expect(docNumber).toMatch(/^DEMO-[0-9A-Z]{6}-R1$/);
+  const [receiptMails] = await e2eQuery<{ n: number }>(
+    "SELECT count(*)::int AS n FROM email_messages WHERE order_id = $1 AND template = 'receipt'",
+    [orderId],
   );
-  await expect(page.getByTestId("doc-number")).toHaveText(
-    /^DEMO-[0-9A-Z]{6}-R1$/,
-  );
-  const docNumber = (await page.getByTestId("doc-number").textContent()) ?? "";
+  expect(receiptMails?.n).toBe(0);
 
   // The disclosure document, via the link in the confirmation.
   const disclosureUrl = /href="([^"]*\/print\/disclosure\/[^"]+)"/.exec(
@@ -148,11 +147,11 @@ test("IL purchase in Hebrew: pay → Sold → emails → mock receipt → admin"
     "מדינת העוסק",
   );
 
-  // A wrong token is a 404 for both printables.
-  const bad = await page.goto(`/he/print/receipt/${docNumber}?k=wrong`);
+  // A wrong token is a 404.
+  const bad = await page.goto(`/he/print/disclosure/${number}?k=wrong`);
   expect(bad?.status()).toBe(404);
 
-  // The admin sees the order, its receipt, and records manual tracking.
+  // The admin sees the order, its document, and records manual tracking.
   const admin = await browser.newContext({ storageState: ADMIN_STORAGE_STATE });
   try {
     const ap = await admin.newPage();

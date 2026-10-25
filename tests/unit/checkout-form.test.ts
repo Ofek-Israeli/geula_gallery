@@ -128,5 +128,13 @@ describe("checkout form: payment methods", () => {
       const html = render(locale, [{ id: "mock", label: "Test payment" }]);
       expect(html).not.toContain('data-testid="checkout-card-page"');
     });
+
+    it(`${locale}: no receipt fields or promise (receipts are issued by hand)`, () => {
+      const html = render(locale, [{ id: "cardcom", label: "Card" }]);
+      expect(html).not.toMatch(/name="(receiptEmail|vatId)"/);
+      expect(html).not.toMatch(/receipt|קבלה|קבלות/i);
+      // The company name stays, for the shipping label.
+      expect(html).toContain('name="companyName"');
+    });
   }
 });

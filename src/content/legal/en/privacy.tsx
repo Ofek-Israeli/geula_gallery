@@ -22,8 +22,8 @@ export const privacy: LegalDocModule = {
       <H2>What we collect and why</H2>
       <UL>
         <li>
-          Orders: name, email, phone and delivery address – to fulfil the order,
-          deliver the work and issue the receipt.
+          Orders: name, email, phone and delivery address – to fulfil the order
+          and deliver the work.
         </li>
         <li>Questions and requests: the details you send – to reply.</li>
         <li>
@@ -66,13 +66,12 @@ export const privacy: LegalDocModule = {
           Resend (email delivery, when we send email) – data may be stored in
           the United States;
         </li>
-        <li>Morning (receipts);</li>
         <li>DHL and other carriers (shipping and tracking).</li>
       </UL>
 
       <H2>How long we keep it</H2>
       <UL>
-        <li>Paid orders, tax documents and cancellations: 7 years.</li>
+        <li>Paid orders and cancellations: 7 years.</li>
         <li>Unpaid orders: buyer details are erased after 30 days.</li>
         <li>Cancellation notices not matched to an order: 2 years.</li>
         <li>Closed requests: 24 months.</li>

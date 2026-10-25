@@ -62,8 +62,7 @@ export const terms: LegalDocModule = {
         (HTTPS), and are processed by a licensed credit card acquirer. Card
         details are typed only on Cardcom&apos;s page: they never reach this
         site and are never saved on it. Buyers abroad may also pay with PayPal,
-        on PayPal&apos;s own page. A receipt is emailed if you ask for it, and
-        is always included with the work.
+        on PayPal&apos;s own page.
       </P>
 
       <H2>6. Delivery</H2>

@@ -41,7 +41,6 @@ export const checkoutFields = {
   email: emailSchema,
   phone: phoneSchema,
   companyName: optionalText(200),
-  vatId: optionalText(40),
   line1: optionalText(200),
   line2: optionalText(200),
   city: optionalText(DESTINATION_LIMITS.city),
@@ -49,7 +48,6 @@ export const checkoutFields = {
   postalCode: optionalText(DESTINATION_LIMITS.postalCode),
   terms: checkboxSchema.refine((v) => v),
   dap: checkboxSchema,
-  receiptEmail: checkboxSchema,
 };
 
 type Fields = z.output<z.ZodObject<typeof checkoutFields>>;
@@ -137,7 +135,6 @@ export function startBase(
       email: input.email,
       phone: input.phone,
       ...(input.companyName ? { companyName: input.companyName } : {}),
-      ...(input.vatId ? { vatId: input.vatId } : {}),
     },
     shipTo:
       input.method === "LOCAL_PICKUP"
@@ -161,7 +158,8 @@ export function startBase(
       ...(input.country !== "IL"
         ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
         : {}),
-      receiptEmailConsent: input.receiptEmail,
+      // Receipts are issued by hand (TAX_DOCUMENTS_MODE=none): the site never emails one.
+      receiptEmailConsent: false,
     },
     ipHash: meta.ipHash,
   };

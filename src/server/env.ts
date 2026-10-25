@@ -331,11 +331,13 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
           "ISRACARD_MODE",
           "must be live while sales are open in production",
         );
-      if (
-        e.TAX_DOCUMENTS_MODE !== "morning" &&
-        e.TAX_DOCUMENTS_MODE !== "gateway"
-      )
-        issue("TAX_DOCUMENTS_MODE", "must be morning or gateway in production");
+      // `none`: the painter issues receipts by hand; each sale's receipt waits as NEEDS_MANUAL
+      // (admin alert) until she records it. Mock documents are never real ones.
+      if (e.TAX_DOCUMENTS_MODE === "mock")
+        issue(
+          "TAX_DOCUMENTS_MODE",
+          "must be morning, gateway or none in production",
+        );
       if (e.SHIPPING_CARRIER === "mock")
         issue("SHIPPING_CARRIER", "must not be mock in production");
       if (e.EMAIL_DRIVER !== "resend")

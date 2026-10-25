@@ -135,7 +135,7 @@ environment variables.
 | Payments | `PAYMENT_PROVIDERS` | `mock`: a hosted mock page with HMAC-signed webhooks and capture and review modes | `cardcom`, `paypal` | See the Cardcom and PayPal rows. |
 | Cardcom | `CARDCOM_MODE` | `disabled` | `test`, `live` | The checkout's card provider (2026-10-25): fixture-tested, and `check:cardcom` passed on the painter's terminal. Cardcom's public test terminal refuses its published API names (HTTP 401, ResponseCode 603). `live` also needs `CARDCOM_API_PASSWORD` for refunds, the daily sweep and gateway documents. |
 | PayPal | `PAYPAL_MODE` | `disabled` | `sandbox`, `live` | Fixture-tested; waiting for sandbox credentials (client id and secret, webhook id, merchant id). |
-| Tax documents | `TAX_DOCUMENTS_MODE` | `mock` | `morning`, `gateway`, `none` | |
+| Tax documents | `TAX_DOCUMENTS_MODE` | `mock` | `morning`, `gateway`, `none` | Production uses `none`: the painter issues receipts by hand, and the site never promises or emails one (2026-10-25). |
 | Morning | `MORNING_MODE` | `disabled` | `sandbox`, `live` | Fixture-tested; waiting for sandbox keys. |
 | Carrier | `SHIPPING_CARRIER` | `mock`: moves to DELIVERED after `MOCK_CARRIER_DELIVERY_SECONDS` | `manual`, `dhl` | |
 | DHL | `DHL_EXPRESS_MODE` | `disabled` | `test`, `live` | Built on the MyDHL 3.3.2 types; tested with fixtures and contract tests. `api-mock.dhl.com` answered a read-only probe. A live check needs an account. |

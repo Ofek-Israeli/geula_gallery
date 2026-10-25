@@ -33,7 +33,6 @@ export interface LinkDetailsFormProps {
     city: string;
     region: string;
     postalCode: string;
-    receiptEmail: boolean;
   };
   /** The pre-contract disclosure (server component output). */
   disclosure: ReactNode;
@@ -49,7 +48,6 @@ const IDS: Record<string, string> = {
   region: "ld-region",
   postalCode: "ld-postal",
   companyName: "ld-company",
-  vatId: "ld-vat",
   terms: "ld-terms",
   dap: "ld-dap",
 };
@@ -247,15 +245,6 @@ export function LinkDetailsForm(props: LinkDetailsFormProps) {
             />
           )}
         </Field>
-        <Field
-          id={IDS.vatId ?? "ld-vat"}
-          label={optional(tc("details.vatId"))}
-          error={errorFor("vatId")}
-        >
-          {(c) => (
-            <Input {...c} name="vatId" dir="ltr" defaultValue={v.vatId ?? ""} />
-          )}
-        </Field>
       </fieldset>
 
       {props.disclosure}
@@ -280,16 +269,6 @@ export function LinkDetailsForm(props: LinkDetailsFormProps) {
             error={errorFor("dap")}
           />
         ) : null}
-        <Checkbox
-          id="ld-receipt"
-          name="receiptEmail"
-          label={tc("consent.receiptEmail")}
-          defaultChecked={
-            values.current.receiptEmail
-              ? values.current.receiptEmail === "on"
-              : props.defaults.receiptEmail
-          }
-        />
       </fieldset>
 
       <p className="text-sm text-ink-muted">{tc("privacy")}</p>

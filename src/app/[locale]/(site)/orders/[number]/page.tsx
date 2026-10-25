@@ -127,7 +127,6 @@ export default async function OrderPage({
           city: view.address?.city ?? "",
           region: view.address?.region ?? "",
           postalCode: view.address?.postalCode ?? "",
-          receiptEmail: view.receiptEmailConsent,
         }}
         disclosure={<PreContractDisclosure doc={preContract} />}
       />

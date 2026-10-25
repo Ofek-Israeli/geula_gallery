@@ -73,7 +73,6 @@ const FIELD_IDS: Record<string, string> = {
   line2: "co-line2",
   region: "co-region",
   companyName: "co-company",
-  vatId: "co-vat",
   terms: "co-terms",
   dap: "co-dap",
   providerId: "co-provider",
@@ -313,6 +312,20 @@ export function CheckoutForm(props: CheckoutFormProps) {
             />
           )}
         </Field>
+        <Field
+          id={FIELD_IDS.companyName ?? "co-company"}
+          label={optional(t("details.companyName"))}
+          error={errorFor("companyName")}
+        >
+          {(c) => (
+            <Input
+              {...c}
+              name="companyName"
+              autoComplete="organization"
+              defaultValue={v.companyName ?? ""}
+            />
+          )}
+        </Field>
       </fieldset>
 
       {props.needsAddress ? (
@@ -368,34 +381,6 @@ export function CheckoutForm(props: CheckoutFormProps) {
         <p className="text-sm text-ink-muted">{t("details.pickupNote")}</p>
       )}
 
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mbe-1 text-xl">{t("details.receiptTitle")}</legend>
-        <p className="text-sm text-ink-muted">{t("details.receiptHint")}</p>
-        <Field
-          id={FIELD_IDS.companyName ?? "co-company"}
-          label={optional(t("details.companyName"))}
-          error={errorFor("companyName")}
-        >
-          {(c) => (
-            <Input
-              {...c}
-              name="companyName"
-              autoComplete="organization"
-              defaultValue={v.companyName ?? ""}
-            />
-          )}
-        </Field>
-        <Field
-          id={FIELD_IDS.vatId ?? "co-vat"}
-          label={optional(t("details.vatId"))}
-          error={errorFor("vatId")}
-        >
-          {(c) => (
-            <Input {...c} name="vatId" dir="ltr" defaultValue={v.vatId ?? ""} />
-          )}
-        </Field>
-      </fieldset>
-
       {props.disclosure}
 
       <fieldset className="flex flex-col gap-3">
@@ -418,12 +403,6 @@ export function CheckoutForm(props: CheckoutFormProps) {
             error={errorFor("dap")}
           />
         ) : null}
-        <Checkbox
-          id="co-receipt"
-          name="receiptEmail"
-          label={t("consent.receiptEmail")}
-          defaultChecked={v.receiptEmail === "on"}
-        />
       </fieldset>
 
       {/* While card payment is not active the card option leads to our own card page: the server

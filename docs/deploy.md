@@ -228,8 +228,11 @@ SALES_OPEN=true
 CHECKOUT_PREVIEW=false
 EMAIL_TO_VISITORS=true
 EMAIL_DRIVER=resend          # with RESEND_API_KEY and a verified domain
-TAX_DOCUMENTS_MODE=morning   # with MORNING_MODE=live and its keys
+TAX_DOCUMENTS_MODE=none      # the painter issues receipts by hand (2026-10-25)
 ```
+
+With `TAX_DOCUMENTS_MODE=none` each paid order's receipt waits as NEEDS_MANUAL (an admin alert)
+until the painter records the receipt she issued; the site never emails or promises one.
 
 Clear the go-live blockers (§13), then make a small live purchase and refund it (from the admin,
 through `RefundByTransactionId`). TEST attempts still open from the preview are retired
@@ -323,7 +326,8 @@ Rules enforced when `APP_ENV=production`:
 - `FORM_MIN_AGE_MS` of at least 3000;
 - secrets of at least 32 characters;
 - with `DEMO_MODE=false`: `EMAIL_DRIVER=resend` and `STORAGE_DRIVER=blob`, and while
-  `SALES_OPEN=true` also no `mock` provider, tax documents set to `morning` or `gateway`, and a
+  `SALES_OPEN=true` also no `mock` provider, tax documents set to `morning`, `gateway` or `none`
+  (receipts by hand), and a
   carrier other than `mock`;
 - with `STORAGE_DRIVER=blob`: both tokens and `NEXT_PUBLIC_BLOB_HOST`;
 - while `SALES_OPEN=true` outside demo mode: every listed provider in `live` mode (a TEST payment
@@ -362,7 +366,7 @@ Rules enforced when `APP_ENV=production`:
 | `CARDCOM_3DS`, `CARDCOM_WALLETS` | as the terminal allows | as agreed with Cardcom |
 | `PAYPAL_MODE` | `sandbox` | `live` |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_MERCHANT_ID` | sandbox app | live app (§7) |
-| `TAX_DOCUMENTS_MODE` | `mock` or `morning` | `morning` or `gateway` (accountant's choice) |
+| `TAX_DOCUMENTS_MODE` | `mock` or `morning` | `none`: receipts issued by hand (the painter's choice, 2026-10-25); or `morning` / `gateway` |
 | `MORNING_MODE`, `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET` | `sandbox` + sandbox keys | `live` + production keys |
 | `SHIPPING_CARRIER` | `mock` or `manual` | `dhl` or `manual` |
 | `DHL_EXPRESS_MODE`, `DHL_API_KEY`, `DHL_API_SECRET`, `DHL_ACCOUNT_NUMBER` | `test` + test credentials | `live` + account |

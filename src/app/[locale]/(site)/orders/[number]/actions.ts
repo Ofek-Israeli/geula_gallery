@@ -138,7 +138,7 @@ export async function releaseHoldAction(formData: FormData): Promise<void> {
 /**
  * "Complete your order" on a link order (spec §5.1 step 4, §5.8): the delivery address (Latin
  * abroad), the delivery method when the painter did not lock the shipping, the consents (terms,
- * 18+, DAP abroad, receipt by email). A method change requotes the order. Authorized by the `?k=`
+ * 18+, DAP abroad). A method change requotes the order. Authorized by the `?k=`
  * token like "Pay"; the result redirects back to the order page.
  */
 const has = (v: string | undefined) => v !== undefined && v !== "";
@@ -157,11 +157,9 @@ const detailsSchema = base
     region: optionalText(120),
     postalCode: optionalText(20),
     companyName: optionalText(200),
-    vatId: optionalText(40),
     needsAddress: checkboxSchema,
     terms: checkboxSchema.refine((v) => v),
     dap: checkboxSchema,
-    receiptEmail: checkboxSchema,
   })
   .superRefine((v, ctx) => {
     const pickup = v.method === "LOCAL_PICKUP" || !v.needsAddress;
@@ -236,7 +234,6 @@ const runDetails = publicAction(
       buyer: {
         ...(phone ? { phone } : {}),
         ...(input.companyName ? { companyName: input.companyName } : {}),
-        ...(input.vatId ? { vatId: input.vatId } : {}),
       },
       consents: {
         termsVersion: LEGAL_VERSIONS.terms,
@@ -245,7 +242,8 @@ const runDetails = publicAction(
         ...(input.country !== "IL"
           ? { dutiesNoticeVersion: LEGAL_VERSIONS.dutiesNotice }
           : {}),
-        receiptEmailConsent: input.receiptEmail,
+        // Receipts are issued by hand (TAX_DOCUMENTS_MODE=none): the site never emails one.
+        receiptEmailConsent: false,
       },
       actor: `buyer:${input.number}`,
       ipHash: meta.ipHash,

@@ -110,10 +110,7 @@
     "region": "State / region",
     "postalCode": "Postal code",
     "cityAndPostal": "City and postal code",
-    "receiptTitle": "Receipt details",
-    "receiptHint": "Only if the receipt should be in a company's or business's name.",
     "companyName": "Company name",
-    "vatId": "VAT / company ID for the receipt",
     "pickupNote": "The studio address and pickup instructions are sent after payment."
   },
   "consent": {
@@ -123,7 +120,6 @@
     "termsLink": "terms of sale",
     "returnsLink": "cancellation and returns policy",
     "dap": "I understand that import duties, taxes and fees at the destination are mine to pay (DAP).",
-    "receiptEmail": "Send my receipt by email.",
     "required": "Please tick this box to continue."
   },
   "provider": {
@@ -163,7 +159,7 @@
     "amex": "American Express",
     "diners": "Diners"
   },
-  "privacy": "We use your details only to fulfil this order: payment, delivery and the receipt. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
+  "privacy": "We use your details only to fulfil this order: payment and delivery. You are not legally required to provide them, but we cannot complete the purchase without them. They are shared with the payment provider and the carrier only.",
   "holdNotice": "When you continue, {count, plural, one {the work is} other {the # works are}} reserved for you for {minutes} minutes.",
   "submit": "Continue to payment",
   "submitting": "Reserving…",

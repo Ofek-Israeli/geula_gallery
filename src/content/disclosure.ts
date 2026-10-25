@@ -202,7 +202,7 @@ const PRE_TEXT = {
     dap: "המשלוח לחו״ל הוא DAP: מכס, מע״מ יבוא ועמלות שחרור, אם יחולו, ישולמו על ידי הקונה ביעד.",
     privacy: "פרטיות",
     privacyText:
-      "הפרטים נאספים לצורך ביצוע ההזמנה, המשלוח והחשבונית. אין חובה חוקית למסור אותם, אך בלעדיהם לא ניתן להשלים את הרכישה. הם יועברו לספק הסליקה ולחברת השילוח בלבד.",
+      "הפרטים נאספים לצורך ביצוע ההזמנה והמשלוח. אין חובה חוקית למסור אותם, אך בלעדיהם לא ניתן להשלים את הרכישה. הם יועברו לספק הסליקה ולחברת השילוח בלבד.",
     links: "מסמכים",
     terms: "תנאי מכירה",
     returns: "ביטולים והחזרות",
@@ -281,7 +281,7 @@ const PRE_TEXT = {
     dap: "International shipments are DAP: import duties, VAT and clearance fees, if any, are paid by the buyer on delivery.",
     privacy: "Privacy",
     privacyText:
-      "Your details are collected to fulfil the order, ship it and issue the receipt. You are not legally required to give them, but the purchase cannot be completed without them. They are shared only with the payment provider and the carrier.",
+      "Your details are collected to fulfil the order and ship it. You are not legally required to give them, but the purchase cannot be completed without them. They are shared only with the payment provider and the carrier.",
     links: "Documents",
     terms: "Terms of sale",
     returns: "Cancellations and returns",

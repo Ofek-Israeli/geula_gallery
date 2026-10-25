@@ -264,8 +264,15 @@ describe("the showcase switches", () => {
   it("opening sales brings back the real-store rules", () => {
     const open = { ...showcaseEnv(), SALES_OPEN: "true" };
     expectProblem(open, "PAYMENT_PROVIDERS");
-    expectProblem(open, "TAX_DOCUMENTS_MODE");
     expectProblem({ ...open, EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
+    // Receipts by hand (`none`) stay allowed once sales open; mock documents never are.
+    expect(
+      problems(open).some((p) => p.startsWith("TAX_DOCUMENTS_MODE:")),
+    ).toBe(false);
+    expectProblem(
+      { ...open, TAX_DOCUMENTS_MODE: "mock" },
+      "TAX_DOCUMENTS_MODE",
+    );
   });
 
   it("the checkout preview is a showcase production with the purchase flow public", () => {
