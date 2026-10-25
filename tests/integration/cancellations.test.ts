@@ -447,7 +447,11 @@ describe("review payload", () => {
     const token = sealReview(parsed, "he", now);
     expect(token).not.toContain(parsed.idNumber?.value ?? "x");
     expect(openReview(token, now)?.notice).toEqual(parsed);
-    expect(openReview(`${token.slice(0, -2)}AA`, now)).toBeNull();
+    // Tamper in the middle, where every character carries full bits (overwriting the last two
+    // characters can decode to the same bytes, so that check failed now and then).
+    const mid = Math.floor(token.length / 2);
+    const tampered = `${token.slice(0, mid)}${token[mid] === "A" ? "B" : "A"}${token.slice(mid + 1)}`;
+    expect(openReview(tampered, now)).toBeNull();
     expect(
       openReview(token, new Date(now.getTime() + 3 * 60 * 60 * 1000)),
     ).toBeNull();

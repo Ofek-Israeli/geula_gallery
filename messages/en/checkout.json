@@ -187,6 +187,7 @@
   "returned": {
     "title": "Return from the payment page",
     "body": "We could not match this link to an order. If you paid, your confirmation email has a link to your order page.",
+    "bodyNoEmail": "We could not match this link to an order. If you paid, contact us and we will send you the link to your order page.",
     "works": "Back to the works"
   },
   "mockPay": {

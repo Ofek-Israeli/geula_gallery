@@ -23,7 +23,9 @@
     "pending": "We have not received a confirmation yet. If you paid, it will appear here shortly.",
     "capturing": "Your payment is being confirmed.",
     "review": "Your payment is under review by the provider. We will email you when it is confirmed.",
+    "reviewNoEmail": "Your payment is under review by the provider. Check this page again later; we will contact you if anything is needed.",
     "needs_refund": "Your payment could not be applied to this order. It is being refunded in full; we have emailed you.",
+    "needs_refundNoEmail": "Your payment could not be applied to this order. It is being refunded in full.",
     "failed": "The payment did not go through. You were not charged.",
     "not_completed": "The payment was not completed and you were not charged. You can try again.",
     "canceled": "The payment was cancelled. You were not charged.",
@@ -48,6 +50,8 @@
   "paid": {
     "title": "Your order is confirmed",
     "body": "A confirmation with the disclosure document is on its way to your email. We will let you know when {count, plural, one {the work ships} other {the works ship}}.",
+    "bodyNoEmail": "Keep the link to this page: your order and its disclosure document are here. We will contact you about the delivery.",
+    "disclosure": "The disclosure document for this order (to save or print)",
     "cancel": "Want to cancel? Use the cancellation form"
   },
   "review": {

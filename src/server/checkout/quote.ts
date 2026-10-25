@@ -176,8 +176,24 @@ async function quoteArtworks(
   }
 
   const country = (req.country ?? "IL").toUpperCase();
+  const liveBlocked = await liveProvidersBlocked(db, e);
+  const providersFor = (c: Currency) =>
+    checkoutProviders(
+      {
+        currency: c,
+        destinationCountry: country,
+        isDemo,
+        paypalForIsraeliDestinations: checkout.paypalForIsraeliDestinations,
+        liveBlocked,
+      },
+      { env: e },
+    );
+  // Dollars only abroad and for works with a USD price; with sales open, only when a payment
+  // method takes them (a dollar checkout must never end without one).
   const usdAvailable =
-    country !== "IL" && items.every((a) => a.priceUsdMinor !== null);
+    country !== "IL" &&
+    items.every((a) => a.priceUsdMinor !== null) &&
+    (e.salesAccess !== "open" || providersFor("USD").length > 0);
   const currency: Currency =
     req.currency === "USD" && usdAvailable ? "USD" : "ILS";
   const quoted: CheckoutQuoteItem[] = [];
@@ -204,16 +220,7 @@ async function quoteArtworks(
     if (liveConfigured)
       return blocked("DEMO_LIVE_PROVIDER", [], (items[0] as ArtworkRow).id);
   }
-  const providers = checkoutProviders(
-    {
-      currency,
-      destinationCountry: country,
-      isDemo,
-      paypalForIsraeliDestinations: checkout.paypalForIsraeliDestinations,
-      liveBlocked: await liveProvidersBlocked(db, e),
-    },
-    { env: e },
-  );
+  const providers = providersFor(currency);
   // The preview without a configured provider still shows the whole checkout; its payment step
   // says "activation pending" and `startCheckout` refuses before creating anything.
   if (providers.length === 0 && e.salesAccess !== "preview")

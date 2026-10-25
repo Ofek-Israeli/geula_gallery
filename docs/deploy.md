@@ -226,8 +226,8 @@ CARDCOM_CURRENCIES=ILS       # add USD only if the merchant agreement covers it
 CARDCOM_3DS=Auto             # until Cardcom confirms 3-D Secure on the terminal (§8)
 SALES_OPEN=true
 CHECKOUT_PREVIEW=false
-EMAIL_TO_VISITORS=true
-EMAIL_DRIVER=resend          # with RESEND_API_KEY and a verified domain
+EMAIL_TO_VISITORS=false      # no buyer emails (the owner's legal decision, 2026-10-25)
+EMAIL_DRIVER=log             # or resend, with RESEND_API_KEY, a verified domain and EMAIL_TO_VISITORS=true
 TAX_DOCUMENTS_MODE=none      # the painter issues receipts by hand (2026-10-25)
 ```
 
@@ -325,7 +325,9 @@ Rules enforced when `APP_ENV=production`:
 - `RATE_LIMIT_SCALE=1`;
 - `FORM_MIN_AGE_MS` of at least 3000;
 - secrets of at least 32 characters;
-- with `DEMO_MODE=false`: `EMAIL_DRIVER=resend` and `STORAGE_DRIVER=blob`, and while
+- with `DEMO_MODE=false`: `EMAIL_TO_VISITORS=false` unless `EMAIL_DRIVER=resend` (the log driver
+  sends nothing, so no page may promise an email; buyers then find the disclosure document on
+  their order page), `STORAGE_DRIVER=blob` on Vercel, and while
   `SALES_OPEN=true` also no `mock` provider, tax documents set to `morning`, `gateway` or `none`
   (receipts by hand), and a
   carrier other than `mock`;

@@ -15,9 +15,10 @@ import { formatDateTime, formatTime } from "@/lib/format";
 import { LOCALE_FIELD } from "@/lib/forms";
 import { isLocale } from "@/lib/locale";
 import { formatMoney } from "@/lib/money";
-import { paths } from "@/lib/routes";
+import { localePath, paths } from "@/lib/routes";
 import { getBuyerOrder } from "@/server/checkout/order-view";
 import { loadDisclosureInput } from "@/server/documents/data";
+import { env } from "@/server/env";
 import { ipHashFrom } from "@/server/security/ip";
 import { checkLimit } from "@/server/security/rate-limit";
 import { addOrderToCartAction } from "../../cart/actions";
@@ -64,6 +65,11 @@ export default async function OrderPage({
   const tp = await getTranslations({ locale, namespace: "checkout.provider" });
   const payment = one(sp.payment);
   const err = one(sp.err);
+  /** Visitors get no email (`EMAIL_TO_VISITORS=false`): texts that promise one have a variant. */
+  const noEmail = (key: string): string =>
+    !env.EMAIL_TO_VISITORS && t.has(`${key}NoEmail` as never)
+      ? `${key}NoEmail`
+      : key;
   const settling =
     view.recentPending || view.attempts.some((a) => a.status === "CAPTURING");
   const hidden = (
@@ -152,7 +158,7 @@ export default async function OrderPage({
           className="border border-line p-4"
           data-testid="payment-result"
         >
-          {t(`payment.${payment}` as never, { count } as never)}
+          {t(noEmail(`payment.${payment}`) as never, { count } as never)}
         </p>
       ) : null}
       {err ? (
@@ -296,7 +302,20 @@ export default async function OrderPage({
       {view.status === "PAID" || view.status === "COMPLETED" ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-2xl">{t("paid.title")}</h2>
-          <p>{t("paid.body", { count })}</p>
+          <p>{t(noEmail("paid.body") as never, { count } as never)}</p>
+          <p>
+            {/* A full page load: the printable has its own layout. */}
+            <a
+              href={localePath(
+                locale,
+                paths.printDisclosure(view.number, view.accessToken),
+              )}
+              className="underline"
+              data-testid="order-disclosure"
+            >
+              {t("paid.disclosure")}
+            </a>
+          </p>
           <p>
             <Link href={paths.cancel(view.number)} className="underline">
               {t("paid.cancel")}

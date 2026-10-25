@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { buttonClasses } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/lib/locale";
 import { paths } from "@/lib/routes";
+import { env } from "@/server/env";
 
 /**
  * `/[locale]/checkout/returned` (spec §5.2 "Return route"): where a return link with a bad or
@@ -17,11 +19,15 @@ export default async function CheckoutReturnedPage({
 }: PageProps<"/[locale]/checkout/returned">) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+  await connection();
   const t = await getTranslations({ locale, namespace: "checkout.returned" });
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-3xl">{t("title")}</h1>
-      <p className="max-w-prose">{t("body")}</p>
+      <p className="max-w-prose">
+        {/* Without visitor emails there is no confirmation email to look in. */}
+        {t(env.EMAIL_TO_VISITORS ? "body" : "bodyNoEmail")}
+      </p>
       <p>
         <Link href={paths.works()} className={buttonClasses("secondary")}>
           {t("works")}

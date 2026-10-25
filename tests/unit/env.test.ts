@@ -148,7 +148,11 @@ describe("parseEnv cross-field rules (spec §4.8)", () => {
       { ...productionEnv(), SHIPPING_CARRIER: "mock" },
       "SHIPPING_CARRIER",
     );
-    expectProblem({ ...productionEnv(), EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
+    // The log driver sends nothing, so visitors must not be promised an email.
+    expectProblem(
+      { ...productionEnv(), EMAIL_DRIVER: "log" },
+      "EMAIL_TO_VISITORS",
+    );
     expectProblem(
       { ...productionEnv(), VERCEL: "1", STORAGE_DRIVER: "local" },
       "STORAGE_DRIVER",
@@ -264,7 +268,17 @@ describe("the showcase switches", () => {
   it("opening sales brings back the real-store rules", () => {
     const open = { ...showcaseEnv(), SALES_OPEN: "true" };
     expectProblem(open, "PAYMENT_PROVIDERS");
-    expectProblem({ ...open, EMAIL_DRIVER: "log" }, "EMAIL_DRIVER");
+    // Selling without buyer emails is the owner's choice (2026-10-25): the log driver stays
+    // allowed, but then no page may promise visitors an email.
+    expect(
+      problems({ ...open, EMAIL_DRIVER: "log" }).some((p) =>
+        p.startsWith("EMAIL_DRIVER:"),
+      ),
+    ).toBe(false);
+    expectProblem(
+      { ...open, EMAIL_DRIVER: "log", EMAIL_TO_VISITORS: "true" },
+      "EMAIL_TO_VISITORS",
+    );
     // Receipts by hand (`none`) stay allowed once sales open; mock documents never are.
     expect(
       problems(open).some((p) => p.startsWith("TAX_DOCUMENTS_MODE:")),

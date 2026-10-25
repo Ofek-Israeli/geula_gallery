@@ -340,9 +340,16 @@ function addCrossFieldIssues(e: RawEnv, ctx: z.RefinementCtx): void {
         );
       if (e.SHIPPING_CARRIER === "mock")
         issue("SHIPPING_CARRIER", "must not be mock in production");
-      if (e.EMAIL_DRIVER !== "resend")
-        issue("EMAIL_DRIVER", "must be resend in production");
+      // EMAIL_DRIVER=log stays allowed with sales open (the owner's legal decision, 2026-10-25):
+      // buyers then get no email; the order page carries the disclosure document and the painter
+      // reads every email in the admin.
     }
+    // Pages promise an email only when visitors get one: with the log driver nothing is sent.
+    if (e.EMAIL_TO_VISITORS && e.EMAIL_DRIVER !== "resend")
+      issue(
+        "EMAIL_TO_VISITORS",
+        "must be false unless EMAIL_DRIVER=resend (emails are only logged)",
+      );
     // Vercel's filesystem does not persist, so a deployment there stores files in Blob; a
     // self-hosted server (no VERCEL) may keep them on its own disk (STORAGE_DRIVER=local).
     if (e.VERCEL && e.STORAGE_DRIVER !== "blob")

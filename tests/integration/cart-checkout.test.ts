@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { cleanDatabaseBeforeEach } from "../helpers/db";
+import { cleanDatabaseBeforeEach, testEnv } from "../helpers/db";
 import {
   buyableArtwork,
   cartCheckoutInput,
@@ -24,6 +24,7 @@ const { db } = await import("@/server/db/client");
 const { artworks, orderItems, orders, paymentAttempts, refunds, sales } =
   await import("@/server/db/schema");
 const { getCheckoutQuote } = await import("@/server/checkout/quote");
+const { parseEnv } = await import("@/server/env");
 const { startCheckout } = await import("@/server/checkout/start");
 const { releaseReservation } = await import("@/server/checkout/release");
 const { finalizeAttempt } = await import("@/server/payments/finalize");
@@ -96,6 +97,37 @@ describe("cart quote", () => {
     if (both.kind !== "ok") throw new Error(both.reason);
     expect(both.usdAvailable).toBe(false);
     expect(both.currency).toBe("ILS");
+  });
+
+  it("with sales open, offers USD only when a payment method takes it", async () => {
+    const a = await buyableArtwork(db);
+    // Cardcom in shekels only (placeholder credentials): a dollar checkout would have no provider.
+    const ilsOnly = parseEnv({
+      ...testEnv(),
+      PAYMENT_PROVIDERS: "cardcom",
+      CARDCOM_MODE: "test",
+      CARDCOM_TERMINAL_NUMBER: "1000",
+      CARDCOM_API_NAME: "test-placeholder-api-name",
+      CARDCOM_CURRENCIES: "ILS",
+    });
+    const req = {
+      artworkIds: [a.id],
+      locale: "en" as const,
+      country: "US",
+      currency: "USD" as const,
+    };
+    const ils = await getCheckoutQuote(req, { env: ilsOnly });
+    if (ils.kind !== "ok") throw new Error(ils.reason);
+    expect(ils.usdAvailable).toBe(false);
+    expect(ils.currency).toBe("ILS");
+    expect(ils.providers.map((p) => p.id)).toEqual(["cardcom"]);
+
+    const withUsd = await getCheckoutQuote(req, {
+      env: parseEnv({ ...testEnv(), CARDCOM_CURRENCIES: "ILS,USD" }),
+    });
+    if (withUsd.kind !== "ok") throw new Error(withUsd.reason);
+    expect(withUsd.usdAvailable).toBe(true);
+    expect(withUsd.currency).toBe("USD");
   });
 
   it("names every unavailable work and refuses demo mixed with real works", async () => {
