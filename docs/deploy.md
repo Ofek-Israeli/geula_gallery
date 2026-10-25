@@ -431,9 +431,9 @@ The card provider since 2026-10-25 (§0c): LowProfile v11, a redirect to Cardcom
 - On the painter's terminal (2026-10-25), pages created with `ThreeDSecureState=Enabled` (the
   `CARDCOM_3DS` default) hung after "pay" and no transaction reached Cardcom, for a test card and
   for a Spanish card; with `Auto` (Cardcom's terminal setting) or `Disabled` they processed. Use
-  `CARDCOM_3DS=Auto` until Cardcom confirms 3-D Secure on the terminal. Without 3-D Secure a
-  Spanish Visa was declined with no issuer approval (60000004); ask Cardcom whether foreign
-  cards are enabled (European banks usually require 3-D Secure).
+  `CARDCOM_3DS=Auto` until Cardcom confirms 3-D Secure on the terminal. Foreign cards work: a
+  Spanish Visa was refused at ₪1 (60000004, no issuer approval) and approved by its bank at ₪10,
+  so foreign banks may refuse tiny test amounts.
 
 ## 9. Domain and HSTS
 

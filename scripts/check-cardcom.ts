@@ -9,6 +9,7 @@
  *   npm run check:cardcom -- --wait[=600]     … then poll GetLpResult until a human pays with a test
  *                                             card on the printed URL (default 10 min)
  *   npm run check:cardcom -- --locale=en      English hosted page
+ *   npm run check:cardcom -- --amount=10      a ₪10 page instead of ₪1 (whole shekels, 1–4999)
  *   npm run check:cardcom -- --allow-live     permit CARDCOM_MODE=live (creates a page, charges nothing)
  *
  * No buyer data is ever sent (`buyer: null`, and the adapter sends none in TEST mode). Refunds and
@@ -95,6 +96,11 @@ const record = (scenario: string, note: string, list: RecordedExchange[]) => {
 };
 
 const locale = option("locale") === "en" ? "en" : "he";
+const shekels = Number(option("amount") ?? 1);
+if (!Number.isInteger(shekels) || shekels < 1 || shekels > 4999) {
+  fail(CHECK, "--amount must be whole shekels from 1 to 4999");
+}
+const pageAmountMinor = shekels * 100;
 const attemptId = randomUUID();
 const appUrl = env.APP_URL.replace(/\/+$/, "");
 const ret = (s: string) =>
@@ -106,7 +112,7 @@ say(
   `mode ${provider.mode}, base ${env.CARDCOM_BASE_URL}, locale ${locale}${args.length ? `, args ${args.join(" ")}` : ""}`,
 );
 
-// 1. LowProfile/Create for ₪1.
+// 1. LowProfile/Create for ₪1 (or --amount).
 let providerRef: string;
 let hostedUrl: string;
 try {
@@ -115,11 +121,11 @@ try {
     attemptSeq: 1,
     orderId: randomUUID(),
     orderNumber: "GG-CHECK1",
-    amount: { amountMinor: 100, currency: "ILS" },
+    amount: { amountMinor: pageAmountMinor, currency: "ILS" },
     lines: [
       {
         name: locale === "he" ? "בדיקת חיבור" : "Connection check",
-        amount: { amountMinor: 100, currency: "ILS" },
+        amount: { amountMinor: pageAmountMinor, currency: "ILS" },
       },
     ],
     shipping: { amountMinor: 0, currency: "ILS" },
